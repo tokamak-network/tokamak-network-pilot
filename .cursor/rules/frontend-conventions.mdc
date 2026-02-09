@@ -1,0 +1,70 @@
+---
+description: Frontend conventions — shadcn/ui, Jotai, Lucide, Tailwind CSS 4
+globs: apps/web/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+# Frontend Stack & Conventions
+
+## UI Components — shadcn/ui
+
+- **Always use shadcn/ui** for UI components. Never hand-write buttons, inputs, cards, badges, etc.
+- Components live in `apps/web/src/components/ui/` — these are shadcn-managed, do not edit directly
+- To add new shadcn components: `npx shadcn@latest add <component>` (run from `apps/web/`)
+- Already installed: `Button`, `Input`, `Card`, `Badge`, `Separator`, `Tooltip`, `Sheet`, `ScrollArea`, `Avatar`, `Skeleton`, `Sidebar`
+- Custom/composed components go in `apps/web/src/components/` (not in `ui/`)
+- Use the `cn()` utility from `@/lib/utils` for conditional classes
+
+```tsx
+// ✅ GOOD — use shadcn/ui components
+import { Button } from '@/components/ui/button';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
+
+// ❌ BAD — don't hand-write UI primitives
+<button className="bg-blue-500 text-white px-4 py-2 rounded">Click</button>
+```
+
+## Icons — Lucide React
+
+- **Always use `lucide-react`** for icons. No other icon library.
+- Import individual icons, never the entire library.
+
+```tsx
+// ✅ GOOD
+import { Search, Send, Database } from 'lucide-react';
+
+// ❌ BAD
+import * as Icons from 'lucide-react';
+```
+
+## Global State — Jotai
+
+- **Use Jotai** for all global/shared state. No Redux, Zustand, or React Context for state.
+- Atoms are defined in `apps/web/src/store/` — one file per domain (ask, sources, content, ui)
+- Export atoms from `@/store` barrel file
+- The `JotaiProvider` wraps the app in `apps/web/src/components/providers.tsx`
+
+```tsx
+// ✅ GOOD — define atoms in store files
+// src/store/ask.ts
+import { atom } from 'jotai';
+export const queryAtom = atom('');
+
+// Use in components
+import { useAtom } from 'jotai';
+import { queryAtom } from '@/store';
+const [query, setQuery] = useAtom(queryAtom);
+```
+
+## Styling — Tailwind CSS 4
+
+- Use Tailwind utility classes for all styling. No CSS modules, styled-components, or inline styles.
+- Theme colors are CSS variables defined in `globals.css` — use semantic names: `bg-background`, `text-foreground`, `text-muted-foreground`, `bg-card`, `border-border`, etc.
+- Dark mode uses the `.dark` class strategy (not media query)
+- The `cn()` helper merges Tailwind classes: `cn('base-class', conditional && 'active-class')`
+
+## Routing — Next.js App Router
+
+- Pages live in `apps/web/src/app/` using the App Router file convention
+- Client components must have `'use client'` directive at the top
+- API calls go through `apps/web/src/lib/api.ts` — never call fetch directly in components

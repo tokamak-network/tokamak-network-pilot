@@ -1,0 +1,28 @@
+---
+description: Conventions for shared packages — types, SDK, config
+globs: packages/**/*.ts
+alwaysApply: false
+---
+
+# Shared Packages
+
+## @tokamak-pilot/shared
+
+- All TypeScript **interfaces and types** shared between frontend and backend go here
+- `src/types.ts` — Domain types (Source, ContentEntry, AskRequest, AskResponse, User, etc.)
+- `src/constants.ts` — Shared constants (API_PREFIX, port numbers, labels)
+- Import as `@tokamak-pilot/shared` in both `apps/api` and `apps/web`
+- When adding a new domain entity, define its type here first, then use it in both apps
+
+## @tokamak-pilot/sdk
+
+- Public TypeScript SDK for external consumers of the Tokamak Pilot API
+- `TokamakPilotClient` class wraps all API endpoints
+- When adding a new API endpoint, add the corresponding method to the SDK client
+- Types are re-exported from `@tokamak-pilot/shared` — don't duplicate
+
+## Adding Dependencies
+
+- Use `pnpm --filter <package-name> add <dep>` to add deps to a specific workspace
+- Example: `pnpm --filter @tokamak-pilot/web add sonner`
+- Never install dependencies at the root unless they're dev tools (turbo, prettier)

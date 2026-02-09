@@ -1,0 +1,30 @@
+---
+description: Tokamak Pilot project overview and monorepo conventions
+alwaysApply: true
+---
+
+# Tokamak Pilot — Project Overview
+
+This is a **pnpm monorepo** managed by **Turborepo** for a RAG-powered knowledge hub for the Tokamak Network ecosystem.
+
+## Monorepo Structure
+
+- `apps/api` — NestJS 11 backend (REST API, port 4000)
+- `apps/web` — Next.js 15 frontend (React 19, port 3000)
+- `packages/shared` — Shared TypeScript types, constants (imported as `@tokamak-pilot/shared`)
+- `packages/sdk` — Public TypeScript SDK (`@tokamak-pilot/sdk`)
+- `packages/eslint-config` — Shared ESLint config
+
+## Commands
+
+- `pnpm dev` — Runs both API + Web in parallel (single command)
+- `pnpm build` — Builds everything
+- `pnpm --filter @tokamak-pilot/api dev` — Run only the API
+- `pnpm --filter @tokamak-pilot/web dev` — Run only the frontend
+
+## Key Conventions
+
+- All shared types go in `packages/shared/src/types.ts`, not duplicated across apps
+- Environment variables are defined in root `.env` (see `.env.example`)
+- API endpoints are prefixed with `/api/v1`
+- Swagger docs are auto-generated at `http://localhost:4000/docs`

@@ -1,0 +1,22 @@
+{
+  "name": "@tokamak-pilot/sdk",
+  "version": "0.1.0",
+  "description": "TypeScript SDK for the Tokamak Pilot knowledge base API",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@tokamak-pilot/shared": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.7.0"
+  },
+  "peerDependencies": {},
+  "files": ["dist"],
+  "keywords": ["tokamak", "sdk", "rag", "knowledge-base"],
+  "license": "MIT"
+}

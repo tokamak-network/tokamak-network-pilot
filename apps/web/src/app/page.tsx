@@ -1,0 +1,234 @@
+'use client';
+
+import { useAtom } from 'jotai';
+import { Search, Send, Zap, Database, FileText, Loader2 } from 'lucide-react';
+import Link from 'next/link';
+import { queryAtom, isLoadingAtom, conversationAtom } from '@/store';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Separator } from '@/components/ui/separator';
+import type { ConversationMessage } from '@/store/ask';
+
+export default function HomePage() {
+  const [query, setQuery] = useAtom(queryAtom);
+  const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
+  const [conversation, setConversation] = useAtom(conversationAtom);
+
+  const handleAsk = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!query.trim() || isLoading) return;
+
+    const userMessage: ConversationMessage = {
+      role: 'user',
+      content: query,
+      timestamp: new Date(),
+    };
+
+    setConversation((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+
+    // TODO: Call the /api/v1/ask endpoint
+    // Simulating a response for now
+    setTimeout(() => {
+      const assistantMessage: ConversationMessage = {
+        role: 'assistant',
+        content:
+          'RAG pipeline not yet implemented. This is a placeholder response. Once connected, I will search across all indexed Tokamak Network knowledge sources to provide accurate, cited answers.',
+        sources: [],
+        timestamp: new Date(),
+      };
+      setConversation((prev) => [...prev, assistantMessage]);
+      setIsLoading(false);
+    }, 1000);
+
+    setQuery('');
+  };
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-3.5rem)]">
+      {conversation.length === 0 ? (
+        /* Empty State — Hero + Quick Links */
+        <div className="flex flex-col items-center justify-center flex-1 p-8">
+          <div className="max-w-2xl w-full text-center space-y-8">
+            <div className="space-y-3">
+              <div className="flex items-center justify-center gap-2 mb-4">
+                <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                  <Zap className="size-6" />
+                </div>
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight">
+                Tokamak Pilot
+              </h1>
+              <p className="text-muted-foreground text-base max-w-md mx-auto">
+                Your single source of truth for the Tokamak Network ecosystem.
+                Ask anything — powered by RAG + LLM.
+              </p>
+            </div>
+
+            {/* Search Input */}
+            <form onSubmit={handleAsk}>
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Ask about Tokamak Network... e.g. 'How does TON staking work?'"
+                    className="pl-10 h-12 text-base"
+                  />
+                </div>
+                <Button type="submit" size="lg" disabled={!query.trim()}>
+                  <Send className="size-4" />
+                  Ask
+                </Button>
+              </div>
+            </form>
+
+            {/* Quick Link Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+              <Link href="/sources">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Database className="size-4 text-muted-foreground" />
+                      Knowledge Sources
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>
+                      GitHub repos, docs, files
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <Link href="/content">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <FileText className="size-4 text-muted-foreground" />
+                      Team Content
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>
+                      Curated answers & guides
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+
+              <a
+                href="http://localhost:4000/docs"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <Zap className="size-4 text-muted-foreground" />
+                      API Docs
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>
+                      Swagger / OpenAPI
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : (
+        /* Conversation View */
+        <>
+          <ScrollArea className="flex-1 p-6">
+            <div className="max-w-3xl mx-auto space-y-6">
+              {conversation.map((msg, i) => (
+                <div key={i} className="space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Badge variant={msg.role === 'user' ? 'default' : 'secondary'}>
+                      {msg.role === 'user' ? 'You' : 'Pilot'}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">
+                      {msg.timestamp.toLocaleTimeString()}
+                    </span>
+                  </div>
+                  <Card>
+                    <CardContent className="pt-4">
+                      <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                        {msg.content}
+                      </p>
+                      {msg.sources && msg.sources.length > 0 && (
+                        <>
+                          <Separator className="my-3" />
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">
+                              Sources
+                            </p>
+                            {msg.sources.map((src, j) => (
+                              <a
+                                key={j}
+                                href={src.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs text-primary hover:underline block"
+                              >
+                                {src.title}
+                              </a>
+                            ))}
+                          </div>
+                        </>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+              ))}
+
+              {isLoading && (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  <span className="text-sm">Thinking...</span>
+                </div>
+              )}
+            </div>
+          </ScrollArea>
+
+          {/* Bottom Input */}
+          <div className="border-t p-4">
+            <form onSubmit={handleAsk} className="max-w-3xl mx-auto">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder="Ask a follow-up question..."
+                    className="pl-10"
+                    disabled={isLoading}
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  disabled={!query.trim() || isLoading}
+                >
+                  <Send className="size-4" />
+                </Button>
+              </div>
+            </form>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
