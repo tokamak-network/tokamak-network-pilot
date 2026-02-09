@@ -1,0 +1,54 @@
+---
+description: Backend conventions — NestJS modules, Swagger, DTOs
+globs: apps/api/**/*.ts
+alwaysApply: false
+---
+
+# Backend Stack & Conventions (NestJS)
+
+## Module Structure
+
+Each domain feature is a NestJS module in `apps/api/src/modules/`:
+
+```
+modules/
+├── rag/        # Ask questions, semantic search (RAG pipeline)
+├── sources/    # Knowledge source management (GitHub, docs, files)
+├── content/    # Team-curated content entries
+└── auth/       # Authentication & authorization (JWT)
+```
+
+Each module follows the pattern: `module.ts`, `controller.ts`, `service.ts`, and `dto/` folder.
+
+## DTOs & Validation
+
+- Use `class-validator` decorators for input validation
+- Use `class-transformer` for transformation
+- DTOs live in `modules/<feature>/dto/` folder
+- Use `!` definite assignment for DTO properties (they are populated by the validation pipe, not constructors)
+
+```typescript
+// ✅ GOOD
+export class AskQuestionDto {
+  @IsString()
+  @IsNotEmpty()
+  question!: string;  // note the ! — required for strict mode
+}
+```
+
+## Swagger / OpenAPI
+
+- **Every controller and endpoint must have Swagger decorators** — `@ApiTags`, `@ApiOperation`, `@ApiBearerAuth` (if auth required)
+- DTOs should use `@ApiProperty` / `@ApiPropertyOptional`
+- Docs auto-served at `http://localhost:4000/docs`
+
+## Configuration
+
+- Use `@nestjs/config` with `ConfigService` — never read `process.env` directly
+- Env files resolve from both `apps/api/.env` and root `../../.env`
+
+## API Conventions
+
+- Global prefix: `/api/v1` (set in `main.ts`)
+- CORS enabled for `http://localhost:3000`
+- Global `ValidationPipe` with whitelist + transform enabled
