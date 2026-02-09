@@ -86,6 +86,89 @@ export interface User {
 
 export type UserRole = 'admin' | 'project_lead' | 'member' | 'viewer';
 
+// ---- Document Chunk Types ----
+
+export type ChunkType =
+  | 'readme'
+  | 'code'
+  | 'issue'
+  | 'pull_request'
+  | 'documentation'
+  | 'markdown'
+  | 'text'
+  | 'comment';
+
+export interface DocumentChunk {
+  id: string;
+  content: string;
+  sourceId: string;
+  sourceType: SourceType;
+  chunkType: ChunkType;
+  metadata: ChunkMetadata;
+  embedding?: number[];
+}
+
+export interface ChunkMetadata {
+  title?: string;
+  url?: string;
+  filePath?: string;
+  repo?: string;
+  owner?: string;
+  language?: string;
+  /** ISO date */
+  lastUpdated?: string;
+  /** Additional key-value pairs */
+  [key: string]: unknown;
+}
+
+// ---- Vector Search Types ----
+
+export interface VectorSearchResult {
+  id: string;
+  content: string;
+  score: number;
+  chunkType: ChunkType;
+  metadata: ChunkMetadata;
+}
+
+// ---- Ingestion Types ----
+
+export type IngestionStatus =
+  | 'pending'
+  | 'fetching'
+  | 'chunking'
+  | 'embedding'
+  | 'storing'
+  | 'completed'
+  | 'failed';
+
+export interface IngestionJob {
+  id: string;
+  sourceId: string;
+  status: IngestionStatus;
+  totalChunks: number;
+  processedChunks: number;
+  error?: string;
+  startedAt: string;
+  completedAt?: string;
+}
+
+export interface GitHubRepoConfig {
+  owner: string;
+  repo: string;
+  branch?: string;
+  /** Glob patterns of files to include */
+  includePaths?: string[];
+  /** Glob patterns of files to exclude */
+  excludePaths?: string[];
+  /** Whether to index issues */
+  indexIssues?: boolean;
+  /** Whether to index pull requests */
+  indexPullRequests?: boolean;
+  /** Whether to index code files */
+  indexCode?: boolean;
+}
+
 // ---- Common Types ----
 
 export interface ConversationMessage {

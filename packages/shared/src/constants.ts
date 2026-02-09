@@ -25,3 +25,27 @@ export const USER_ROLE_LABELS: Record<string, string> = {
 
 /** Tokamak GitHub org */
 export const TOKAMAK_GITHUB_ORG = 'tokamak-network';
+
+/** Qdrant collection name for document chunks */
+export const QDRANT_COLLECTION_NAME = 'tokamak_knowledge';
+
+/** Embedding model dimensions */
+export const EMBEDDING_DIMENSIONS = 1536;
+
+/** Default chunk size (characters) */
+export const DEFAULT_CHUNK_SIZE = 1500;
+
+/** Default chunk overlap (characters) */
+export const DEFAULT_CHUNK_OVERLAP = 200;
+
+/** Chunk type labels */
+export const CHUNK_TYPE_LABELS: Record<string, string> = {
+  readme: 'README',
+  code: 'Source Code',
+  issue: 'GitHub Issue',
+  pull_request: 'Pull Request',
+  documentation: 'Documentation',
+  markdown: 'Markdown File',
+  text: 'Plain Text',
+  comment: 'Comment',
+};
