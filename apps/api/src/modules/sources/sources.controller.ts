@@ -7,8 +7,9 @@ import {
   Param,
   Body,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody } from '@nestjs/swagger';
 import { SourcesService } from './sources.service';
+import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
 
 @ApiTags('sources')
 @Controller('sources')
@@ -32,17 +33,19 @@ export class SourcesController {
   @ApiOperation({
     summary: 'Register a new knowledge source',
     description:
-      'Add a GitHub repo, documentation URL, file upload, or other source type to the indexing pipeline.',
+      'Add a GitHub repo, documentation URL, file upload, or other source type to the indexing pipeline. Automatically triggers ingestion.',
   })
-  async create(@Body() body: any) {
-    return this.sourcesService.create(body);
+  @ApiBody({ type: CreateSourceDto })
+  async create(@Body() dto: CreateSourceDto) {
+    return this.sourcesService.create(dto);
   }
 
   @Put(':id')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a knowledge source configuration' })
-  async update(@Param('id') id: string, @Body() body: any) {
-    return this.sourcesService.update(id, body);
+  @ApiBody({ type: UpdateSourceDto })
+  async update(@Param('id') id: string, @Body() dto: UpdateSourceDto) {
+    return this.sourcesService.update(id, dto);
   }
 
   @Delete(':id')

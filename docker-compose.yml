@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  # ---- PostgreSQL (metadata, auth, content) ----
+  postgres:
+    image: postgres:16-alpine
+    container_name: tokamak-postgres
+    restart: unless-stopped
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: tokamak_pilot
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  # ---- Qdrant (vector database) ----
+  qdrant:
+    image: qdrant/qdrant:v1.12.1
+    container_name: tokamak-qdrant
+    restart: unless-stopped
+    ports:
+      - '6333:6333' # REST API
+      - '6334:6334' # gRPC
+    volumes:
+      - qdrant_data:/qdrant/storage
+
+  # ---- Redis (BullMQ job queue, caching) ----
+  redis:
+    image: redis:7-alpine
+    container_name: tokamak-redis
+    restart: unless-stopped
+    ports:
+      - '6379:6379'
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  redis_data:

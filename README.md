@@ -86,8 +86,8 @@ The system can ingest knowledge from multiple source types:
 
 | Source Type      | Description                              | Status     |
 | ---------------- | ---------------------------------------- | ---------- |
-| GitHub Repos     | Code, docs, issues, PRs from repos       | Planned    |
-| GitHub Org       | All repos in a GitHub organization        | Planned    |
+| GitHub Repos     | Code, docs, issues, PRs from repos       | Done       |
+| GitHub Org       | All repos in a GitHub organization        | Done       |
 | Documentation    | External documentation URLs               | Planned    |
 | File Uploads     | PDF, Markdown, TXT file uploads           | Planned    |
 | Notion           | Notion workspace pages                    | Planned    |
@@ -132,15 +132,15 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 ## Roadmap
 
-- [ ] GitHub RAG ingestion pipeline
-- [ ] Vector database integration (Qdrant)
-- [ ] LLM integration (OpenAI / Anthropic)
+- [x] GitHub RAG ingestion pipeline
+- [x] Vector database integration (Qdrant)
+- [x] LLM integration (OpenAI / Anthropic)
 - [ ] Content management CRUD with auth
 - [ ] File upload and document parsing
 - [ ] Notion integration
 - [ ] Conversation history / follow-ups
 - [ ] SDK publishing to npm
-- [ ] Docker Compose for local infra
+- [x] Docker Compose for local infra
 - [ ] CI/CD pipeline
 
 ## License
