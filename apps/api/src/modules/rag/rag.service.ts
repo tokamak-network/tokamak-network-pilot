@@ -1,8 +1,8 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import OpenAI from 'openai';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { VectorService, VectorSearchResult } from '../vector/vector.service';
+import { LlmService } from '../llm/llm.service';
+import { ChatMessage } from '../llm/llm.types';
 import { AskQuestionDto } from './dto/ask-question.dto';
 
 const TOP_K = 8; // Number of chunks to retrieve
@@ -10,28 +10,25 @@ const TOP_K = 8; // Number of chunks to retrieve
 @Injectable()
 export class RagService {
   private readonly logger = new Logger(RagService.name);
-  private readonly openai: OpenAI;
 
   constructor(
-    private readonly config: ConfigService,
     private readonly embedding: EmbeddingService,
     private readonly vector: VectorService,
-  ) {
-    this.openai = new OpenAI({
-      apiKey: this.config.get<string>('OPENAI_API_KEY'),
-    });
-  }
+    private readonly llm: LlmService,
+  ) {}
 
   /**
    * Process a question through the full RAG pipeline:
    *  1. Embed the question
    *  2. Retrieve relevant chunks from Qdrant
    *  3. Build prompt with context
-   *  4. Generate answer via OpenAI
+   *  4. Generate answer via LLM (OpenAI or Anthropic)
    *  5. Return answer with citations
    */
   async ask(dto: AskQuestionDto) {
-    this.logger.log(`Question received: ${dto.question}`);
+    this.logger.log(
+      `Question received: "${dto.question}" [provider=${this.llm.getProvider()}]`,
+    );
 
     // 1. Embed the question
     const questionVector = await this.embedding.embedText(dto.question);
@@ -46,22 +43,21 @@ export class RagService {
         question: dto.question,
         sources: [],
         confidence: 0,
+        provider: this.llm.getProvider(),
+        model: this.llm.getModel(),
       };
     }
 
     // 3. Build context from retrieved chunks
     const context = this.buildContext(searchResults);
 
-    // 4. Generate answer via OpenAI
+    // 4. Generate answer via configured LLM provider
     const messages = this.buildMessages(dto, context);
-    const completion = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+    const completion = await this.llm.chatCompletion({
       messages,
       temperature: 0.3,
-      max_tokens: 1500,
+      maxTokens: 1500,
     });
-
-    const answer = completion.choices[0]?.message?.content || 'Unable to generate an answer.';
 
     // 5. Extract source citations
     const sources = this.extractCitations(searchResults);
@@ -71,10 +67,13 @@ export class RagService {
       searchResults.reduce((sum, r) => sum + r.score, 0) / searchResults.length;
 
     return {
-      answer,
+      answer: completion.content,
       question: dto.question,
       sources,
       confidence: Math.round(avgScore * 100) / 100,
+      provider: completion.provider,
+      model: completion.model,
+      usage: completion.usage,
     };
   }
 
@@ -117,10 +116,7 @@ export class RagService {
       .join('\n\n---\n\n');
   }
 
-  private buildMessages(
-    dto: AskQuestionDto,
-    context: string,
-  ): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+  private buildMessages(dto: AskQuestionDto, context: string): ChatMessage[] {
     const systemPrompt = `You are a knowledgeable assistant for the Tokamak Network ecosystem. Answer questions accurately based on the provided context documents. If the context doesn't contain enough information, say so honestly. Always cite your sources by referencing the [Source N] tags.
 
 Rules:
@@ -130,7 +126,7 @@ Rules:
 - Be concise but thorough
 - Use Markdown formatting for better readability`;
 
-    const messages: Array<{ role: 'system' | 'user' | 'assistant'; content: string }> = [
+    const messages: ChatMessage[] = [
       { role: 'system', content: systemPrompt },
     ];
 

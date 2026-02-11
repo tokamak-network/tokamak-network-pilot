@@ -6,6 +6,7 @@ import { AppService } from './app.service';
 import { DatabaseModule } from './modules/database/database.module';
 import { VectorModule } from './modules/vector/vector.module';
 import { EmbeddingModule } from './modules/embedding/embedding.module';
+import { LlmModule } from './modules/llm/llm.module';
 import { GitHubModule } from './modules/github/github.module';
 import { IngestionModule } from './modules/ingestion/ingestion.module';
 import { RagModule } from './modules/rag/rag.module';
@@ -45,6 +46,7 @@ import { AuthModule } from './modules/auth/auth.module';
     // ── Infrastructure modules ──
     VectorModule,
     EmbeddingModule,
+    LlmModule,
     GitHubModule,
     IngestionModule,
 
