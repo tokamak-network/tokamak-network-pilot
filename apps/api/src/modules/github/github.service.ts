@@ -11,6 +11,58 @@ export interface RawDocument {
   metadata: Record<string, unknown>;
 }
 
+/** Repo metadata from the GitHub API. */
+export interface RepoMeta {
+  owner: string;
+  repo: string;
+  url: string;
+  description: string | null;
+  language: string | null;
+  topics: string[];
+  stars: number;
+  forks: number;
+  defaultBranch: string;
+  isArchived: boolean;
+  isFork: boolean;
+  pushedAt: string | null;
+}
+
+// ── File types worth indexing ───────────────────────────────
+
+/** Code / config extensions to fetch — covers most languages in crypto/web3 ecosystems */
+const CODE_EXTENSIONS = [
+  // Smart contracts & blockchain
+  '.sol', '.vy', '.cairo', '.move',
+  // Web / JS / TS
+  '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs',
+  // Systems
+  '.go', '.rs', '.c', '.cpp', '.h', '.hpp',
+  // Scripting / data science
+  '.py', '.rb', '.sh', '.bash',
+  // JVM
+  '.java', '.kt', '.scala',
+  // Config & infra
+  '.yaml', '.yml', '.toml', '.ini', '.env.example',
+  // Build / CI
+  '.dockerfile', '.graphql', '.proto',
+];
+
+/** Important standalone config files (matched by exact name) */
+const CONFIG_FILES = [
+  'package.json', 'tsconfig.json', 'hardhat.config.ts', 'hardhat.config.js',
+  'foundry.toml', 'truffle-config.js', 'Cargo.toml', 'go.mod', 'go.sum',
+  'Makefile', 'Dockerfile', 'docker-compose.yml', 'docker-compose.yaml',
+  '.github/workflows', 'turbo.json', 'nx.json', 'lerna.json',
+  'pyproject.toml', 'requirements.txt', 'Gemfile',
+];
+
+/** Directories to skip entirely */
+const SKIP_DIRS = [
+  'node_modules', 'dist', 'build', '.next', '__pycache__',
+  'target', 'vendor', '.git', 'coverage', '.nyc_output',
+  'artifacts', 'cache', 'typechain-types', 'out',
+];
+
 @Injectable()
 export class GitHubService {
   private readonly logger = new Logger(GitHubService.name);
@@ -24,10 +76,10 @@ export class GitHubService {
   // ───────────────────── Org-level helpers ─────────────────────
 
   /**
-   * List all public repos in an organization.
+   * List all public repos in an organization (with metadata).
    */
-  async listOrgRepos(org: string): Promise<Array<{ owner: string; repo: string; url: string }>> {
-    const repos: Array<{ owner: string; repo: string; url: string }> = [];
+  async listOrgRepos(org: string): Promise<RepoMeta[]> {
+    const repos: RepoMeta[] = [];
     let page = 1;
 
     while (true) {
@@ -45,6 +97,15 @@ export class GitHubService {
           owner: r.owner.login,
           repo: r.name,
           url: r.html_url,
+          description: r.description,
+          language: r.language ?? null,
+          topics: r.topics ?? [],
+          stars: r.stargazers_count ?? 0,
+          forks: r.forks_count ?? 0,
+          defaultBranch: r.default_branch ?? 'main',
+          isArchived: r.archived ?? false,
+          isFork: r.fork ?? false,
+          pushedAt: r.pushed_at ?? null,
         });
       }
       page++;
@@ -54,7 +115,63 @@ export class GitHubService {
     return repos;
   }
 
+  /**
+   * Get metadata for a single repo.
+   */
+  async getRepoMeta(owner: string, repo: string): Promise<RepoMeta> {
+    const { data: r } = await this.octokit.repos.get({ owner, repo });
+    return {
+      owner: r.owner.login,
+      repo: r.name,
+      url: r.html_url,
+      description: r.description,
+      language: r.language,
+      topics: r.topics ?? [],
+      stars: r.stargazers_count ?? 0,
+      forks: r.forks_count ?? 0,
+      defaultBranch: r.default_branch ?? 'main',
+      isArchived: r.archived ?? false,
+      isFork: r.fork ?? false,
+      pushedAt: r.pushed_at ?? null,
+    };
+  }
+
   // ───────────────────── Repo-level fetchers ─────────────────────
+
+  /**
+   * Fetch repo metadata as a document (description, topics, stats).
+   */
+  async fetchRepoMetadata(owner: string, repo: string): Promise<RawDocument[]> {
+    try {
+      const meta = await this.getRepoMeta(owner, repo);
+      const content = [
+        `# ${owner}/${repo}`,
+        '',
+        meta.description ? `**Description:** ${meta.description}` : '',
+        meta.language ? `**Primary Language:** ${meta.language}` : '',
+        meta.topics.length > 0 ? `**Topics:** ${meta.topics.join(', ')}` : '',
+        `**Stars:** ${meta.stars} | **Forks:** ${meta.forks}`,
+        `**Default Branch:** ${meta.defaultBranch}`,
+        meta.isArchived ? '**Status:** Archived' : '',
+        meta.isFork ? '**Note:** This is a fork' : '',
+        meta.pushedAt ? `**Last Push:** ${meta.pushedAt}` : '',
+      ]
+        .filter(Boolean)
+        .join('\n');
+
+      return [
+        {
+          title: `${owner}/${repo} — Repository Info`,
+          content,
+          contentType: 'readme',
+          url: `https://github.com/${owner}/${repo}`,
+          metadata: { ...meta },
+        },
+      ];
+    } catch {
+      return [];
+    }
+  }
 
   /**
    * Fetch the README of a repo.
@@ -83,34 +200,64 @@ export class GitHubService {
   }
 
   /**
-   * Recursively fetch all Markdown / doc files from /docs and root.
+   * Fetch ALL markdown files anywhere in the repo tree (not just /docs).
    */
-  async fetchRepoDocs(owner: string, repo: string): Promise<RawDocument[]> {
+  async fetchAllMarkdown(owner: string, repo: string, maxFiles = 500): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
 
-    // Fetch from common doc paths
-    const docPaths = ['docs', 'documentation', 'doc', '.'];
+    try {
+      const { tree, truncated } = await this.getRepoTree(owner, repo);
 
-    for (const basePath of docPaths) {
-      try {
-        await this.fetchMarkdownFiles(owner, repo, basePath, docs);
-      } catch {
-        // path doesn't exist — skip
+      if (truncated) {
+        this.logger.warn(
+          `Repository ${owner}/${repo} tree was truncated by GitHub — some deeply nested .md files may be missed`,
+        );
       }
+
+      const mdFiles = tree
+        .filter(
+          (f) =>
+            f.type === 'blob' &&
+            f.path &&
+            /\.(md|mdx|rst)$/i.test(f.path) &&
+            !SKIP_DIRS.some((d) => f.path!.includes(`${d}/`)) &&
+            (f.size ?? 0) < 500_000, // allow up to 500KB markdown files
+        )
+        .slice(0, maxFiles);
+
+      this.logger.log(
+        `Found ${mdFiles.length} markdown files in ${owner}/${repo} (tree had ${tree.length} entries${truncated ? ', truncated' : ''})`,
+      );
+
+      for (const file of mdFiles) {
+        try {
+          const content = await this.fetchFileContent(owner, repo, file.path!);
+          // Skip truly empty files (< 20 chars) — things like just a title
+          if (content.trim().length < 20) continue;
+
+          docs.push({
+            title: `${owner}/${repo}: ${file.path}`,
+            content,
+            contentType: 'documentation',
+            url: `https://github.com/${owner}/${repo}/blob/main/${file.path}`,
+            metadata: { owner, repo, path: file.path, size: file.size },
+          });
+        } catch {
+          // skip unreadable
+        }
+      }
+    } catch (error) {
+      this.logger.warn(`Could not fetch markdown tree for ${owner}/${repo}: ${error}`);
     }
 
-    this.logger.log(`Fetched ${docs.length} doc files from ${owner}/${repo}`);
+    this.logger.log(`Fetched ${docs.length} markdown files from ${owner}/${repo}`);
     return docs;
   }
 
   /**
    * Fetch issues (open and closed, most recent first).
    */
-  async fetchIssues(
-    owner: string,
-    repo: string,
-    maxIssues = 100,
-  ): Promise<RawDocument[]> {
+  async fetchIssues(owner: string, repo: string, maxIssues = 100): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
     let page = 1;
 
@@ -128,7 +275,6 @@ export class GitHubService {
       if (data.length === 0) break;
 
       for (const issue of data) {
-        // Skip pull requests (GitHub API includes them in issues endpoint)
         if (issue.pull_request) continue;
 
         const comments = await this.fetchIssueComments(owner, repo, issue.number);
@@ -139,9 +285,7 @@ export class GitHubService {
           '',
           issue.body || '(no description)',
           '',
-          ...comments.map(
-            (c, i) => `--- Comment ${i + 1} ---\n${c}`,
-          ),
+          ...comments.map((c, i) => `--- Comment ${i + 1} ---\n${c}`),
         ].join('\n');
 
         docs.push({
@@ -169,11 +313,7 @@ export class GitHubService {
   /**
    * Fetch pull requests (open and closed/merged).
    */
-  async fetchPullRequests(
-    owner: string,
-    repo: string,
-    maxPRs = 50,
-  ): Promise<RawDocument[]> {
+  async fetchPullRequests(owner: string, repo: string, maxPRs = 50): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
     let page = 1;
 
@@ -223,38 +363,51 @@ export class GitHubService {
   }
 
   /**
-   * Fetch notable code files (Solidity contracts, TypeScript, config files).
+   * Fetch code files broadly — all languages, config files, etc.
    */
   async fetchCodeFiles(
     owner: string,
     repo: string,
-    extensions = ['.sol', '.ts', '.js', '.json'],
-    maxFiles = 50,
+    maxFiles = 150,
   ): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
 
     try {
-      const tree = await this.getRepoTree(owner, repo);
+      const { tree } = await this.getRepoTree(owner, repo);
+
+      const isCodeFile = (path: string) =>
+        CODE_EXTENSIONS.some((ext) => path.endsWith(ext));
+
+      const isConfigFile = (path: string) =>
+        CONFIG_FILES.some((name) => path === name || path.endsWith(`/${name}`));
+
+      const isSkippedDir = (path: string) =>
+        SKIP_DIRS.some((d) => path.includes(`${d}/`) || path.startsWith(`${d}/`));
 
       const codeFiles = tree
         .filter(
           (f) =>
             f.type === 'blob' &&
-            extensions.some((ext) => f.path?.endsWith(ext)) &&
-            !f.path?.includes('node_modules') &&
-            !f.path?.includes('dist/') &&
-            !f.path?.includes('.min.') &&
-            (f.size ?? 0) < 100_000, // skip large files
+            f.path &&
+            !isSkippedDir(f.path) &&
+            !f.path.endsWith('.min.js') &&
+            !f.path.endsWith('.min.css') &&
+            !f.path.endsWith('.map') &&
+            !f.path.endsWith('.lock') &&
+            !f.path.endsWith('package-lock.json') &&
+            !f.path.endsWith('yarn.lock') &&
+            !f.path.endsWith('pnpm-lock.yaml') &&
+            (isCodeFile(f.path) || isConfigFile(f.path)) &&
+            (f.size ?? 0) < 100_000, // skip large generated files
         )
         .slice(0, maxFiles);
 
       for (const file of codeFiles) {
         try {
-          const content = await this.fetchFileContent(
-            owner,
-            repo,
-            file.path!,
-          );
+          const content = await this.fetchFileContent(owner, repo, file.path!);
+          // Skip empty/trivial files
+          if (content.trim().length < 20) continue;
+
           docs.push({
             title: `${owner}/${repo}: ${file.path}`,
             content,
@@ -278,8 +431,6 @@ export class GitHubService {
    * Fetch wiki pages (if the repo has a wiki).
    */
   async fetchWiki(owner: string, repo: string): Promise<RawDocument[]> {
-    // GitHub doesn't have an official API for wiki content.
-    // We attempt to access the wiki repo (<repo>.wiki.git) via the contents API.
     try {
       const wikiRepo = `${repo}.wiki`;
       const { data } = await this.octokit.repos.getContent({
@@ -291,17 +442,11 @@ export class GitHubService {
       if (!Array.isArray(data)) return [];
 
       const docs: RawDocument[] = [];
-      const mdFiles = data.filter(
-        (f) => f.type === 'file' && f.name.endsWith('.md'),
-      );
+      const mdFiles = data.filter((f) => f.type === 'file' && f.name.endsWith('.md'));
 
       for (const file of mdFiles) {
         try {
-          const content = await this.fetchFileContent(
-            owner,
-            wikiRepo,
-            file.path,
-          );
+          const content = await this.fetchFileContent(owner, wikiRepo, file.path);
           docs.push({
             title: `Wiki: ${file.name.replace('.md', '')}`,
             content,
@@ -323,31 +468,74 @@ export class GitHubService {
   }
 
   /**
-   * Fetch ALL content types for a single repo.
+   * Fetch repo content with configurable depth.
+   *
+   * - `light` (default): Only metadata + README + all .md files.
+   *   Fast, no rate-limit concerns — ideal for bulk org ingestion.
+   *
+   * - `full`: Everything — metadata, README, markdown, issues, PRs,
+   *   code files, wiki. Use on-demand per repo.
    */
-  async fetchAllRepoContent(owner: string, repo: string): Promise<RawDocument[]> {
-    this.logger.log(`Fetching all content from ${owner}/${repo}...`);
+  async fetchAllRepoContent(
+    owner: string,
+    repo: string,
+    mode: 'light' | 'full' = 'light',
+  ): Promise<{
+    documents: RawDocument[];
+    breakdown: Record<string, number>;
+    meta: RepoMeta | null;
+  }> {
+    this.logger.log(`Fetching ${mode} content from ${owner}/${repo}...`);
 
-    const [readme, docs, issues, prs, code, wiki] = await Promise.allSettled([
-      this.fetchRepoReadme(owner, repo),
-      this.fetchRepoDocs(owner, repo),
-      this.fetchIssues(owner, repo),
-      this.fetchPullRequests(owner, repo),
-      this.fetchCodeFiles(owner, repo),
-      this.fetchWiki(owner, repo),
-    ]);
-
-    const all: RawDocument[] = [];
-    for (const result of [readme, docs, issues, prs, code, wiki]) {
-      if (result.status === 'fulfilled') {
-        all.push(...result.value);
-      }
+    // Fetch repo metadata separately so we can return it for the caller
+    let meta: RepoMeta | null = null;
+    try {
+      meta = await this.getRepoMeta(owner, repo);
+    } catch {
+      this.logger.warn(`Could not fetch metadata for ${owner}/${repo}`);
     }
 
+    // Light mode: only markdown / docs
+    const lightFetchers: Array<Promise<RawDocument[]>> = [
+      this.fetchRepoMetadata(owner, repo),
+      this.fetchRepoReadme(owner, repo),
+      this.fetchAllMarkdown(owner, repo),
+    ];
+    const lightLabels = ['metadata', 'readme', 'documentation'];
+
+    // Full mode: add issues, PRs, code, wiki
+    const fullFetchers: Array<Promise<RawDocument[]>> = mode === 'full'
+      ? [
+          this.fetchIssues(owner, repo),
+          this.fetchPullRequests(owner, repo),
+          this.fetchCodeFiles(owner, repo),
+          this.fetchWiki(owner, repo),
+        ]
+      : [];
+    const fullLabels = mode === 'full' ? ['issues', 'prs', 'code', 'wiki'] : [];
+
+    const results = await Promise.allSettled([...lightFetchers, ...fullFetchers]);
+    const labels = [...lightLabels, ...fullLabels];
+
+    const all: RawDocument[] = [];
+    const breakdown: Record<string, number> = {};
+
+    results.forEach((result, i) => {
+      if (result.status === 'fulfilled') {
+        all.push(...result.value);
+        breakdown[labels[i]] = result.value.length;
+      } else {
+        breakdown[labels[i]] = 0;
+        this.logger.warn(
+          `Failed to fetch ${labels[i]} for ${owner}/${repo}: ${result.reason}`,
+        );
+      }
+    });
+
     this.logger.log(
-      `Total: ${all.length} documents from ${owner}/${repo}`,
+      `Total: ${all.length} documents (${mode}) from ${owner}/${repo} — ${JSON.stringify(breakdown)}`,
     );
-    return all;
+    return { documents: all, breakdown, meta };
   }
 
   // ───────────────────── Private helpers ─────────────────────
@@ -371,60 +559,7 @@ export class GitHubService {
     }
   }
 
-  private async fetchMarkdownFiles(
-    owner: string,
-    repo: string,
-    path: string,
-    docs: RawDocument[],
-  ): Promise<void> {
-    const { data } = await this.octokit.repos.getContent({ owner, repo, path });
-
-    if (!Array.isArray(data)) {
-      // Single file
-      if (data.name.endsWith('.md') || data.name.endsWith('.mdx')) {
-        const content = Buffer.from(
-          (data as any).content,
-          'base64',
-        ).toString('utf-8');
-        docs.push({
-          title: `${owner}/${repo}: ${data.path}`,
-          content,
-          contentType: 'documentation',
-          url: data.html_url!,
-          metadata: { owner, repo, path: data.path },
-        });
-      }
-      return;
-    }
-
-    for (const item of data) {
-      if (
-        item.type === 'file' &&
-        (item.name.endsWith('.md') || item.name.endsWith('.mdx'))
-      ) {
-        try {
-          const content = await this.fetchFileContent(owner, repo, item.path);
-          docs.push({
-            title: `${owner}/${repo}: ${item.path}`,
-            content,
-            contentType: 'documentation',
-            url: item.html_url!,
-            metadata: { owner, repo, path: item.path },
-          });
-        } catch {
-          // skip unreadable
-        }
-      } else if (item.type === 'dir') {
-        await this.fetchMarkdownFiles(owner, repo, item.path, docs);
-      }
-    }
-  }
-
-  private async fetchFileContent(
-    owner: string,
-    repo: string,
-    path: string,
-  ): Promise<string> {
+  private async fetchFileContent(owner: string, repo: string, path: string): Promise<string> {
     const { data } = await this.octokit.repos.getContent({ owner, repo, path });
     if (Array.isArray(data) || data.type !== 'file') {
       throw new Error(`${path} is not a file`);
@@ -432,16 +567,13 @@ export class GitHubService {
     return Buffer.from((data as any).content, 'base64').toString('utf-8');
   }
 
-  private async getRepoTree(
-    owner: string,
-    repo: string,
-  ) {
+  private async getRepoTree(owner: string, repo: string) {
     const { data } = await this.octokit.git.getTree({
       owner,
       repo,
       tree_sha: 'HEAD',
       recursive: 'true',
     });
-    return data.tree;
+    return { tree: data.tree, truncated: !!data.truncated };
   }
 }

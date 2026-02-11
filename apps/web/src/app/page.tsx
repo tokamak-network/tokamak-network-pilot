@@ -1,9 +1,10 @@
 'use client';
 
 import { useAtom } from 'jotai';
-import { Search, Send, Zap, Database, FileText, Loader2 } from 'lucide-react';
+import { Search, Send, Zap, Database, FileText, Loader2, LayoutDashboard } from 'lucide-react';
 import Link from 'next/link';
 import { queryAtom, isLoadingAtom, conversationAtom } from '@/store';
+import { askQuestion } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -27,30 +28,38 @@ export default function HomePage() {
     e.preventDefault();
     if (!query.trim() || isLoading) return;
 
+    const currentQuery = query;
     const userMessage: ConversationMessage = {
       role: 'user',
-      content: query,
+      content: currentQuery,
       timestamp: new Date(),
     };
 
     setConversation((prev) => [...prev, userMessage]);
     setIsLoading(true);
+    setQuery('');
 
-    // TODO: Call the /api/v1/ask endpoint
-    // Simulating a response for now
-    setTimeout(() => {
+    try {
+      const result = await askQuestion(currentQuery);
+
       const assistantMessage: ConversationMessage = {
         role: 'assistant',
-        content:
-          'RAG pipeline not yet implemented. This is a placeholder response. Once connected, I will search across all indexed Tokamak Network knowledge sources to provide accurate, cited answers.',
-        sources: [],
+        content: result.answer,
+        sources: result.sources,
         timestamp: new Date(),
       };
       setConversation((prev) => [...prev, assistantMessage]);
+    } catch (error: any) {
+      const errorMessage: ConversationMessage = {
+        role: 'assistant',
+        content: `Sorry, something went wrong: ${error.message || 'Could not reach the API'}. Make sure the API server is running and knowledge sources have been indexed.`,
+        sources: [],
+        timestamp: new Date(),
+      };
+      setConversation((prev) => [...prev, errorMessage]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
-
-    setQuery('');
+    }
   };
 
   return (
@@ -94,18 +103,34 @@ export default function HomePage() {
             </form>
 
             {/* Quick Link Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-2">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+              <Link href="/dashboard">
+                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-sm flex items-center gap-2">
+                      <LayoutDashboard className="size-4 text-muted-foreground" />
+                      Dashboard
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <CardDescription>
+                      Analytics & status
+                    </CardDescription>
+                  </CardContent>
+                </Card>
+              </Link>
+
               <Link href="/sources">
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <Database className="size-4 text-muted-foreground" />
-                      Knowledge Sources
+                      Sources
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription>
-                      GitHub repos, docs, files
+                      GitHub repos, docs
                     </CardDescription>
                   </CardContent>
                 </Card>
@@ -116,12 +141,12 @@ export default function HomePage() {
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
                       <FileText className="size-4 text-muted-foreground" />
-                      Team Content
+                      Content
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <CardDescription>
-                      Curated answers & guides
+                      Curated guides
                     </CardDescription>
                   </CardContent>
                 </Card>

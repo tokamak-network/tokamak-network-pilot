@@ -8,6 +8,8 @@ export const INGESTION_QUEUE = 'ingestion';
 export interface IngestionJobData {
   sourceId: string;
   action: 'ingest' | 'clear';
+  /** 'light' = markdown only (default), 'full' = everything */
+  fetchMode?: 'light' | 'full';
 }
 
 @Processor(INGESTION_QUEUE)
@@ -19,14 +21,14 @@ export class IngestionProcessor extends WorkerHost {
   }
 
   async process(job: Job<IngestionJobData>): Promise<void> {
-    const { sourceId, action } = job.data;
+    const { sourceId, action, fetchMode } = job.data;
     this.logger.log(
-      `Processing job ${job.id} — action="${action}" sourceId="${sourceId}"`,
+      `Processing job ${job.id} — action="${action}" sourceId="${sourceId}" mode="${fetchMode || 'light'}"`,
     );
 
     switch (action) {
       case 'ingest':
-        await this.ingestionService.ingestSource(sourceId);
+        await this.ingestionService.ingestSource(sourceId, fetchMode);
         break;
 
       case 'clear':

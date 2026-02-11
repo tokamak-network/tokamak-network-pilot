@@ -6,6 +6,7 @@ import { Document } from '../../entities/document.entity';
 import { SourcesController } from './sources.controller';
 import { SourcesService } from './sources.service';
 import { VectorModule } from '../vector/vector.module';
+import { LlmModule } from '../llm/llm.module';
 import { INGESTION_QUEUE } from '../ingestion/ingestion.processor';
 
 @Module({
@@ -13,6 +14,7 @@ import { INGESTION_QUEUE } from '../ingestion/ingestion.processor';
     TypeOrmModule.forFeature([Source, Document]),
     BullModule.registerQueue({ name: INGESTION_QUEUE }),
     VectorModule,
+    LlmModule,
   ],
   controllers: [SourcesController],
   providers: [SourcesService],

@@ -69,7 +69,8 @@ export interface ContentEntry {
   project?: string;
   category?: string;
   tags: string[];
-  author: string;
+  authorId: string;
+  author?: User;
   isOutdated: boolean;
   createdAt: string;
   updatedAt: string;
@@ -80,11 +81,31 @@ export interface ContentEntry {
 export interface User {
   id: string;
   email: string;
-  name: string;
+  name?: string;
   role: UserRole;
+  isActive?: boolean;
+  lastLoginAt?: string;
 }
 
 export type UserRole = 'admin' | 'project_lead' | 'member' | 'viewer';
+
+export interface RequestOtpRequest {
+  email: string;
+}
+
+export interface RequestOtpResponse {
+  message: string;
+}
+
+export interface VerifyOtpRequest {
+  email: string;
+  code: string;
+}
+
+export interface VerifyOtpResponse {
+  token: string;
+  user: User;
+}
 
 // ---- Common Types ----
 

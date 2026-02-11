@@ -7,14 +7,26 @@ import {
   Param,
   Body,
   Query,
+  UseGuards,
+  Request,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ContentService } from './content.service';
+import { CreateContentDto, UpdateContentDto } from './dto/content.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('content')
 @Controller('content')
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
+
+  // ─── Public: anyone can read ───────────────────────────────
 
   @Get()
   @ApiOperation({
@@ -24,11 +36,15 @@ export class ContentController {
   })
   @ApiQuery({ name: 'project', required: false })
   @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'page', required: false, type: Number })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
   async findAll(
     @Query('project') project?: string,
     @Query('category') category?: string,
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
   ) {
-    return this.contentService.findAll({ project, category });
+    return this.contentService.findAll({ project, category, page, limit });
   }
 
   @Get(':id')
@@ -37,30 +53,41 @@ export class ContentController {
     return this.contentService.findOne(id);
   }
 
+  // ─── Protected: must be authenticated ──────────────────────
+
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a new content entry',
     description:
-      'Project leads and team members can add curated knowledge entries.',
+      'Authenticated team members can add curated knowledge entries.',
   })
-  async create(@Body() body: any) {
-    return this.contentService.create(body);
+  @ApiResponse({ status: 201, description: 'Content entry created' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async create(@Body() dto: CreateContentDto, @Request() req: any) {
+    return this.contentService.create(dto, req.user.sub);
   }
 
   @Put(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update a content entry',
     description: 'Mark content as outdated, update answers, add notes, etc.',
   })
-  async update(@Param('id') id: string, @Body() body: any) {
-    return this.contentService.update(id, body);
+  @ApiResponse({ status: 200, description: 'Content entry updated' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
+  async update(@Param('id') id: string, @Body() dto: UpdateContentDto) {
+    return this.contentService.update(id, dto);
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a content entry' })
+  @ApiResponse({ status: 200, description: 'Content entry deleted' })
+  @ApiResponse({ status: 401, description: 'Not authenticated' })
   async remove(@Param('id') id: string) {
     return this.contentService.remove(id);
   }

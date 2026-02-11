@@ -95,18 +95,21 @@ The system can ingest knowledge from multiple source types:
 
 ## API Endpoints
 
-| Method | Path                 | Description                        |
-| ------ | -------------------- | ---------------------------------- |
-| POST   | `/api/v1/ask`        | Ask a question (RAG pipeline)      |
-| GET    | `/api/v1/ask/search` | Semantic search                    |
-| GET    | `/api/v1/sources`    | List knowledge sources             |
-| POST   | `/api/v1/sources`    | Add a knowledge source             |
-| POST   | `/api/v1/sources/:id/sync` | Trigger re-indexing           |
-| GET    | `/api/v1/content`    | List curated content entries       |
-| POST   | `/api/v1/content`    | Create content entry               |
-| PUT    | `/api/v1/content/:id`| Update content entry               |
-| POST   | `/api/v1/auth/login` | Authenticate                       |
-| GET    | `/api/v1/health`     | Health check                       |
+| Method | Path                        | Description                          | Auth   |
+| ------ | --------------------------- | ------------------------------------ | ------ |
+| POST   | `/api/v1/ask`               | Ask a question (RAG pipeline)        | —      |
+| GET    | `/api/v1/ask/search`        | Semantic search                      | —      |
+| GET    | `/api/v1/sources`           | List knowledge sources               | —      |
+| POST   | `/api/v1/sources`           | Add a knowledge source               | —      |
+| POST   | `/api/v1/sources/:id/sync`  | Trigger re-indexing                  | —      |
+| GET    | `/api/v1/content`           | List curated content entries         | —      |
+| POST   | `/api/v1/content`           | Create content entry                 | JWT    |
+| PUT    | `/api/v1/content/:id`       | Update content entry                 | JWT    |
+| DELETE | `/api/v1/content/:id`       | Delete content entry                 | JWT    |
+| POST   | `/api/v1/auth/request-otp`  | Request OTP login code               | —      |
+| POST   | `/api/v1/auth/verify-otp`   | Verify OTP → JWT token               | —      |
+| GET    | `/api/v1/auth/me`           | Get current user profile             | JWT    |
+| GET    | `/api/v1/health`            | Health check                         | —      |
 
 Full interactive docs at `http://localhost:4000/docs` (Swagger).
 
@@ -135,7 +138,8 @@ const { sources: knowledgeSources } = await pilot.listSources();
 - [x] GitHub RAG ingestion pipeline
 - [x] Vector database integration (Qdrant)
 - [x] LLM integration (OpenAI / Anthropic)
-- [ ] Content management CRUD with auth
+- [x] Auto-seed from `GITHUB_ORGS` / `GITHUB_REPOS` on startup
+- [x] Content management CRUD with auth (OTP email login, `@tokamak.network` only)
 - [ ] File upload and document parsing
 - [ ] Notion integration
 - [ ] Conversation history / follow-ups

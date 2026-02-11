@@ -26,16 +26,19 @@ export class IngestionService {
   ) {}
 
   /**
-   * Run the full ingestion pipeline for a source.
+   * Run the ingestion pipeline for a source.
+   * @param modeOverride — 'light' (markdown only) or 'full' (everything).
+   *   If not provided, reads from source.config.fetchMode (default: 'light').
    */
-  async ingestSource(sourceId: string): Promise<void> {
+  async ingestSource(sourceId: string, modeOverride?: 'light' | 'full'): Promise<void> {
     const source = await this.sourceRepo.findOneBy({ id: sourceId });
     if (!source) {
       this.logger.error(`Source ${sourceId} not found`);
       return;
     }
 
-    this.logger.log(`Starting ingestion for source "${source.name}" (${source.type})`);
+    const fetchMode = modeOverride || (source.config as any)?.fetchMode || 'light';
+    this.logger.log(`Starting ${fetchMode} ingestion for source "${source.name}" (${source.type})`);
 
     // Mark as syncing
     await this.sourceRepo.update(sourceId, {
@@ -45,14 +48,33 @@ export class IngestionService {
 
     try {
       // 1. Fetch raw documents from GitHub
-      const rawDocs = await this.fetchDocuments(source);
+      const { rawDocs, breakdown, repoMeta } = await this.fetchDocuments(source, fetchMode);
       this.logger.log(`Fetched ${rawDocs.length} raw documents`);
+
+      // Store the fetch breakdown + GitHub metadata in source config for monitoring/sorting
+      const updatedConfig: Record<string, unknown> = {
+        ...source.config,
+        fetchMode,
+        fetchBreakdown: breakdown,
+        fetchedAt: new Date().toISOString(),
+        rawDocumentCount: rawDocs.length,
+        // Store GitHub activity data for sorting
+        ...(repoMeta && {
+          pushedAt: repoMeta.pushedAt ?? undefined,
+          stars: repoMeta.stars,
+          forks: repoMeta.forks,
+          language: repoMeta.language ?? undefined,
+          description: repoMeta.description ?? undefined,
+          isArchived: repoMeta.isArchived,
+        }),
+      };
 
       if (rawDocs.length === 0) {
         await this.sourceRepo.update(sourceId, {
           status: 'active',
           lastSyncedAt: new Date(),
           documentCount: 0,
+          config: updatedConfig as any,
         });
         return;
       }
@@ -121,11 +143,12 @@ export class IngestionService {
         );
       }
 
-      // 5. Update source status
+      // 5. Update source status with full stats
       await this.sourceRepo.update(sourceId, {
         status: 'active',
         lastSyncedAt: new Date(),
         documentCount: storedCount,
+        config: { ...updatedConfig, chunkCount: storedCount } as any,
       });
 
       this.logger.log(
@@ -147,49 +170,53 @@ export class IngestionService {
    * Clear all documents and vectors for a source.
    */
   async clearSourceData(sourceId: string): Promise<void> {
-    // Delete vectors from Qdrant by source filter
     await this.vector.deleteByFilter({
       must: [{ key: 'sourceId', match: { value: sourceId } }],
     });
-
-    // Delete documents from PostgreSQL
     await this.documentRepo.delete({ sourceId });
-
     this.logger.log(`Cleared all data for source ${sourceId}`);
   }
 
   // ───────────────────── Private helpers ─────────────────────
 
-  private async fetchDocuments(source: Source): Promise<RawDocument[]> {
+  private async fetchDocuments(
+    source: Source,
+    mode: 'light' | 'full' = 'light',
+  ): Promise<{
+    rawDocs: RawDocument[];
+    breakdown: Record<string, number>;
+    repoMeta: import('../github/github.service').RepoMeta | null;
+  }> {
     switch (source.type) {
       case 'github_repo': {
         const { owner, repo } = source.config as { owner: string; repo: string };
-        return this.github.fetchAllRepoContent(owner, repo);
+        const result = await this.github.fetchAllRepoContent(owner, repo, mode);
+        return { rawDocs: result.documents, breakdown: result.breakdown, repoMeta: result.meta };
       }
 
       case 'github_org': {
         const { org } = source.config as { org: string };
         const repos = await this.github.listOrgRepos(org);
         const allDocs: RawDocument[] = [];
+        const breakdown: Record<string, number> = {};
 
         for (const r of repos) {
           try {
-            const docs = await this.github.fetchAllRepoContent(r.owner, r.repo);
-            allDocs.push(...docs);
+            const result = await this.github.fetchAllRepoContent(r.owner, r.repo, mode);
+            allDocs.push(...result.documents);
+            for (const [key, count] of Object.entries(result.breakdown)) {
+              breakdown[key] = (breakdown[key] || 0) + count;
+            }
           } catch (error) {
-            this.logger.warn(
-              `Failed to fetch ${r.owner}/${r.repo}: ${error}`,
-            );
+            this.logger.warn(`Failed to fetch ${r.owner}/${r.repo}: ${error}`);
           }
         }
-        return allDocs;
+        return { rawDocs: allDocs, breakdown, repoMeta: null };
       }
 
       default:
-        this.logger.warn(
-          `Source type "${source.type}" ingestion not yet implemented`,
-        );
-        return [];
+        this.logger.warn(`Source type "${source.type}" ingestion not yet implemented`);
+        return { rawDocs: [], breakdown: {}, repoMeta: null };
     }
   }
 }
