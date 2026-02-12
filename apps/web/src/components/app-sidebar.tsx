@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useCallback, useMemo, useState } from 'react';
+import { useEffect, useCallback, useMemo, useState, useRef } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { useAtom, useSetAtom } from 'jotai';
+import { useAtom } from 'jotai';
 import {
   MessageSquare,
   Database,
@@ -19,12 +19,19 @@ import {
   LogOut,
   User,
   LayoutDashboard,
-  ChevronRight,
   Search,
   X,
+  ChevronRight,
+  GitFork,
+  Star,
 } from 'lucide-react';
 import { sourcesAtom, userAtom } from '@/store';
-import { fetchSources, fetchMe } from '@/lib/api';
+import { fetchSources, fetchMe, type SourceResponse } from '@/lib/api';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 
 import {
   Sidebar,
@@ -42,7 +49,6 @@ import {
 const mainNav = [
   { label: 'Ask', href: '/', icon: MessageSquare },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { label: 'Sources', href: '/sources', icon: Database },
   { label: 'Content', href: '/content', icon: FileText },
 ];
 
@@ -72,33 +78,27 @@ const statusDots: Record<string, string> = {
   disabled: 'bg-gray-400',
 };
 
-/** Max repos to show in the sidebar before a "View all" link */
-const MAX_SIDEBAR_REPOS = 20;
-
 export function AppSidebar() {
   const pathname = usePathname();
   const router = useRouter();
   const [sources, setSources] = useAtom(sourcesAtom);
   const [user, setUser] = useAtom(userAtom);
+  const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [repoSearch, setRepoSearch] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Load sources for sidebar on mount
     fetchSources()
       .then((data) => setSources(data.sources))
-      .catch(() => {
-        // API might not be running
-      });
+      .catch(() => {});
   }, [setSources]);
 
-  // Restore auth state from localStorage on mount
   useEffect(() => {
     const token = localStorage.getItem('tokamak_token');
     if (token && !user) {
       fetchMe()
         .then((u) => setUser(u))
         .catch(() => {
-          // Token invalid — clear it
           localStorage.removeItem('tokamak_token');
         });
     }
@@ -113,49 +113,38 @@ export function AppSidebar() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  /**
-   * Sort repos: currently-viewed repo always at top, then by latest GitHub
-   * commit (pushedAt), then by most documents. Filter by search query.
-   * Limit to MAX_SIDEBAR_REPOS.
-   */
+  // Sort repos for the flyout: latest commit first, then most documents
   const sortedSources = useMemo(() => {
-    const activeSourceId = pathname.startsWith('/sources/')
-      ? pathname.split('/')[2]
-      : null;
-
     let filtered = [...sources];
 
-    // Apply search filter
     if (repoSearch.trim()) {
       const q = repoSearch.toLowerCase();
       filtered = filtered.filter((s) => s.name.toLowerCase().includes(q));
     }
 
     filtered.sort((a, b) => {
-      // Active repo always goes first
-      if (a.id === activeSourceId) return -1;
-      if (b.id === activeSourceId) return 1;
-
-      // Primary: latest GitHub commit (pushedAt) first
       const aPushed = a.pushedAt ? new Date(a.pushedAt).getTime() : 0;
       const bPushed = b.pushedAt ? new Date(b.pushedAt).getTime() : 0;
       if (aPushed !== bPushed) return bPushed - aPushed;
-
-      // Secondary: most documents first
       if (b.documentCount !== a.documentCount) return b.documentCount - a.documentCount;
-
-      // Tertiary: last synced
-      const aSync = a.lastSyncedAt ? new Date(a.lastSyncedAt).getTime() : 0;
-      const bSync = b.lastSyncedAt ? new Date(b.lastSyncedAt).getTime() : 0;
-      return bSync - aSync;
+      return 0;
     });
 
-    return filtered.slice(0, MAX_SIDEBAR_REPOS);
-  }, [sources, pathname, repoSearch]);
+    return filtered;
+  }, [sources, repoSearch]);
+
+  // Focus the search input when the popover opens
+  useEffect(() => {
+    if (repoPopoverOpen) {
+      setTimeout(() => searchInputRef.current?.focus(), 100);
+    } else {
+      setRepoSearch('');
+    }
+  }, [repoPopoverOpen]);
 
   return (
     <Sidebar variant="sidebar" collapsible="icon">
-      {/* Header / Logo — h-14 matches the main content header */}
+      {/* Header / Logo */}
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border p-2">
         <SidebarMenu>
           <SidebarMenuItem>
@@ -165,7 +154,7 @@ export function AppSidebar() {
                   <Zap className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-semibold">Tokamak Network Pilot</span>
+                  <span className="font-semibold">Tokamak Pilot</span>
                   <span className="text-xs text-muted-foreground">Knowledge Hub</span>
                 </div>
               </Link>
@@ -194,92 +183,48 @@ export function AppSidebar() {
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
+
+              {/* Sources — with repo flyout */}
+              <SidebarMenuItem>
+                <Popover open={repoPopoverOpen} onOpenChange={setRepoPopoverOpen}>
+                  <PopoverTrigger asChild>
+                    <SidebarMenuButton
+                      isActive={isActive('/sources')}
+                      tooltip="Sources"
+                      className="w-full"
+                    >
+                      <Database />
+                      <span className="flex-1">Sources</span>
+                      {sources.length > 0 && (
+                        <span className="text-[10px] text-muted-foreground tabular-nums">
+                          {sources.length}
+                        </span>
+                      )}
+                      <ChevronRight className={`size-3 text-muted-foreground transition-transform ${repoPopoverOpen ? 'rotate-90' : ''}`} />
+                    </SidebarMenuButton>
+                  </PopoverTrigger>
+
+                  <PopoverContent
+                    side="right"
+                    align="start"
+                    sideOffset={8}
+                    className="w-80 p-0"
+                  >
+                    <RepoFlyout
+                      sources={sortedSources}
+                      allCount={sources.length}
+                      search={repoSearch}
+                      onSearchChange={setRepoSearch}
+                      searchRef={searchInputRef}
+                      pathname={pathname}
+                      onSelect={() => setRepoPopoverOpen(false)}
+                    />
+                  </PopoverContent>
+                </Popover>
+              </SidebarMenuItem>
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
-
-        {/* Dynamic Repositories — sorted by activity, active repo promoted to top */}
-        {sources.length > 0 && (
-          <SidebarGroup>
-            <SidebarGroupLabel>
-              Repositories
-              <span className="ml-auto text-[10px] text-muted-foreground font-normal">
-                {sources.length}
-              </span>
-            </SidebarGroupLabel>
-            <SidebarGroupContent>
-              {/* Quick search */}
-              {sources.length > 5 && (
-                <div className="px-2 pb-1.5">
-                  <div className="relative">
-                    <Search className="absolute left-2 top-1/2 -translate-y-1/2 size-3 text-muted-foreground pointer-events-none" />
-                    <input
-                      value={repoSearch}
-                      onChange={(e) => setRepoSearch(e.target.value)}
-                      placeholder="Search repos..."
-                      className="w-full h-7 pl-7 pr-7 text-xs rounded-md border border-sidebar-border bg-sidebar-accent/50 text-sidebar-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-sidebar-ring"
-                    />
-                    {repoSearch && (
-                      <button
-                        onClick={() => setRepoSearch('')}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-sidebar-foreground"
-                      >
-                        <X className="size-3" />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )}
-              <SidebarMenu>
-                {sortedSources.map((source) => {
-                  const Icon = sourceTypeIcons[source.type] || Database;
-                  const href = `/sources/${source.id}`;
-                  const active = pathname === href;
-                  return (
-                    <SidebarMenuItem key={source.id}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={active}
-                        tooltip={source.name}
-                      >
-                        <Link href={href}>
-                          <div className="relative">
-                            <Icon className="size-4" />
-                            <div
-                              className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${statusDots[source.status] || 'bg-gray-400'}`}
-                            />
-                          </div>
-                          <span className="truncate">{source.name}</span>
-                        </Link>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  );
-                })}
-                {repoSearch && sortedSources.length === 0 && (
-                  <SidebarMenuItem>
-                    <div className="px-2 py-2 text-xs text-muted-foreground text-center">
-                      No repos match &ldquo;{repoSearch}&rdquo;
-                    </div>
-                  </SidebarMenuItem>
-                )}
-                {(sources.length > MAX_SIDEBAR_REPOS || repoSearch) && sortedSources.length > 0 && (
-                  <SidebarMenuItem>
-                    <SidebarMenuButton asChild tooltip="View all repositories">
-                      <Link href="/sources" className="text-muted-foreground">
-                        <ChevronRight className="size-4" />
-                        <span className="text-xs">
-                          {repoSearch
-                            ? `${sortedSources.length} of ${sources.length} repos`
-                            : `View all ${sources.length} repos`}
-                        </span>
-                      </Link>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                )}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        )}
 
         <SidebarGroup>
           <SidebarGroupLabel>Tools</SidebarGroupLabel>
@@ -346,4 +291,160 @@ export function AppSidebar() {
       </SidebarFooter>
     </Sidebar>
   );
+}
+
+// ─── Repo Flyout Panel ──────────────────────────────────────
+
+function RepoFlyout({
+  sources,
+  allCount,
+  search,
+  onSearchChange,
+  searchRef,
+  pathname,
+  onSelect,
+}: {
+  sources: SourceResponse[];
+  allCount: number;
+  search: string;
+  onSearchChange: (v: string) => void;
+  searchRef: React.RefObject<HTMLInputElement | null>;
+  pathname: string;
+  onSelect: () => void;
+}) {
+  return (
+    <div className="flex flex-col max-h-[70vh]">
+      {/* Header with search */}
+      <div className="p-3 border-b">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-sm font-semibold">Repositories</h3>
+          <Link
+            href="/sources"
+            onClick={onSelect}
+            className="text-xs text-primary hover:underline"
+          >
+            View all {allCount}
+          </Link>
+        </div>
+        <div className="relative">
+          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+          <input
+            ref={searchRef}
+            value={search}
+            onChange={(e) => onSearchChange(e.target.value)}
+            placeholder="Search repositories..."
+            className="w-full h-8 pl-8 pr-8 text-sm rounded-md border bg-muted/50 placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+          />
+          {search && (
+            <button
+              onClick={() => onSearchChange('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
+        </div>
+        {search && (
+          <p className="text-[11px] text-muted-foreground mt-1.5">
+            {sources.length} of {allCount} repositories
+          </p>
+        )}
+      </div>
+
+      {/* Repo list */}
+      <div className="overflow-y-auto flex-1">
+        {sources.length === 0 ? (
+          <div className="p-6 text-center">
+            <Database className="size-6 text-muted-foreground mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">
+              {search ? `No repos match "${search}"` : 'No repositories indexed yet'}
+            </p>
+          </div>
+        ) : (
+          <div className="py-1">
+            {sources.map((source) => {
+              const Icon = sourceTypeIcons[source.type] || Database;
+              const href = `/sources/${source.id}`;
+              const active = pathname === href;
+              const repoName = source.name.includes('/')
+                ? source.name.split('/')[1]
+                : source.name;
+              const orgName = source.name.includes('/')
+                ? source.name.split('/')[0]
+                : null;
+
+              return (
+                <Link
+                  key={source.id}
+                  href={href}
+                  onClick={onSelect}
+                  className={`flex items-start gap-3 px-3 py-2 hover:bg-muted/80 transition-colors ${
+                    active ? 'bg-muted' : ''
+                  }`}
+                >
+                  <div className="relative mt-0.5 shrink-0">
+                    <Icon className="size-4 text-muted-foreground" />
+                    <div
+                      className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${statusDots[source.status] || 'bg-gray-400'}`}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-sm font-medium truncate">{repoName}</span>
+                      {source.language && (
+                        <span className="text-[10px] px-1 py-0.5 rounded bg-muted text-muted-foreground shrink-0">
+                          {source.language}
+                        </span>
+                      )}
+                    </div>
+                    {orgName && (
+                      <p className="text-[11px] text-muted-foreground">{orgName}</p>
+                    )}
+                    {source.description && (
+                      <p className="text-[11px] text-muted-foreground/70 truncate mt-0.5">
+                        {source.description}
+                      </p>
+                    )}
+                    <div className="flex items-center gap-3 mt-1 text-[10px] text-muted-foreground">
+                      {(source.stars ?? 0) > 0 && (
+                        <span className="flex items-center gap-0.5">
+                          <Star className="size-2.5" />
+                          {source.stars}
+                        </span>
+                      )}
+                      {source.documentCount > 0 && (
+                        <span>{source.documentCount} chunks</span>
+                      )}
+                      {source.pushedAt && (
+                        <span>{timeAgo(source.pushedAt)}</span>
+                      )}
+                    </div>
+                  </div>
+                  <ChevronRight className="size-3.5 text-muted-foreground mt-1 shrink-0" />
+                </Link>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Format a date string as a relative time (e.g. "3d ago") */
+function timeAgo(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return 'just now';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  const months = Math.floor(days / 30);
+  if (months < 12) return `${months}mo ago`;
+  const years = Math.floor(days / 365);
+  return `${years}y ago`;
 }
