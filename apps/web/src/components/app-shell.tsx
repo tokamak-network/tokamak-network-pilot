@@ -12,7 +12,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 
 /** Public routes that don't require authentication */
-const PUBLIC_PATHS = ['/login'];
+const PUBLIC_PATHS = ['/login', '/docs'];
 
 function isProtectedPath(pathname: string): boolean {
   return !PUBLIC_PATHS.some(
@@ -86,7 +86,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace(`/login?next=${next}`);
   }, [authChecking, pathname, protectedPath, router, user]);
 
-  if (pathname === '/login') {
+  if (pathname === '/login' || pathname === '/docs') {
     return <>{children}</>;
   }
 

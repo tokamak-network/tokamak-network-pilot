@@ -35,14 +35,6 @@ function LoginContent() {
       ? requestedNextPath
       : '/';
 
-  useEffect(() => {
-    if (user) {
-      router.replace(nextPath);
-    }
-  }, [nextPath, router, user]);
-
-  if (user) return null;
-
   // ─── Step 1: Request OTP ───────────────────────────────
   const handleRequestOtp = useCallback(
     async (e: React.FormEvent) => {
@@ -97,6 +89,14 @@ function LoginContent() {
     },
     [email, otp, setUser, router, nextPath],
   );
+
+  useEffect(() => {
+    if (user) {
+      router.replace(nextPath);
+    }
+  }, [nextPath, router, user]);
+
+  if (user) return null;
 
   return (
     <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center p-6">

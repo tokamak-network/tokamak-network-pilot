@@ -10,7 +10,6 @@ import {
   FileText,
   Settings,
   Zap,
-  ExternalLink,
   Github,
   Globe,
   Upload,
@@ -54,12 +53,7 @@ const mainNav = [
 
 const secondaryNav = [
   { label: 'Settings', href: '/settings', icon: Settings },
-  {
-    label: 'API Docs',
-    href: 'http://localhost:4000/docs',
-    icon: ExternalLink,
-    external: true,
-  },
+  { label: 'API Docs', href: '/docs', icon: BookOpen },
 ];
 
 const sourceTypeIcons: Record<string, React.ElementType> = {
