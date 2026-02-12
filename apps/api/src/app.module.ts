@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { BullModule } from '@nestjs/bullmq';
+import { ThrottlerModule } from '@nestjs/throttler';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { DatabaseModule } from './modules/database/database.module';
@@ -13,6 +14,8 @@ import { RagModule } from './modules/rag/rag.module';
 import { SourcesModule } from './modules/sources/sources.module';
 import { ContentModule } from './modules/content/content.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ApiKeysModule } from './modules/api-keys/api-keys.module';
+import { PublicApiModule } from './modules/public-api/public-api.module';
 
 @Module({
   imports: [
@@ -43,6 +46,15 @@ import { AuthModule } from './modules/auth/auth.module';
       }),
     }),
 
+    // ── Rate limiting (used by public API with per-key limits) ──
+    ThrottlerModule.forRoot([
+      {
+        name: 'public-api',
+        ttl: 60_000, // 1 minute window
+        limit: 600, // default premium limit; overridden per-key by ApiKeyThrottlerGuard
+      },
+    ]),
+
     // ── Infrastructure modules ──
     VectorModule,
     EmbeddingModule,
@@ -55,6 +67,10 @@ import { AuthModule } from './modules/auth/auth.module';
     SourcesModule,
     ContentModule,
     AuthModule,
+
+    // ── API Key management & Public API ──
+    ApiKeysModule,
+    PublicApiModule,
   ],
   controllers: [AppController],
   providers: [AppService],

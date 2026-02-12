@@ -29,6 +29,10 @@ export async function apiFetch<T>(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({ message: res.statusText }));
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('tokamak_token');
+      window.dispatchEvent(new Event('tokamak:unauthorized'));
+    }
     throw new Error(error.message || `API error: ${res.status}`);
   }
 
@@ -220,6 +224,77 @@ export async function syncSourceFull(id: string) {
 export async function deleteSource(id: string) {
   return apiFetch<{ message: string }>(`/sources/${id}`, {
     method: 'DELETE',
+  });
+}
+
+// ───────────────────── API Keys API ─────────────────────
+
+export interface ApiKeyResponse {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scopes: string[];
+  tier: string;
+  rateLimit: number;
+  isActive: boolean;
+  expiresAt?: string;
+  lastUsedAt?: string;
+  totalRequests: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateApiKeyResponse extends ApiKeyResponse {
+  /** The plaintext key — only returned once on creation */
+  key: string;
+}
+
+/** List all API keys for the current user */
+export async function fetchApiKeys() {
+  return apiFetch<ApiKeyResponse[]>('/api-keys');
+}
+
+/** Create a new API key */
+export async function createApiKey(data: {
+  name: string;
+  scopes?: string[];
+  expiresAt?: string;
+  metadata?: Record<string, unknown>;
+}) {
+  return apiFetch<CreateApiKeyResponse>('/api-keys', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Update an API key */
+export async function updateApiKey(
+  id: string,
+  data: {
+    name?: string;
+    scopes?: string[];
+    isActive?: boolean;
+    metadata?: Record<string, unknown>;
+  },
+) {
+  return apiFetch<ApiKeyResponse>(`/api-keys/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Delete / revoke an API key */
+export async function deleteApiKey(id: string) {
+  return apiFetch<{ message: string }>(`/api-keys/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Rotate an API key (generates new secret) */
+export async function rotateApiKey(id: string) {
+  return apiFetch<CreateApiKeyResponse>(`/api-keys/${id}/rotate`, {
+    method: 'POST',
   });
 }
 

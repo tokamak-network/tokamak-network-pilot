@@ -107,6 +107,71 @@ export interface VerifyOtpResponse {
   user: User;
 }
 
+// ---- API Key Types ----
+
+export type ApiKeyTier = 'free' | 'standard' | 'premium';
+
+export type ApiKeyScope = 'ask' | 'search' | 'sources:read' | 'content:read';
+
+export const API_KEY_ALL_SCOPES: ApiKeyScope[] = [
+  'ask',
+  'search',
+  'sources:read',
+  'content:read',
+];
+
+/** Public-facing API key info (never includes the hash or plaintext secret) */
+export interface ApiKeyInfo {
+  id: string;
+  name: string;
+  keyPrefix: string;
+  scopes: ApiKeyScope[];
+  tier: ApiKeyTier;
+  rateLimit: number;
+  isActive: boolean;
+  expiresAt?: string;
+  lastUsedAt?: string;
+  totalRequests: number;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Request body for creating an API key */
+export interface CreateApiKeyRequest {
+  name: string;
+  scopes?: ApiKeyScope[];
+  expiresAt?: string;
+  metadata?: Record<string, unknown>;
+}
+
+/** Response after creating or rotating an API key — includes the plaintext key (shown once) */
+export interface CreateApiKeyResponse extends ApiKeyInfo {
+  /** The plaintext API key — store this securely, it will never be shown again */
+  key: string;
+}
+
+/** Request body for updating an API key */
+export interface UpdateApiKeyRequest {
+  name?: string;
+  scopes?: ApiKeyScope[];
+  isActive?: boolean;
+  metadata?: Record<string, unknown>;
+}
+
+/** Usage log entry */
+export interface ApiKeyUsageEntry {
+  id: string;
+  apiKeyId: string;
+  endpoint: string;
+  method: string;
+  statusCode: number;
+  responseTimeMs?: number;
+  ip?: string;
+  userAgent?: string;
+  createdAt: string;
+}
+
 // ---- Common Types ----
 
 export interface ConversationMessage {

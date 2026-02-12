@@ -2,9 +2,7 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Providers } from '@/components/providers';
-import { AppSidebar } from '@/components/app-sidebar';
-import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
-import { Separator } from '@/components/ui/separator';
+import { AppShell } from '@/components/app-shell';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -23,21 +21,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
         <Providers>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              <header className="flex h-14 shrink-0 items-center gap-2 border-b px-4">
-                <SidebarTrigger className="-ml-1" />
-                <Separator orientation="vertical" className="mr-2 h-5" />
-                <span className="text-sm text-muted-foreground">
-                  Tokamak Network Knowledge Hub
-                </span>
-              </header>
-              <div className="flex-1 overflow-auto">
-                {children}
-              </div>
-            </SidebarInset>
-          </SidebarProvider>
+          <AppShell>{children}</AppShell>
         </Providers>
       </body>
     </html>

@@ -26,7 +26,7 @@ import {
   Star,
 } from 'lucide-react';
 import { sourcesAtom, userAtom } from '@/store';
-import { fetchSources, fetchMe, type SourceResponse } from '@/lib/api';
+import { fetchSources, type SourceResponse } from '@/lib/api';
 import {
   Popover,
   PopoverContent,
@@ -92,17 +92,6 @@ export function AppSidebar() {
       .then((data) => setSources(data.sources))
       .catch(() => {});
   }, [setSources]);
-
-  useEffect(() => {
-    const token = localStorage.getItem('tokamak_token');
-    if (token && !user) {
-      fetchMe()
-        .then((u) => setUser(u))
-        .catch(() => {
-          localStorage.removeItem('tokamak_token');
-        });
-    }
-  }, [user, setUser]);
 
   const handleLogout = useCallback(() => {
     localStorage.removeItem('tokamak_token');

@@ -1,8 +1,8 @@
 'use client';
 
-import { useState, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { useSetAtom } from 'jotai';
+import { Suspense, useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useAtom } from 'jotai';
 import { Mail, ArrowRight, Loader2, ShieldCheck, Zap } from 'lucide-react';
 import { userAtom } from '@/store';
 import { requestOtp, verifyOtp } from '@/lib/api';
@@ -18,9 +18,10 @@ import {
 
 type Step = 'email' | 'otp';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
-  const setUser = useSetAtom(userAtom);
+  const searchParams = useSearchParams();
+  const [user, setUser] = useAtom(userAtom);
 
   const [step, setStep] = useState<Step>('email');
   const [email, setEmail] = useState('');
@@ -28,6 +29,19 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
+  const requestedNextPath = searchParams.get('next');
+  const nextPath =
+    requestedNextPath && requestedNextPath.startsWith('/')
+      ? requestedNextPath
+      : '/';
+
+  useEffect(() => {
+    if (user) {
+      router.replace(nextPath);
+    }
+  }, [nextPath, router, user]);
+
+  if (user) return null;
 
   // ─── Step 1: Request OTP ───────────────────────────────
   const handleRequestOtp = useCallback(
@@ -73,15 +87,15 @@ export default function LoginPage() {
         localStorage.setItem('tokamak_token', res.token);
         // Update global state
         setUser(res.user);
-        // Redirect to home
-        router.push('/');
+        // Redirect to intended page when available
+        router.push(nextPath);
       } catch (err: any) {
         setError(err.message || 'Invalid or expired code');
       } finally {
         setLoading(false);
       }
     },
-    [email, otp, setUser, router],
+    [email, otp, setUser, router, nextPath],
   );
 
   return (
@@ -195,5 +209,19 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[calc(100vh-3.5rem)] items-center justify-center">
+          <Loader2 className="size-6 animate-spin text-muted-foreground" />
+        </div>
+      }
+    >
+      <LoginContent />
+    </Suspense>
   );
 }

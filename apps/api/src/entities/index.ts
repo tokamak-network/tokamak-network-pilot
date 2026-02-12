@@ -6,3 +6,7 @@ export { User } from './user.entity';
 export type { UserRole } from './user.entity';
 export { OtpCode } from './otp-code.entity';
 export { ContentEntry } from './content-entry.entity';
+export { ApiKey } from './api-key.entity';
+export type { ApiKeyTier, ApiKeyScope } from './api-key.entity';
+export { API_KEY_SCOPES, TIER_RATE_LIMITS } from './api-key.entity';
+export { ApiKeyUsageLog } from './api-key-usage.entity';

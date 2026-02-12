@@ -22,11 +22,11 @@ import { CreateContentDto, UpdateContentDto } from './dto/content.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('content')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('content')
 export class ContentController {
   constructor(private readonly contentService: ContentService) {}
-
-  // ─── Public: anyone can read ───────────────────────────────
 
   @Get()
   @ApiOperation({
@@ -53,11 +53,9 @@ export class ContentController {
     return this.contentService.findOne(id);
   }
 
-  // ─── Protected: must be authenticated ──────────────────────
+  // ─── Write operations ──────────────────────────────────────
 
   @Post()
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Create a new content entry',
     description:
@@ -70,8 +68,6 @@ export class ContentController {
   }
 
   @Put(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Update a content entry',
     description: 'Mark content as outdated, update answers, add notes, etc.',
@@ -83,8 +79,6 @@ export class ContentController {
   }
 
   @Delete(':id')
-  @UseGuards(JwtAuthGuard)
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a content entry' })
   @ApiResponse({ status: 200, description: 'Content entry deleted' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })

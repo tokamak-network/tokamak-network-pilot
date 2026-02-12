@@ -5,60 +5,98 @@ import type {
   Source,
   ContentEntry,
   PaginatedResponse,
+  ApiKeyInfo,
+  CreateApiKeyRequest,
+  CreateApiKeyResponse,
+  UpdateApiKeyRequest,
+  ApiKeyUsageEntry,
 } from '@tokamak-pilot/shared';
 
 export interface TokamakPilotClientOptions {
   /** Base URL of the Tokamak Pilot API (e.g. https://pilot.tokamak.network/api/v1) */
   baseUrl: string;
-  /** Optional bearer token for authenticated endpoints */
+  /** Optional bearer token for authenticated endpoints (key management) */
   token?: string;
+  /** Optional API key for public endpoints (third-party access) */
+  apiKey?: string;
 }
 
 /**
  * TypeScript SDK client for the Tokamak Pilot API.
  *
+ * There are two authentication modes:
+ *
+ * 1. **JWT token** — for internal users managing keys, sources, content, etc.
+ * 2. **API key** — for third-party apps accessing the public API.
+ *
+ * When an `apiKey` is provided, the `ask`, `search`, `listSources`, `getSource`,
+ * `listContent`, `getContent`, and `health` methods automatically route through
+ * the `/public/` endpoints with the `X-API-Key` header.
+ *
  * @example
  * ```ts
- * import { TokamakPilotClient } from '@tokamak-pilot/sdk';
- *
+ * // Third-party usage with API key
  * const pilot = new TokamakPilotClient({
  *   baseUrl: 'http://localhost:4000/api/v1',
+ *   apiKey: 'tkp_a1b2c3d4e5f6...',
  * });
  *
  * const answer = await pilot.ask('How does TON staking work?');
  * console.log(answer.answer);
  * ```
+ *
+ * @example
+ * ```ts
+ * // Internal usage with JWT
+ * const pilot = new TokamakPilotClient({
+ *   baseUrl: 'http://localhost:4000/api/v1',
+ *   token: 'eyJhbGciOi...',
+ * });
+ *
+ * const keys = await pilot.listApiKeys();
+ * ```
  */
 export class TokamakPilotClient {
   private baseUrl: string;
   private token?: string;
+  private apiKey?: string;
 
   constructor(options: TokamakPilotClientOptions) {
     this.baseUrl = options.baseUrl.replace(/\/$/, '');
     this.token = options.token;
+    this.apiKey = options.apiKey;
+  }
+
+  /** Whether this client uses API key auth (routes through /public/ endpoints) */
+  get isApiKeyAuth(): boolean {
+    return !!this.apiKey;
   }
 
   // ---- RAG ----
 
   async ask(question: string, filters?: string[]): Promise<AskResponse> {
     const body: AskRequest = { question, filters };
-    return this.post<AskResponse>('/ask', body);
+    const path = this.apiKey ? '/public/ask' : '/ask';
+    return this.post<AskResponse>(path, body);
   }
 
   async search(query: string, limit = 10): Promise<SearchResponse> {
+    const base = this.apiKey ? '/public/search' : '/ask/search';
     return this.get<SearchResponse>(
-      `/ask/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+      `${base}?q=${encodeURIComponent(query)}&limit=${limit}`,
     );
   }
 
   // ---- Sources ----
 
   async listSources(): Promise<{ sources: Source[]; total: number }> {
-    return this.get('/sources');
+    const path = this.apiKey ? '/public/sources' : '/sources';
+    return this.get(path);
   }
 
   async getSource(id: string): Promise<Source> {
-    return this.get(`/sources/${id}`);
+    const path = this.apiKey ? `/public/sources/${id}` : `/sources/${id}`;
+    return this.get(path);
   }
 
   async syncSource(id: string): Promise<{ message: string }> {
@@ -74,17 +112,59 @@ export class TokamakPilotClient {
     if (filters?.project) params.set('project', filters.project);
     if (filters?.category) params.set('category', filters.category);
     const qs = params.toString();
-    return this.get(`/content${qs ? `?${qs}` : ''}`);
+    const base = this.apiKey ? '/public/content' : '/content';
+    return this.get(`${base}${qs ? `?${qs}` : ''}`);
   }
 
   async getContent(id: string): Promise<ContentEntry> {
-    return this.get(`/content/${id}`);
+    const path = this.apiKey ? `/public/content/${id}` : `/content/${id}`;
+    return this.get(path);
   }
 
   // ---- Health ----
 
-  async health(): Promise<{ status: string; version: string }> {
-    return this.get('/health');
+  async health(): Promise<{ status: string; version?: string }> {
+    const path = this.apiKey ? '/public/health' : '/health';
+    return this.get(path);
+  }
+
+  // ---- API Key Management (requires JWT token) ----
+
+  async createApiKey(dto: CreateApiKeyRequest): Promise<CreateApiKeyResponse> {
+    return this.post<CreateApiKeyResponse>('/api-keys', dto);
+  }
+
+  async listApiKeys(): Promise<ApiKeyInfo[]> {
+    return this.get<ApiKeyInfo[]>('/api-keys');
+  }
+
+  async getApiKey(id: string): Promise<ApiKeyInfo> {
+    return this.get<ApiKeyInfo>(`/api-keys/${id}`);
+  }
+
+  async updateApiKey(id: string, dto: UpdateApiKeyRequest): Promise<ApiKeyInfo> {
+    return this.request<ApiKeyInfo>(`/api-keys/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify(dto),
+    });
+  }
+
+  async deleteApiKey(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/api-keys/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async rotateApiKey(id: string): Promise<CreateApiKeyResponse> {
+    return this.post<CreateApiKeyResponse>(`/api-keys/${id}/rotate`);
+  }
+
+  async getApiKeyUsage(
+    id: string,
+    page = 1,
+    limit = 50,
+  ): Promise<PaginatedResponse<ApiKeyUsageEntry>> {
+    return this.get(`/api-keys/${id}/usage?page=${page}&limit=${limit}`);
   }
 
   // ---- Internal Helpers ----
@@ -104,6 +184,9 @@ export class TokamakPilotClient {
     const headers: Record<string, string> = {
       'Content-Type': 'application/json',
     };
+    if (this.apiKey) {
+      headers['X-API-Key'] = this.apiKey;
+    }
     if (this.token) {
       headers['Authorization'] = `Bearer ${this.token}`;
     }

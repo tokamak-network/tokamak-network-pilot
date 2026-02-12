@@ -1,9 +1,12 @@
-import { Controller, Post, Body, Get, Query } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBody, ApiQuery } from '@nestjs/swagger';
+import { Controller, Post, Body, Get, Query, UseGuards } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiBody, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import { RagService } from './rag.service';
 import { AskQuestionDto } from './dto/ask-question.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('ask')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('ask')
 export class RagController {
   constructor(private readonly ragService: RagService) {}

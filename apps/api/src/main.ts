@@ -35,10 +35,16 @@ async function bootstrap() {
     )
     .setVersion('0.1.0')
     .addBearerAuth()
+    .addApiKey(
+      { type: 'apiKey', name: 'X-API-Key', in: 'header', description: 'API key for public endpoints' },
+      'api-key',
+    )
     .addTag('ask', 'Ask questions about Tokamak Network')
     .addTag('sources', 'Manage knowledge sources (GitHub, docs, files)')
     .addTag('content', 'Team content management')
     .addTag('auth', 'Authentication & authorization')
+    .addTag('api-keys', 'API key management (create, rotate, revoke)')
+    .addTag('public', 'Public API for third-party integrations (requires API key)')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);

@@ -7,12 +7,16 @@ import {
   Param,
   Body,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SourcesService } from './sources.service';
 import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('sources')
+@ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 @Controller('sources')
 export class SourcesController {
   constructor(private readonly sourcesService: SourcesService) {}
@@ -68,7 +72,6 @@ export class SourcesController {
   }
 
   @Post()
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Register a new knowledge source',
     description:
@@ -80,7 +83,6 @@ export class SourcesController {
   }
 
   @Put(':id')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a knowledge source configuration' })
   @ApiBody({ type: UpdateSourceDto })
   async update(@Param('id') id: string, @Body() dto: UpdateSourceDto) {
@@ -88,14 +90,12 @@ export class SourcesController {
   }
 
   @Delete(':id')
-  @ApiBearerAuth()
   @ApiOperation({ summary: 'Remove a knowledge source and its indexed data' })
   async remove(@Param('id') id: string) {
     return this.sourcesService.remove(id);
   }
 
   @Post(':id/sync')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Trigger light re-indexing (markdown/docs only)',
     description: 'Re-fetches README and all markdown files for this source.',
@@ -105,7 +105,6 @@ export class SourcesController {
   }
 
   @Post(':id/sync-full')
-  @ApiBearerAuth()
   @ApiOperation({
     summary: 'Trigger deep re-indexing (everything)',
     description:
