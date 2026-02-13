@@ -18,6 +18,7 @@ import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
+import { ProjectsModule } from './modules/projects/projects.module';
 
 @Module({
   imports: [
@@ -75,6 +76,9 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
 
     // ── Conversation history ──
     ConversationsModule,
+
+    // ── Project Management ──
+    ProjectsModule,
 
     // ── API Key management & Public API ──
     ApiKeysModule,

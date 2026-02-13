@@ -26,6 +26,7 @@ import {
   Plus,
   Trash2,
   History,
+  FolderKanban,
 } from 'lucide-react';
 import {
   sourcesAtom,
@@ -65,6 +66,7 @@ import {
 const mainNav = [
   { label: 'Ask', href: '/', icon: MessageSquare },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Content', href: '/content', icon: FileText },
 ];
 

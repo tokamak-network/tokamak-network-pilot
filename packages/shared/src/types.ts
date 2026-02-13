@@ -225,6 +225,114 @@ export interface AskInConversationResponse {
   assistantMessage: MessageInfo;
 }
 
+// ---- Project Types ----
+
+export type ProjectRole = 'lead' | 'contributor' | 'viewer';
+
+export interface ProjectLink {
+  label: string;
+  url: string;
+}
+
+export interface ProjectInfo {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  links: ProjectLink[];
+  summary?: string;
+  summaryUpdatedAt?: string;
+  isPublic: boolean;
+  memberCount: number;
+  sourceCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetail extends ProjectInfo {
+  members: ProjectMemberInfo[];
+  sources: ProjectSourceInfo[];
+}
+
+export interface ProjectMemberInfo {
+  id: string;
+  userId: string;
+  role: ProjectRole;
+  joinedAt: string;
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    role: string;
+  };
+}
+
+export interface ProjectSourceInfo {
+  id: string;
+  sourceId: string;
+  assignedAt: string;
+  source: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    documentCount: number;
+    lastSyncedAt?: string;
+  };
+}
+
+export interface CreateProjectRequest {
+  name: string;
+  slug?: string;
+  description?: string;
+  logoUrl?: string;
+  links?: ProjectLink[];
+  isPublic?: boolean;
+}
+
+export interface UpdateProjectRequest {
+  name?: string;
+  slug?: string;
+  description?: string;
+  logoUrl?: string;
+  links?: ProjectLink[];
+  summary?: string;
+  isPublic?: boolean;
+}
+
+export interface AddProjectMemberRequest {
+  email: string;
+  role?: ProjectRole;
+}
+
+export interface UpdateProjectMemberRequest {
+  role: ProjectRole;
+}
+
+export interface AddProjectSourceRequest {
+  sourceId: string;
+}
+
+export interface ProjectPublicInfo {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  links: ProjectLink[];
+  summary?: string;
+  members: Array<{
+    role: ProjectRole;
+    user: { name?: string; email: string };
+  }>;
+  sources: Array<{
+    name: string;
+    type: string;
+    documentCount: number;
+  }>;
+}
+
 // ---- Common Types ----
 
 export interface PaginatedResponse<T> {

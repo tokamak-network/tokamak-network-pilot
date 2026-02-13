@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { VectorService, VectorSearchResult } from '../vector/vector.service';
 import { LlmService } from '../llm/llm.service';
 import { ChatMessage } from '../llm/llm.types';
 import { AskQuestionDto } from './dto/ask-question.dto';
+import { ProjectsService } from '../projects/projects.service';
 
 const TOP_K = 8; // Number of chunks to retrieve
 
@@ -15,6 +16,8 @@ export class RagService {
     private readonly embedding: EmbeddingService,
     private readonly vector: VectorService,
     private readonly llm: LlmService,
+    @Inject(forwardRef(() => ProjectsService))
+    private readonly projects: ProjectsService,
   ) {}
 
   /**
@@ -27,14 +30,30 @@ export class RagService {
    */
   async ask(dto: AskQuestionDto) {
     this.logger.log(
-      `Question received: "${dto.question}" [provider=${this.llm.getProvider()}]`,
+      `Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${dto.projectId ? ` [project=${dto.projectId}]` : ''}`,
     );
 
     // 1. Embed the question
     const questionVector = await this.embedding.embedText(dto.question);
 
-    // 2. Search Qdrant for relevant chunks
-    const searchResults = await this.vector.search(questionVector, TOP_K);
+    // 2. Build optional project-scoped filter
+    let filter: Record<string, unknown> | undefined;
+    if (dto.projectId) {
+      const sourceIds = await this.projects.getProjectSourceIds(dto.projectId);
+      if (sourceIds.length > 0) {
+        filter = {
+          must: [
+            {
+              key: 'sourceId',
+              match: { any: sourceIds },
+            },
+          ],
+        };
+      }
+    }
+
+    // 3. Search Qdrant for relevant chunks (with optional project filter)
+    const searchResults = await this.vector.search(questionVector, TOP_K, filter);
 
     if (searchResults.length === 0) {
       return {
@@ -48,10 +67,10 @@ export class RagService {
       };
     }
 
-    // 3. Build context from retrieved chunks
+    // 4. Build context from retrieved chunks
     const context = this.buildContext(searchResults);
 
-    // 4. Generate answer via configured LLM provider
+    // 5. Generate answer via configured LLM provider
     const messages = this.buildMessages(dto, context);
     const completion = await this.llm.chatCompletion({
       messages,
@@ -59,7 +78,7 @@ export class RagService {
       maxTokens: 1500,
     });
 
-    // 5. Extract source citations
+    // 6. Extract source citations
     const sources = this.extractCitations(searchResults);
 
     // Estimate confidence from average similarity score
@@ -79,15 +98,27 @@ export class RagService {
 
   /**
    * Semantic search — return relevant chunks without LLM generation.
+   * Optionally scoped to a project's sources.
    */
-  async search(query: string, limit = 10) {
-    this.logger.log(`Search query: ${query} (limit: ${limit})`);
+  async search(query: string, limit = 10, projectId?: string) {
+    this.logger.log(`Search query: ${query} (limit: ${limit})${projectId ? ` [project=${projectId}]` : ''}`);
 
     // Embed the query
     const queryVector = await this.embedding.embedText(query);
 
+    // Build optional project filter
+    let filter: Record<string, unknown> | undefined;
+    if (projectId) {
+      const sourceIds = await this.projects.getProjectSourceIds(projectId);
+      if (sourceIds.length > 0) {
+        filter = {
+          must: [{ key: 'sourceId', match: { any: sourceIds } }],
+        };
+      }
+    }
+
     // Search Qdrant
-    const results = await this.vector.search(queryVector, limit);
+    const results = await this.vector.search(queryVector, limit, filter);
 
     return {
       query,

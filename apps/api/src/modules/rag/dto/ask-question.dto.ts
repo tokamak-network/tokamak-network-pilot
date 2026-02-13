@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsArray } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsArray, IsUUID } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class AskQuestionDto {
@@ -18,6 +18,13 @@ export class AskQuestionDto {
   @IsArray()
   @IsString({ each: true })
   filters?: string[];
+
+  @ApiPropertyOptional({
+    description: 'Scope the question to a specific project (by ID). Only sources assigned to this project will be searched.',
+  })
+  @IsOptional()
+  @IsUUID()
+  projectId?: string;
 
   @ApiPropertyOptional({
     description: 'Conversation history for follow-up questions',

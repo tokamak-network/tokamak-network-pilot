@@ -564,3 +564,217 @@ export async function deleteContent(id: string) {
     method: 'DELETE',
   });
 }
+
+// ───────────────────── Projects API ─────────────────────
+
+export interface ProjectLinkResponse {
+  label: string;
+  url: string;
+}
+
+export interface ProjectMemberResponse {
+  id: string;
+  userId: string;
+  role: 'lead' | 'contributor' | 'viewer';
+  joinedAt: string;
+  user: {
+    id: string;
+    email: string;
+    name?: string;
+    role: string;
+  };
+}
+
+export interface ProjectSourceResponse {
+  id: string;
+  sourceId: string;
+  assignedAt: string;
+  source: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    documentCount: number;
+    lastSyncedAt?: string;
+  };
+}
+
+export interface ProjectResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  links: ProjectLinkResponse[];
+  summary?: string;
+  summaryUpdatedAt?: string;
+  isPublic: boolean;
+  memberCount: number;
+  sourceCount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProjectDetailResponse extends ProjectResponse {
+  members: ProjectMemberResponse[];
+  sources: ProjectSourceResponse[];
+}
+
+export interface ProjectDashboardResponse {
+  project: ProjectDetailResponse;
+  stats: {
+    memberCount: number;
+    sourceCount: number;
+    contentEntries: number;
+    totalDocuments: number;
+    totalChunks: number;
+    chunkBreakdown: Record<string, number>;
+  };
+}
+
+export interface ProjectPublicResponse {
+  id: string;
+  name: string;
+  slug: string;
+  description?: string;
+  logoUrl?: string;
+  links: ProjectLinkResponse[];
+  summary?: string;
+  members: Array<{
+    role: string;
+    user: { name?: string; email: string };
+  }>;
+  sources: Array<{
+    name: string;
+    type: string;
+    documentCount: number;
+  }>;
+}
+
+export interface ProjectSummaryResponse {
+  projectId: string;
+  projectName: string;
+  summary: string;
+  provider: string;
+  model: string;
+  generatedAt: string;
+}
+
+/** List all projects */
+export async function fetchProjects() {
+  return apiFetch<{ projects: ProjectResponse[]; total: number }>('/projects');
+}
+
+/** Get project details by ID or slug */
+export async function fetchProject(idOrSlug: string) {
+  return apiFetch<ProjectDetailResponse>(`/projects/${idOrSlug}`);
+}
+
+/** Get project dashboard with stats */
+export async function fetchProjectDashboard(idOrSlug: string) {
+  return apiFetch<ProjectDashboardResponse>(`/projects/${idOrSlug}/dashboard`);
+}
+
+/** Get public project overview */
+export async function fetchProjectPublic(slug: string) {
+  return apiFetch<ProjectPublicResponse>(`/projects/${slug}/public`);
+}
+
+/** Create a new project */
+export async function createProject(data: {
+  name: string;
+  slug?: string;
+  description?: string;
+  logoUrl?: string;
+  links?: ProjectLinkResponse[];
+  isPublic?: boolean;
+}) {
+  return apiFetch<ProjectDetailResponse>('/projects', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Update a project */
+export async function updateProject(
+  id: string,
+  data: {
+    name?: string;
+    slug?: string;
+    description?: string;
+    logoUrl?: string;
+    links?: ProjectLinkResponse[];
+    summary?: string;
+    isPublic?: boolean;
+  },
+) {
+  return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Delete a project */
+export async function deleteProject(id: string) {
+  return apiFetch<{ message: string }>(`/projects/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Add a source to a project */
+export async function addProjectSource(projectId: string, sourceId: string) {
+  return apiFetch<ProjectSourceResponse>(`/projects/${projectId}/sources`, {
+    method: 'POST',
+    body: JSON.stringify({ sourceId }),
+  });
+}
+
+/** Remove a source from a project */
+export async function removeProjectSource(projectId: string, sourceId: string) {
+  return apiFetch<{ message: string }>(
+    `/projects/${projectId}/sources/${sourceId}`,
+    { method: 'DELETE' },
+  );
+}
+
+/** Add a member to a project */
+export async function addProjectMember(
+  projectId: string,
+  email: string,
+  role?: 'lead' | 'contributor' | 'viewer',
+) {
+  return apiFetch<ProjectMemberResponse>(`/projects/${projectId}/members`, {
+    method: 'POST',
+    body: JSON.stringify({ email, role }),
+  });
+}
+
+/** Update a project member's role */
+export async function updateProjectMember(
+  projectId: string,
+  userId: string,
+  role: 'lead' | 'contributor' | 'viewer',
+) {
+  return apiFetch<ProjectMemberResponse>(
+    `/projects/${projectId}/members/${userId}`,
+    {
+      method: 'PUT',
+      body: JSON.stringify({ role }),
+    },
+  );
+}
+
+/** Remove a member from a project */
+export async function removeProjectMember(projectId: string, userId: string) {
+  return apiFetch<{ message: string }>(
+    `/projects/${projectId}/members/${userId}`,
+    { method: 'DELETE' },
+  );
+}
+
+/** Generate an AI summary for a project */
+export async function generateProjectSummary(projectId: string) {
+  return apiFetch<ProjectSummaryResponse>(`/projects/${projectId}/summary`, {
+    method: 'POST',
+  });
+}

@@ -23,5 +23,12 @@ export const USER_ROLE_LABELS: Record<string, string> = {
   viewer: 'Viewer',
 };
 
+/** Project role labels */
+export const PROJECT_ROLE_LABELS: Record<string, string> = {
+  lead: 'Lead',
+  contributor: 'Contributor',
+  viewer: 'Viewer',
+};
+
 /** Tokamak GitHub org */
 export const TOKAMAK_GITHUB_ORG = 'tokamak-network';

@@ -10,6 +10,9 @@ import { ApiKey } from '../../entities/api-key.entity';
 import { ApiKeyUsageLog } from '../../entities/api-key-usage.entity';
 import { Conversation } from '../../entities/conversation.entity';
 import { Message } from '../../entities/message.entity';
+import { Project } from '../../entities/project.entity';
+import { ProjectMember } from '../../entities/project-member.entity';
+import { ProjectSource } from '../../entities/project-source.entity';
 
 @Module({
   imports: [
@@ -21,7 +24,7 @@ import { Message } from '../../entities/message.entity';
           'DATABASE_URL',
           'postgresql://postgres:postgres@localhost:5432/tokamak_pilot',
         ),
-        entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message],
+        entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource],
         synchronize: true, // Auto-sync schema in dev — disable in production
         logging: config.get<string>('NODE_ENV') === 'development',
       }),

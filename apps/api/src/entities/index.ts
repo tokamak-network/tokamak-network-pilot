@@ -13,3 +13,7 @@ export { ApiKeyUsageLog } from './api-key-usage.entity';
 export { Conversation } from './conversation.entity';
 export { Message } from './message.entity';
 export type { MessageRole } from './message.entity';
+export { Project } from './project.entity';
+export { ProjectMember } from './project-member.entity';
+export type { ProjectRole } from './project-member.entity';
+export { ProjectSource } from './project-source.entity';

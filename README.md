@@ -105,6 +105,21 @@ The system can ingest knowledge from multiple source types:
 | POST   | `/api/v1/content`           | Create content entry                 | JWT    |
 | PUT    | `/api/v1/content/:id`       | Update content entry                 | JWT    |
 | DELETE | `/api/v1/content/:id`       | Delete content entry                 | JWT    |
+| GET    | `/api/v1/projects`              | List all projects                    | —      |
+| POST   | `/api/v1/projects`              | Create a project                     | JWT    |
+| GET    | `/api/v1/projects/:idOrSlug`    | Get project details                  | —      |
+| PUT    | `/api/v1/projects/:id`          | Update a project                     | JWT    |
+| DELETE | `/api/v1/projects/:id`          | Delete a project                     | JWT    |
+| GET    | `/api/v1/projects/:id/sources`  | List project sources                 | —      |
+| POST   | `/api/v1/projects/:id/sources`  | Assign source to project             | JWT    |
+| DELETE | `/api/v1/projects/:id/sources/:sourceId` | Remove source from project | JWT    |
+| GET    | `/api/v1/projects/:id/members`  | List project team members            | —      |
+| POST   | `/api/v1/projects/:id/members`  | Add team member                      | JWT    |
+| PUT    | `/api/v1/projects/:id/members/:userId` | Update member role           | JWT    |
+| DELETE | `/api/v1/projects/:id/members/:userId` | Remove team member           | JWT    |
+| POST   | `/api/v1/projects/:id/summary`  | Generate AI project summary          | JWT    |
+| GET    | `/api/v1/projects/:slug/public` | Public project overview              | —      |
+| GET    | `/api/v1/projects/:id/dashboard`| Project dashboard with stats         | JWT    |
 | POST   | `/api/v1/auth/request-otp`  | Request OTP login code               | —      |
 | POST   | `/api/v1/auth/verify-otp`   | Verify OTP → JWT token               | —      |
 | GET    | `/api/v1/auth/me`           | Get current user profile             | JWT    |
@@ -134,16 +149,172 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 ## Roadmap
 
-- [x] GitHub RAG ingestion pipeline
+### Completed
+
+- [x] GitHub RAG ingestion pipeline (repos + orgs)
 - [x] Vector database integration (Qdrant)
 - [x] LLM integration (OpenAI / Anthropic)
 - [x] Auto-seed from `GITHUB_ORGS` / `GITHUB_REPOS` on startup
 - [x] Content management CRUD with auth (OTP email login, `@tokamak.network` only)
 - [x] File upload and document parsing (PDF, MD, TXT, DOCX, CSV)
 - [x] Conversation history / follow-ups
-- [ ] SDK publishing to npm
 - [x] Docker Compose for local infra
-- [ ] CI/CD pipeline
+- [x] Dashboard analytics (KPIs, ingestion status, content breakdown)
+- [x] API key management (create, rotate, revoke, scopes, usage logs)
+- [x] Public API with rate limiting (`X-API-Key` auth)
+- [x] TypeScript SDK (`@tokamak-pilot/sdk`)
+- [x] Custom API docs page with copy-to-clipboard on code blocks
+
+---
+
+### Phase 1 — Project Management & Team Collaboration
+
+> Let teams organize knowledge by project, assign repos, and collaborate.
+
+- [x] **Project entity & CRUD** — Create, update, delete projects with name, description, logo, and links
+- [x] **Project ↔ Source mapping** — Assign one or more GitHub repos / knowledge sources to a project
+- [x] **Project summary & introduction** — Auto-generated AI summary of a project based on its assigned sources; editable by project leads
+- [x] **Team members per project** — Invite and assign team members to projects with roles (lead, contributor, viewer)
+- [x] **Project dashboard** — Per-project view showing assigned repos, content entries, ingestion status, and team
+- [x] **Project-scoped chat** — Ask questions scoped to a specific project's knowledge only
+- [x] **Project overview page (public)** — Public-facing project page with summary, links, team, and key docs
+
+---
+
+### Phase 2 — AI-Friendly Output & Integrations
+
+> Make knowledge consumable by other AI tools and agents.
+
+- [ ] **`llms.txt` endpoint** — Serve a standardized `llms.txt` file at `/llms.txt` and `/llms-full.txt` following the [llms.txt spec](https://llmstxt.org/), so LLMs and AI agents can discover and consume Tokamak knowledge
+- [ ] **Structured export (JSON/Markdown)** — Export any answer, content entry, or project summary as structured JSON or Markdown for use in other tools
+- [ ] **One-click copy as AI prompt** — Copy button on docs/answers that formats content as a ready-to-paste prompt (with context, sources, and instructions)
+- [ ] **OpenAPI spec download** — One-click download of the full OpenAPI JSON/YAML spec from the docs page
+- [ ] **Embeddable widget** — JavaScript snippet that others can embed on their sites to add a "Ask about Tokamak" chat widget
+
+---
+
+### Phase 3 — MCP Server (Model Context Protocol)
+
+> Expose Tokamak Pilot as an MCP server so any AI assistant (Cursor, Claude Desktop, etc.) can use it as a tool.
+
+- [ ] **MCP server package** — New package `packages/mcp-server` implementing the [Model Context Protocol](https://modelcontextprotocol.io/)
+- [ ] **MCP Tools:**
+  - `tokamak_ask` — Ask a question about Tokamak Network, returns answer with sources
+  - `tokamak_search` — Semantic search across all indexed knowledge
+  - `tokamak_list_projects` — List all projects with summaries
+  - `tokamak_get_project` — Get project details, team, and linked sources
+  - `tokamak_list_sources` — List knowledge sources and their status
+  - `tokamak_get_content` — Get a specific curated content entry
+  - `tokamak_list_content` — Browse curated content by project or category
+- [ ] **MCP Resources:**
+  - `tokamak://projects` — List of all projects
+  - `tokamak://projects/{id}` — Project details and summary
+  - `tokamak://sources` — List of knowledge sources
+  - `tokamak://content/{id}` — Curated content entry
+- [ ] **MCP Prompts:**
+  - `explain-project` — Pre-built prompt to explain a Tokamak project
+  - `compare-projects` — Compare two projects side by side
+  - `summarize-source` — Summarize a knowledge source
+- [ ] **Distribution** — Publish as npm package, add to MCP server registries, document setup for Cursor / Claude Desktop
+
+---
+
+### Phase 4 — Enhanced Docs & Developer Experience
+
+> Make the docs page a best-in-class developer experience.
+
+- [ ] **Interactive API playground** — Try API calls directly from the docs page (like Swagger, but integrated into the custom docs UI)
+- [ ] **Multi-language code examples** — Show examples in cURL, JavaScript, Python, Go, and Rust with language tabs
+- [ ] **SDK code generator** — Auto-generate SDK usage snippets from the docs page based on selected endpoint + parameters
+- [ ] **Changelog / release notes** — Track API changes and display them in the docs
+- [ ] **Webhook documentation** — When webhooks are added, auto-document event payloads and provide testing tools
+- [ ] **Rate limit dashboard** — Show API key usage, remaining quota, and rate limit status in the docs page
+
+---
+
+### Phase 5 — Additional Knowledge Sources
+
+> Ingest knowledge from more platforms.
+
+- [ ] **External documentation URLs** — Crawl and ingest docs sites (GitBook, Docusaurus, ReadTheDocs, etc.)
+- [ ] **Webhook / custom source** — Accept real-time content pushes via webhook
+- [ ] **Google Docs / Drive** — Sync documents from Google Workspace
+
+---
+
+### Phase 6 — Quality, Feedback & Analytics
+
+> Improve answer quality and understand usage patterns.
+
+- [ ] **Answer feedback** — Thumbs up/down on AI answers with optional comment; store for quality tracking
+- [ ] **Answer quality metrics** — Track confidence scores, feedback ratios, and unanswered questions over time
+- [ ] **Search analytics** — Log popular queries, zero-result queries, and trending topics
+- [ ] **Content freshness alerts** — Auto-detect when indexed content is outdated (repo updated but not re-synced)
+- [ ] **Suggested questions** — Show popular or recommended questions on the home page
+- [ ] **Query caching** — Cache frequent queries for faster responses and lower LLM costs
+
+---
+
+### Phase 8 — Infrastructure & DevOps
+
+> Production readiness and operational excellence.
+
+- [ ] **CI/CD pipeline** — GitHub Actions for lint, test, build, and deploy
+- [ ] **SDK publishing to npm** — Automated npm publish for `@tokamak-pilot/sdk`
+- [ ] **Streaming responses** — Stream RAG answers token-by-token via SSE for faster perceived response
+- [ ] **Kubernetes / Docker deployment** — Production-ready Helm chart or Docker Compose with health checks, resource limits
+- [ ] **Monitoring & alerting** — Prometheus metrics, Grafana dashboards, PagerDuty/Slack alerts
+- [ ] **Backup & disaster recovery** — Automated PostgreSQL + Qdrant backups
+- [ ] **Multi-environment config** — Staging, production environment management
+- [ ] **E2E tests** — Playwright tests for the web app, API integration tests
+
+---
+
+### MCP Server Architecture (Reference)
+
+The MCP server will wrap the existing Public API and expose it via the Model Context Protocol:
+
+```
+┌─────────────────────────────────────────────┐
+│  AI Assistant (Cursor / Claude Desktop)      │
+│  ─ discovers tools via MCP handshake         │
+└──────────────┬──────────────────────────────┘
+               │  stdio / SSE
+┌──────────────▼──────────────────────────────┐
+│  packages/mcp-server                         │
+│  ├── tools/     (ask, search, list, get)     │
+│  ├── resources/ (projects, sources, content) │
+│  └── prompts/   (explain, compare, summarize)│
+└──────────────┬──────────────────────────────┘
+               │  HTTP (X-API-Key)
+┌──────────────▼──────────────────────────────┐
+│  apps/api  (Public API)                      │
+│  /api/v1/public/*                            │
+└─────────────────────────────────────────────┘
+```
+
+The MCP server will:
+1. Use `@modelcontextprotocol/sdk` to implement the MCP protocol
+2. Authenticate to the Tokamak Pilot API using an API key
+3. Translate MCP tool calls into Public API requests
+4. Return structured results that AI assistants can reason over
+5. Support both `stdio` transport (for Cursor/Claude Desktop) and `SSE` transport (for web-based clients)
+
+**Configuration (for users):**
+```json
+{
+  "mcpServers": {
+    "tokamak-pilot": {
+      "command": "npx",
+      "args": ["@tokamak-pilot/mcp-server"],
+      "env": {
+        "TOKAMAK_PILOT_API_URL": "https://pilot.tokamak.network/api/v1",
+        "TOKAMAK_PILOT_API_KEY": "your-api-key"
+      }
+    }
+  }
+}
+```
 
 ## License
 
