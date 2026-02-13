@@ -16,6 +16,7 @@ import { ContentModule } from './modules/content/content.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
+import { FileUploadModule } from './modules/file-upload/file-upload.module';
 
 @Module({
   imports: [
@@ -67,6 +68,9 @@ import { PublicApiModule } from './modules/public-api/public-api.module';
     SourcesModule,
     ContentModule,
     AuthModule,
+
+    // ── File upload & document parsing ──
+    FileUploadModule,
 
     // ── API Key management & Public API ──
     ApiKeysModule,

@@ -34,6 +34,7 @@ import {
   createSource,
   syncSource,
   syncSourceFull,
+  uploadFiles,
   type IngestionStatusResponse,
   type IngestionRepoStatus,
 } from '@/lib/api';
@@ -116,14 +117,24 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'name', label: 'Name (A–Z)' },
 ];
 
+type AddSourceTab = 'github' | 'upload';
+
 export default function SourcesPage() {
   const [, setSources] = useAtom(sourcesAtom);
   const [loading, setLoading] = useAtom(sourcesLoadingAtom);
   const [status, setStatus] = useState<IngestionStatusResponse | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [addTab, setAddTab] = useState<AddSourceTab>('github');
   const [newRepoUrl, setNewRepoUrl] = useState('');
   const [adding, setAdding] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+
+  // File upload state
+  const [dragActive, setDragActive] = useState(false);
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
 
   // Search & filter state
   const [searchQuery, setSearchQuery] = useState('');
@@ -191,6 +202,93 @@ export default function SourcesPage() {
     } finally {
       setAdding(false);
     }
+  };
+
+  // ── File upload handlers ──
+  const ACCEPTED_EXTENSIONS = ['.pdf', '.md', '.mdx', '.txt', '.csv', '.docx'];
+  const MAX_FILE_SIZE = 20 * 1024 * 1024; // 20 MB
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === 'dragenter' || e.type === 'dragover') {
+      setDragActive(true);
+    } else if (e.type === 'dragleave') {
+      setDragActive(false);
+    }
+  };
+
+  const validateFiles = (files: File[]): File[] => {
+    const valid: File[] = [];
+    for (const file of files) {
+      const ext = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+      if (!ACCEPTED_EXTENSIONS.includes(ext)) {
+        setUploadError(`"${file.name}" is not a supported file type. Supported: ${ACCEPTED_EXTENSIONS.join(', ')}`);
+        continue;
+      }
+      if (file.size > MAX_FILE_SIZE) {
+        setUploadError(`"${file.name}" exceeds the 20 MB size limit`);
+        continue;
+      }
+      valid.push(file);
+    }
+    return valid;
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    setUploadError(null);
+
+    const droppedFiles = Array.from(e.dataTransfer.files);
+    const valid = validateFiles(droppedFiles);
+    if (valid.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...valid].slice(0, 10));
+    }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUploadError(null);
+    if (!e.target.files) return;
+    const files = Array.from(e.target.files);
+    const valid = validateFiles(files);
+    if (valid.length > 0) {
+      setSelectedFiles((prev) => [...prev, ...valid].slice(0, 10));
+    }
+    // Reset input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const removeFile = (index: number) => {
+    setSelectedFiles((prev) => prev.filter((_, i) => i !== index));
+    setUploadError(null);
+  };
+
+  const handleUpload = async () => {
+    if (selectedFiles.length === 0) return;
+
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      const result = await uploadFiles(selectedFiles);
+      setUploadSuccess(result.message);
+      setSelectedFiles([]);
+      // Refresh the sources list after a short delay (ingestion is async)
+      setTimeout(() => loadStatus(), 1500);
+    } catch (err: any) {
+      setUploadError(err.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   const handleSync = async (id: string, mode: 'light' | 'full' = 'light') => {
@@ -316,30 +414,164 @@ export default function SourcesPage() {
         </div>
       </div>
 
-      {/* Add Repo Form */}
+      {/* Add Source Form (tabbed: GitHub / File Upload) */}
       {showAddForm && (
         <Card>
-          <CardHeader>
-            <CardTitle className="text-sm">Add a GitHub Repository</CardTitle>
-            <CardDescription>
-              Enter a repo URL or owner/repo format. The system will
-              automatically fetch README, docs, issues, PRs, code, wiki — everything.
-            </CardDescription>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              {/* Tab switcher */}
+              <div className="flex rounded-lg border bg-muted p-0.5">
+                <button
+                  onClick={() => setAddTab('github')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    addTab === 'github'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Github className="size-3.5" />
+                  GitHub Repo
+                </button>
+                <button
+                  onClick={() => setAddTab('upload')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    addTab === 'upload'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Upload className="size-3.5" />
+                  File Upload
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleAddRepo} className="flex gap-2">
-              <Input
-                value={newRepoUrl}
-                onChange={(e) => setNewRepoUrl(e.target.value)}
-                placeholder="e.g. tokamak-network/tokamak-network-pilot"
-                className="flex-1"
-                disabled={adding}
-              />
-              <Button type="submit" disabled={adding || !newRepoUrl.trim()}>
-                {adding ? <Loader2 className="size-4 animate-spin" /> : <Github className="size-4" />}
-                {adding ? 'Adding...' : 'Add Repo'}
-              </Button>
-            </form>
+            {addTab === 'github' ? (
+              /* ── GitHub repo tab ── */
+              <div className="space-y-2">
+                <p className="text-xs text-muted-foreground">
+                  Enter a repo URL or owner/repo format. The system will
+                  automatically fetch README, docs, issues, PRs, code, wiki — everything.
+                </p>
+                <form onSubmit={handleAddRepo} className="flex gap-2">
+                  <Input
+                    value={newRepoUrl}
+                    onChange={(e) => setNewRepoUrl(e.target.value)}
+                    placeholder="e.g. tokamak-network/tokamak-network-pilot"
+                    className="flex-1"
+                    disabled={adding}
+                  />
+                  <Button type="submit" disabled={adding || !newRepoUrl.trim()}>
+                    {adding ? <Loader2 className="size-4 animate-spin" /> : <Github className="size-4" />}
+                    {adding ? 'Adding...' : 'Add Repo'}
+                  </Button>
+                </form>
+              </div>
+            ) : (
+              /* ── File upload tab ── */
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Upload PDF, Markdown, TXT, DOCX, or CSV files. They will be parsed, chunked, and indexed into the knowledge base.
+                </p>
+
+                {/* Drop zone */}
+                <div
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                  className={`relative flex flex-col items-center justify-center rounded-lg border-2 border-dashed p-8 transition-colors ${
+                    dragActive
+                      ? 'border-primary bg-primary/5'
+                      : 'border-muted-foreground/25 hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <Upload className={`size-8 mb-3 ${dragActive ? 'text-primary' : 'text-muted-foreground'}`} />
+                  <p className="text-sm font-medium">
+                    {dragActive ? 'Drop files here' : 'Drag & drop files here'}
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    or{' '}
+                    <label className="text-primary hover:underline cursor-pointer">
+                      browse
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.md,.mdx,.txt,.csv,.docx"
+                        onChange={handleFileSelect}
+                        className="hidden"
+                      />
+                    </label>
+                  </p>
+                  <p className="text-[10px] text-muted-foreground/70 mt-2">
+                    PDF, MD, TXT, DOCX, CSV — up to 20 MB each, 10 files max
+                  </p>
+                </div>
+
+                {/* Selected files list */}
+                {selectedFiles.length > 0 && (
+                  <div className="space-y-1.5">
+                    <p className="text-xs font-medium text-muted-foreground">
+                      {selectedFiles.length} file{selectedFiles.length > 1 ? 's' : ''} selected
+                    </p>
+                    {selectedFiles.map((file, i) => (
+                      <div
+                        key={`${file.name}-${i}`}
+                        className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-md bg-muted/50"
+                      >
+                        <FileText className="size-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-medium truncate flex-1">
+                          {file.name}
+                        </span>
+                        <span className="text-muted-foreground shrink-0">
+                          {formatFileSize(file.size)}
+                        </span>
+                        <button
+                          onClick={() => removeFile(i)}
+                          className="text-muted-foreground hover:text-red-500 shrink-0"
+                        >
+                          <X className="size-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Error / success messages */}
+                {uploadError && (
+                  <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-md p-2">
+                    <XCircle className="size-3.5 shrink-0" />
+                    {uploadError}
+                  </div>
+                )}
+                {uploadSuccess && (
+                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-md p-2">
+                    <CheckCircle2 className="size-3.5 shrink-0" />
+                    {uploadSuccess}
+                  </div>
+                )}
+
+                {/* Upload button */}
+                <Button
+                  onClick={handleUpload}
+                  disabled={selectedFiles.length === 0 || uploading}
+                  className="w-full"
+                >
+                  {uploading ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Uploading & Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="size-4" />
+                      Upload {selectedFiles.length > 0 ? `${selectedFiles.length} File${selectedFiles.length > 1 ? 's' : ''}` : 'Files'}
+                    </>
+                  )}
+                </Button>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}

@@ -89,8 +89,7 @@ The system can ingest knowledge from multiple source types:
 | GitHub Repos     | Code, docs, issues, PRs from repos       | Done       |
 | GitHub Org       | All repos in a GitHub organization        | Done       |
 | Documentation    | External documentation URLs               | Planned    |
-| File Uploads     | PDF, Markdown, TXT file uploads           | Planned    |
-| Notion           | Notion workspace pages                    | Planned    |
+| File Uploads     | PDF, Markdown, TXT, DOCX, CSV file uploads | Done       |
 | Custom / Webhook | Custom API-based sources                  | Planned    |
 
 ## API Endpoints
@@ -140,8 +139,7 @@ const { sources: knowledgeSources } = await pilot.listSources();
 - [x] LLM integration (OpenAI / Anthropic)
 - [x] Auto-seed from `GITHUB_ORGS` / `GITHUB_REPOS` on startup
 - [x] Content management CRUD with auth (OTP email login, `@tokamak.network` only)
-- [ ] File upload and document parsing
-- [ ] Notion integration
+- [x] File upload and document parsing (PDF, MD, TXT, DOCX, CSV)
 - [ ] Conversation history / follow-ups
 - [ ] SDK publishing to npm
 - [x] Docker Compose for local infra

@@ -227,6 +227,70 @@ export async function deleteSource(id: string) {
   });
 }
 
+// ───────────────────── File Upload API ─────────────────────
+
+export interface FileUploadResponse {
+  message: string;
+  source: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    fileCount: number;
+    parsedDocuments: number;
+    files: Array<{ name: string; size: number }>;
+  };
+}
+
+export interface SupportedFormatsResponse {
+  formats: string[];
+  maxFileSize: number;
+  maxFileSizeHuman: string;
+  maxFiles: number;
+}
+
+/**
+ * Upload files to create a file_upload knowledge source.
+ * Uses multipart/form-data — does NOT set Content-Type header (browser sets it with boundary).
+ */
+export async function uploadFiles(files: File[]): Promise<FileUploadResponse> {
+  const url = `${API_BASE}/sources/upload`;
+  const token = getToken();
+
+  const formData = new FormData();
+  for (const file of files) {
+    formData.append('files', file);
+  }
+
+  const headers: Record<string, string> = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  // Do NOT set Content-Type — the browser will set it with the correct multipart boundary
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: formData,
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('tokamak_token');
+      window.dispatchEvent(new Event('tokamak:unauthorized'));
+    }
+    throw new Error(error.message || `Upload failed: ${res.status}`);
+  }
+
+  return res.json();
+}
+
+/** Fetch supported file upload formats */
+export async function fetchSupportedFormats() {
+  return apiFetch<SupportedFormatsResponse>('/sources/upload/supported-formats');
+}
+
 // ───────────────────── API Keys API ─────────────────────
 
 export interface ApiKeyResponse {
