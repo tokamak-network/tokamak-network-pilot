@@ -16,9 +16,11 @@ alwaysApply: false
 
 ## @tokamak-pilot/sdk
 
-- Public TypeScript SDK for external consumers of the Tokamak Pilot API
-- `TokamakPilotClient` class wraps all API endpoints
-- When adding a new API endpoint, add the corresponding method to the SDK client
+- Public TypeScript SDK for external/third-party consumers of the Tokamak Pilot API
+- `TokamakPilotClient` class wraps **only the public API** (`/api/v1/public/*`) — authenticated via API key
+- The SDK does **not** expose internal/admin endpoints (auth, conversations, API key management, source sync, etc.)
+- Supported methods: `ask()`, `search()`, `listSources()`, `getSource()`, `listContent()`, `getContent()`, `health()`
+- When adding a new **public** API endpoint, add the corresponding method to the SDK client
 - Types are re-exported from `@tokamak-pilot/shared` — don't duplicate
 
 ## Adding Dependencies
