@@ -140,7 +140,7 @@ const { sources: knowledgeSources } = await pilot.listSources();
 - [x] Auto-seed from `GITHUB_ORGS` / `GITHUB_REPOS` on startup
 - [x] Content management CRUD with auth (OTP email login, `@tokamak.network` only)
 - [x] File upload and document parsing (PDF, MD, TXT, DOCX, CSV)
-- [ ] Conversation history / follow-ups
+- [x] Conversation history / follow-ups
 - [ ] SDK publishing to npm
 - [x] Docker Compose for local infra
 - [ ] CI/CD pipeline

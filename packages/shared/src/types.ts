@@ -30,6 +30,7 @@ export interface Source {
 export interface AskRequest {
   question: string;
   filters?: string[];
+  conversationId?: string;
   conversationHistory?: ConversationMessage[];
 }
 
@@ -172,12 +173,59 @@ export interface ApiKeyUsageEntry {
   createdAt: string;
 }
 
-// ---- Common Types ----
+// ---- Conversation Types ----
 
 export interface ConversationMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
+
+export interface ConversationSummary {
+  id: string;
+  title: string;
+  userId?: string;
+  messageCount: number;
+  lastMessageAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ConversationDetail extends ConversationSummary {
+  messages: MessageInfo[];
+}
+
+export interface MessageInfo {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: CitedSource[];
+  confidence?: number;
+  provider?: string;
+  model?: string;
+  createdAt: string;
+}
+
+export interface CreateConversationRequest {
+  title?: string;
+}
+
+export interface UpdateConversationRequest {
+  title: string;
+}
+
+export interface AskInConversationRequest {
+  question: string;
+  filters?: string[];
+}
+
+export interface AskInConversationResponse {
+  conversationId: string;
+  userMessage: MessageInfo;
+  assistantMessage: MessageInfo;
+}
+
+// ---- Common Types ----
 
 export interface PaginatedResponse<T> {
   data: T[];

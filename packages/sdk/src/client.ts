@@ -10,6 +10,10 @@ import type {
   CreateApiKeyResponse,
   UpdateApiKeyRequest,
   ApiKeyUsageEntry,
+  ConversationSummary,
+  ConversationDetail,
+  AskInConversationRequest,
+  AskInConversationResponse,
 } from '@tokamak-pilot/shared';
 
 export interface TokamakPilotClientOptions {
@@ -119,6 +123,56 @@ export class TokamakPilotClient {
   async getContent(id: string): Promise<ContentEntry> {
     const path = this.apiKey ? `/public/content/${id}` : `/content/${id}`;
     return this.get(path);
+  }
+
+  // ---- Conversations (requires JWT token) ----
+
+  async createConversation(title?: string): Promise<ConversationSummary> {
+    return this.post<ConversationSummary>('/conversations', title ? { title } : {});
+  }
+
+  async listConversations(
+    page = 1,
+    limit = 20,
+  ): Promise<PaginatedResponse<ConversationSummary>> {
+    return this.get(`/conversations?page=${page}&limit=${limit}`);
+  }
+
+  async getConversation(id: string): Promise<ConversationDetail> {
+    return this.get<ConversationDetail>(`/conversations/${id}`);
+  }
+
+  async updateConversation(id: string, title: string): Promise<ConversationSummary> {
+    return this.request<ConversationSummary>(`/conversations/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ title }),
+    });
+  }
+
+  async deleteConversation(id: string): Promise<{ message: string }> {
+    return this.request<{ message: string }>(`/conversations/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
+  async askInConversation(
+    conversationId: string,
+    question: string,
+    filters?: string[],
+  ): Promise<AskInConversationResponse> {
+    const body: AskInConversationRequest = { question, filters };
+    return this.post<AskInConversationResponse>(
+      `/conversations/${conversationId}/ask`,
+      body,
+    );
+  }
+
+  async quickAsk(
+    question: string,
+    filters?: string[],
+  ): Promise<AskInConversationResponse> {
+    const body: AskInConversationRequest = { question, filters };
+    return this.post<AskInConversationResponse>('/conversations/quick-ask', body);
   }
 
   // ---- Health ----

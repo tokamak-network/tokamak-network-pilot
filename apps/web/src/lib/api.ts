@@ -40,7 +40,7 @@ export async function apiFetch<T>(
 }
 
 /**
- * Ask a question to the RAG pipeline.
+ * Ask a question to the RAG pipeline (standalone, no conversation tracking).
  */
 export async function askQuestion(question: string, filters?: string[]) {
   return apiFetch<{
@@ -49,6 +49,102 @@ export async function askQuestion(question: string, filters?: string[]) {
     sources: Array<{ title: string; url: string; score: number }>;
     confidence: number;
   }>('/ask', {
+    method: 'POST',
+    body: JSON.stringify({ question, filters }),
+  });
+}
+
+// ───────────────────── Conversations API ─────────────────────
+
+export interface ConversationSummaryResponse {
+  id: string;
+  title: string;
+  userId?: string;
+  messageCount: number;
+  lastMessageAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MessageResponse {
+  id: string;
+  conversationId: string;
+  role: 'user' | 'assistant';
+  content: string;
+  sources?: Array<{ title: string; url: string; score: number; snippet?: string }>;
+  confidence?: number;
+  provider?: string;
+  model?: string;
+  createdAt: string;
+}
+
+export interface ConversationDetailResponse extends ConversationSummaryResponse {
+  messages: MessageResponse[];
+}
+
+export interface AskInConversationResponse {
+  conversationId: string;
+  userMessage: MessageResponse;
+  assistantMessage: MessageResponse;
+}
+
+/** Create a new conversation */
+export async function createConversation(title?: string) {
+  return apiFetch<ConversationSummaryResponse>('/conversations', {
+    method: 'POST',
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** List conversations for the current user */
+export async function fetchConversations(page = 1, limit = 30) {
+  return apiFetch<{
+    data: ConversationSummaryResponse[];
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  }>(`/conversations?page=${page}&limit=${limit}`);
+}
+
+/** Get a single conversation with all messages */
+export async function fetchConversation(id: string) {
+  return apiFetch<ConversationDetailResponse>(`/conversations/${id}`);
+}
+
+/** Update conversation title */
+export async function updateConversation(id: string, title: string) {
+  return apiFetch<ConversationSummaryResponse>(`/conversations/${id}`, {
+    method: 'PUT',
+    body: JSON.stringify({ title }),
+  });
+}
+
+/** Delete a conversation */
+export async function deleteConversation(id: string) {
+  return apiFetch<{ message: string }>(`/conversations/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Ask a question within an existing conversation */
+export async function askInConversation(
+  conversationId: string,
+  question: string,
+  filters?: string[],
+) {
+  return apiFetch<AskInConversationResponse>(
+    `/conversations/${conversationId}/ask`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ question, filters }),
+    },
+  );
+}
+
+/** Quick ask — creates a conversation and asks in one step */
+export async function quickAsk(question: string, filters?: string[]) {
+  return apiFetch<AskInConversationResponse>('/conversations/quick-ask', {
     method: 'POST',
     body: JSON.stringify({ question, filters }),
   });

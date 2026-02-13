@@ -17,6 +17,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { ApiKeysModule } from './modules/api-keys/api-keys.module';
 import { PublicApiModule } from './modules/public-api/public-api.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
 
 @Module({
   imports: [
@@ -71,6 +72,9 @@ import { FileUploadModule } from './modules/file-upload/file-upload.module';
 
     // ── File upload & document parsing ──
     FileUploadModule,
+
+    // ── Conversation history ──
+    ConversationsModule,
 
     // ── API Key management & Public API ──
     ApiKeysModule,

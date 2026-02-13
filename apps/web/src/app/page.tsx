@@ -1,11 +1,22 @@
 'use client';
 
 import { useAtom } from 'jotai';
-import { useEffect, useRef } from 'react';
-import { Search, Send, Zap, Database, FileText, Loader2, LayoutDashboard } from 'lucide-react';
+import { useEffect, useRef, useCallback } from 'react';
+import { Search, Send, Zap, Database, FileText, Loader2, LayoutDashboard, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { queryAtom, isLoadingAtom, conversationAtom } from '@/store';
-import { askQuestion } from '@/lib/api';
+import {
+  queryAtom,
+  isLoadingAtom,
+  conversationAtom,
+  activeConversationIdAtom,
+  conversationsListAtom,
+} from '@/store';
+import { dbMessageToLocal } from '@/store/ask';
+import {
+  quickAsk,
+  askInConversation,
+  fetchConversations,
+} from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -23,12 +34,33 @@ export default function HomePage() {
   const [query, setQuery] = useAtom(queryAtom);
   const [isLoading, setIsLoading] = useAtom(isLoadingAtom);
   const [conversation, setConversation] = useAtom(conversationAtom);
+  const [activeConversationId, setActiveConversationId] = useAtom(activeConversationIdAtom);
+  const [, setConversationsList] = useAtom(conversationsListAtom);
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation, isLoading]);
+
+  // Refresh conversations list on mount
+  useEffect(() => {
+    fetchConversations()
+      .then((res) => setConversationsList(res.data))
+      .catch(() => {});
+  }, [setConversationsList]);
+
+  const refreshConversationsList = useCallback(() => {
+    fetchConversations()
+      .then((res) => setConversationsList(res.data))
+      .catch(() => {});
+  }, [setConversationsList]);
+
+  const handleNewChat = useCallback(() => {
+    setActiveConversationId(null);
+    setConversation([]);
+    setQuery('');
+  }, [setActiveConversationId, setConversation, setQuery]);
 
   const handleAsk = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,15 +78,39 @@ export default function HomePage() {
     setQuery('');
 
     try {
-      const result = await askQuestion(currentQuery);
+      if (activeConversationId) {
+        // Follow-up in existing conversation
+        const result = await askInConversation(activeConversationId, currentQuery);
 
-      const assistantMessage: ConversationMessage = {
-        role: 'assistant',
-        content: result.answer,
-        sources: result.sources,
-        timestamp: new Date(),
-      };
-      setConversation((prev) => [...prev, assistantMessage]);
+        const assistantMessage: ConversationMessage = dbMessageToLocal(result.assistantMessage);
+        setConversation((prev) => {
+          // Update the user message with the DB id
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            id: result.userMessage.id,
+          };
+          return [...updated, assistantMessage];
+        });
+      } else {
+        // New conversation — quick ask
+        const result = await quickAsk(currentQuery);
+
+        setActiveConversationId(result.conversationId);
+
+        const assistantMessage: ConversationMessage = dbMessageToLocal(result.assistantMessage);
+        setConversation((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            id: result.userMessage.id,
+          };
+          return [...updated, assistantMessage];
+        });
+
+        // Refresh the sidebar list
+        refreshConversationsList();
+      }
     } catch (error: any) {
       const errorMessage: ConversationMessage = {
         role: 'assistant',
@@ -183,10 +239,29 @@ export default function HomePage() {
       ) : (
         /* Conversation View */
         <>
+          {/* Conversation header bar */}
+          <div className="flex items-center justify-between border-b px-4 py-2 bg-background/80 backdrop-blur-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <Zap className="size-4 text-primary shrink-0" />
+              <span className="text-sm font-medium truncate text-muted-foreground">
+                {activeConversationId ? 'Conversation' : 'New Conversation'}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={handleNewChat}
+            >
+              <Plus className="size-3.5" />
+              New Chat
+            </Button>
+          </div>
+
           <ScrollArea className="flex-1">
             <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
               {conversation.map((msg, i) => (
-                <ChatMessage key={i} message={msg} />
+                <ChatMessage key={msg.id || i} message={msg} />
               ))}
 
               {isLoading && (

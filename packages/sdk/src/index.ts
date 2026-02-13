@@ -13,4 +13,10 @@ export type {
   CreateApiKeyResponse,
   UpdateApiKeyRequest,
   ApiKeyUsageEntry,
+  ConversationMessage,
+  ConversationSummary,
+  ConversationDetail,
+  MessageInfo,
+  AskInConversationRequest,
+  AskInConversationResponse,
 } from '@tokamak-pilot/shared';

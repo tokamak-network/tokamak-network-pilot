@@ -10,3 +10,6 @@ export { ApiKey } from './api-key.entity';
 export type { ApiKeyTier, ApiKeyScope } from './api-key.entity';
 export { API_KEY_SCOPES, TIER_RATE_LIMITS } from './api-key.entity';
 export { ApiKeyUsageLog } from './api-key-usage.entity';
+export { Conversation } from './conversation.entity';
+export { Message } from './message.entity';
+export type { MessageRole } from './message.entity';

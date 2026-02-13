@@ -8,6 +8,8 @@ import { OtpCode } from '../../entities/otp-code.entity';
 import { ContentEntry } from '../../entities/content-entry.entity';
 import { ApiKey } from '../../entities/api-key.entity';
 import { ApiKeyUsageLog } from '../../entities/api-key-usage.entity';
+import { Conversation } from '../../entities/conversation.entity';
+import { Message } from '../../entities/message.entity';
 
 @Module({
   imports: [
@@ -19,7 +21,7 @@ import { ApiKeyUsageLog } from '../../entities/api-key-usage.entity';
           'DATABASE_URL',
           'postgresql://postgres:postgres@localhost:5432/tokamak_pilot',
         ),
-        entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog],
+        entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message],
         synchronize: true, // Auto-sync schema in dev — disable in production
         logging: config.get<string>('NODE_ENV') === 'development',
       }),

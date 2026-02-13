@@ -23,9 +23,26 @@ import {
   ChevronRight,
   GitFork,
   Star,
+  Plus,
+  Trash2,
+  History,
 } from 'lucide-react';
-import { sourcesAtom, userAtom } from '@/store';
-import { fetchSources, type SourceResponse } from '@/lib/api';
+import {
+  sourcesAtom,
+  userAtom,
+  conversationsListAtom,
+  activeConversationIdAtom,
+  conversationAtom,
+  queryAtom,
+} from '@/store';
+import { dbMessageToLocal } from '@/store/ask';
+import {
+  fetchSources,
+  fetchConversations,
+  fetchConversation,
+  deleteConversation,
+  type SourceResponse,
+} from '@/lib/api';
 import {
   Popover,
   PopoverContent,
@@ -81,17 +98,70 @@ export function AppSidebar() {
   const [repoSearch, setRepoSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Conversation state
+  const [conversationsList, setConversationsList] = useAtom(conversationsListAtom);
+  const [activeConversationId, setActiveConversationId] = useAtom(activeConversationIdAtom);
+  const [, setConversation] = useAtom(conversationAtom);
+  const [, setQuery] = useAtom(queryAtom);
+
   useEffect(() => {
     fetchSources()
       .then((data) => setSources(data.sources))
       .catch(() => {});
   }, [setSources]);
 
+  // Load conversation list
+  useEffect(() => {
+    fetchConversations()
+      .then((res) => setConversationsList(res.data))
+      .catch(() => {});
+  }, [setConversationsList]);
+
   const handleLogout = useCallback(() => {
     localStorage.removeItem('tokamak_token');
     setUser(null);
     router.push('/');
   }, [setUser, router]);
+
+  const handleNewChat = useCallback(() => {
+    setActiveConversationId(null);
+    setConversation([]);
+    setQuery('');
+    router.push('/');
+  }, [setActiveConversationId, setConversation, setQuery, router]);
+
+  const handleSelectConversation = useCallback(
+    async (id: string) => {
+      try {
+        const detail = await fetchConversation(id);
+        setActiveConversationId(id);
+        setConversation(detail.messages.map(dbMessageToLocal));
+        setQuery('');
+        router.push('/');
+      } catch {
+        // If conversation can't be loaded, just navigate home
+        router.push('/');
+      }
+    },
+    [setActiveConversationId, setConversation, setQuery, router],
+  );
+
+  const handleDeleteConversation = useCallback(
+    async (id: string, e: React.MouseEvent) => {
+      e.stopPropagation();
+      try {
+        await deleteConversation(id);
+        setConversationsList((prev) => prev.filter((c) => c.id !== id));
+        if (activeConversationId === id) {
+          setActiveConversationId(null);
+          setConversation([]);
+        }
+      } catch {
+        // Silently fail
+      }
+    },
+    [activeConversationId, setActiveConversationId, setConversation, setConversationsList],
+  );
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -205,6 +275,53 @@ export function AppSidebar() {
                   </PopoverContent>
                 </Popover>
               </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* Conversation History */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="flex items-center justify-between">
+            <span className="flex items-center gap-1.5">
+              <History className="size-3" />
+              Recent Chats
+            </span>
+            <button
+              onClick={handleNewChat}
+              className="p-0.5 rounded hover:bg-muted transition-colors"
+              title="New Chat"
+            >
+              <Plus className="size-3 text-muted-foreground" />
+            </button>
+          </SidebarGroupLabel>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {conversationsList.length === 0 ? (
+                <div className="px-3 py-2 text-[11px] text-muted-foreground/60">
+                  No conversations yet
+                </div>
+              ) : (
+                conversationsList.slice(0, 10).map((conv) => (
+                  <SidebarMenuItem key={conv.id}>
+                    <SidebarMenuButton
+                      isActive={activeConversationId === conv.id}
+                      tooltip={conv.title}
+                      onClick={() => handleSelectConversation(conv.id)}
+                      className="group/conv w-full"
+                    >
+                      <MessageSquare className="size-4 shrink-0" />
+                      <span className="flex-1 truncate text-xs">{conv.title}</span>
+                      <button
+                        onClick={(e) => handleDeleteConversation(conv.id, e)}
+                        className="opacity-0 group-hover/conv:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all shrink-0"
+                        title="Delete conversation"
+                      >
+                        <Trash2 className="size-3" />
+                      </button>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))
+              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
