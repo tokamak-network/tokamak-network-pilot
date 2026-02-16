@@ -1,0 +1,36 @@
+{
+  "name": "@tokamak-pilot/mcp-server",
+  "version": "0.1.0",
+  "description": "MCP server for the Tokamak Pilot knowledge base — use Tokamak knowledge from any AI assistant (Cursor, Claude Desktop, etc.)",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "bin": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "lint": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.12.0",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.19.9",
+    "typescript": "^5.7.0"
+  },
+  "files": [
+    "dist"
+  ],
+  "keywords": [
+    "tokamak",
+    "mcp",
+    "model-context-protocol",
+    "ai",
+    "knowledge-base",
+    "cursor",
+    "claude-desktop"
+  ],
+  "license": "MIT"
+}

@@ -206,8 +206,8 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 > Expose Tokamak Pilot as an MCP server so any AI assistant (Cursor, Claude Desktop, etc.) can use it as a tool.
 
-- [ ] **MCP server package** — New package `packages/mcp-server` implementing the [Model Context Protocol](https://modelcontextprotocol.io/)
-- [ ] **MCP Tools:**
+- [x] **MCP server package** — New package `packages/mcp-server` implementing the [Model Context Protocol](https://modelcontextprotocol.io/)
+- [x] **MCP Tools:**
   - `tokamak_ask` — Ask a question about Tokamak Network, returns answer with sources
   - `tokamak_search` — Semantic search across all indexed knowledge
   - `tokamak_list_projects` — List all projects with summaries
@@ -215,12 +215,12 @@ const { sources: knowledgeSources } = await pilot.listSources();
   - `tokamak_list_sources` — List knowledge sources and their status
   - `tokamak_get_content` — Get a specific curated content entry
   - `tokamak_list_content` — Browse curated content by project or category
-- [ ] **MCP Resources:**
+- [x] **MCP Resources:**
   - `tokamak://projects` — List of all projects
   - `tokamak://projects/{id}` — Project details and summary
   - `tokamak://sources` — List of knowledge sources
   - `tokamak://content/{id}` — Curated content entry
-- [ ] **MCP Prompts:**
+- [x] **MCP Prompts:**
   - `explain-project` — Pre-built prompt to explain a Tokamak project
   - `compare-projects` — Compare two projects side by side
   - `summarize-source` — Summarize a knowledge source
