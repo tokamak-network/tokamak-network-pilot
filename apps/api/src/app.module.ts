@@ -19,6 +19,9 @@ import { PublicApiModule } from './modules/public-api/public-api.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { ProjectsModule } from './modules/projects/projects.module';
+import { LlmsTxtModule } from './modules/llms-txt/llms-txt.module';
+import { ExportModule } from './modules/export/export.module';
+import { WidgetModule } from './modules/widget/widget.module';
 
 @Module({
   imports: [
@@ -83,6 +86,11 @@ import { ProjectsModule } from './modules/projects/projects.module';
     // ── API Key management & Public API ──
     ApiKeysModule,
     PublicApiModule,
+
+    // ── Phase 2: AI-Friendly Output & Integrations ──
+    LlmsTxtModule,
+    ExportModule,
+    WidgetModule,
   ],
   controllers: [AppController],
   providers: [AppService],

@@ -416,6 +416,78 @@ function KpiCard({
   );
 }
 
+// ─── Copy as AI Prompt & Export (Project) ────────────────────
+
+const PROJECT_API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+
+function ProjectCopyAsPromptButton({ project }: { project: ProjectDetailResponse }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const lines = [
+      '## Context from Tokamak Pilot Knowledge Base',
+      '',
+      `### ${project.name}`,
+      '',
+    ];
+    if (project.description) {
+      lines.push(`> ${project.description}`);
+      lines.push('');
+    }
+    if (project.summary) {
+      lines.push(project.summary);
+      lines.push('');
+    }
+    if (project.sources.length > 0) {
+      lines.push('### Knowledge Sources');
+      for (const s of project.sources) {
+        lines.push(`- ${s.source.name} (${s.source.type}, ${s.source.documentCount} docs)`);
+      }
+      lines.push('');
+    }
+    lines.push('---');
+    lines.push('*This information is from the Tokamak Pilot Knowledge Base. Use it as context for your response. Cite sources when relevant.*');
+    await navigator.clipboard.writeText(lines.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-card px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+      title="Copy project info as AI-ready prompt"
+    >
+      {copied ? <span className="size-3 text-green-500">&#10003;</span> : <Sparkles className="size-3" />}
+      {copied ? 'Copied' : 'Copy as prompt'}
+    </button>
+  );
+}
+
+function ProjectExportButtons({ slug }: { slug: string }) {
+  const handleExport = (format: 'json' | 'markdown') => {
+    window.open(`${PROJECT_API_BASE}/export/project/${slug}?format=${format}`, '_blank');
+  };
+  return (
+    <div className="inline-flex rounded-md border border-border/40 overflow-hidden">
+      <button
+        onClick={() => handleExport('json')}
+        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+        title="Export as JSON"
+      >
+        <FileText className="size-3" />
+        JSON
+      </button>
+      <div className="w-px bg-border/40" />
+      <button
+        onClick={() => handleExport('markdown')}
+        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+        title="Export as Markdown"
+      >
+        MD
+      </button>
+    </div>
+  );
+}
+
 // ─── Overview Tab ────────────────────────────────────────────
 
 function OverviewTab({
@@ -517,8 +589,14 @@ function OverviewTab({
               </div>
             </div>
           ) : project.summary ? (
-            <div className="prose prose-sm max-w-none text-sm text-foreground whitespace-pre-wrap">
-              {project.summary}
+            <div className="space-y-3">
+              <div className="prose prose-sm max-w-none text-sm text-foreground whitespace-pre-wrap">
+                {project.summary}
+              </div>
+              <div className="flex items-center gap-2 pt-1">
+                <ProjectCopyAsPromptButton project={project} />
+                <ProjectExportButtons slug={project.slug} />
+              </div>
             </div>
           ) : (
             <p className="text-sm text-muted-foreground text-center py-6">

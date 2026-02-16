@@ -1,13 +1,12 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Zap, User, ExternalLink, FileText, Copy, Check } from 'lucide-react';
+import { Zap, User, ExternalLink, FileText, Copy, Check, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { ConversationMessage } from '@/store/ask';
-import { useState } from 'react';
 
 interface ChatMessageProps {
   message: ConversationMessage;
@@ -54,6 +53,73 @@ function CopyButton({ text }: { text: string }) {
       ) : (
         <Copy className="size-3 text-muted-foreground" />
       )}
+    </button>
+  );
+}
+
+/**
+ * Formats an answer as an AI-ready prompt with context, sources, and instructions.
+ */
+function formatAsAiPrompt(
+  content: string,
+  sources?: Array<{ title: string; url: string }>,
+): string {
+  const lines: string[] = [];
+  lines.push('## Context from Tokamak Pilot Knowledge Base');
+  lines.push('');
+  lines.push(content);
+  lines.push('');
+
+  if (sources && sources.length > 0) {
+    lines.push('### Sources');
+    lines.push('');
+    for (const src of sources) {
+      if (src.url) {
+        lines.push(`- [${src.title}](${src.url})`);
+      } else {
+        lines.push(`- ${src.title}`);
+      }
+    }
+    lines.push('');
+  }
+
+  lines.push('---');
+  lines.push(
+    '*This information is from the Tokamak Pilot Knowledge Base. ' +
+      'Use it as context for your response. Cite sources when relevant.*',
+  );
+
+  return lines.join('\n');
+}
+
+function CopyAsPromptButton({
+  content,
+  sources,
+}: {
+  content: string;
+  sources?: Array<{ title: string; url: string }>;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    const prompt = formatAsAiPrompt(content, sources);
+    await navigator.clipboard.writeText(prompt);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }, [content, sources]);
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-card px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+      title="Copy as AI-ready prompt with context and sources"
+    >
+      {copied ? (
+        <Check className="size-3 text-green-500" />
+      ) : (
+        <Sparkles className="size-3" />
+      )}
+      {copied ? 'Copied' : 'Copy as prompt'}
     </button>
   );
 }
@@ -286,6 +352,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
                 </a>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Copy as AI prompt */}
+        {!isUser && (
+          <div className="mt-1.5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <CopyAsPromptButton
+              content={message.content}
+              sources={message.sources}
+            />
           </div>
         )}
       </div>

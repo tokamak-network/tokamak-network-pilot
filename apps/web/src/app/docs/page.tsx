@@ -19,6 +19,10 @@ import {
   FileText,
   Heart,
   ArrowRight,
+  Download,
+  Bot,
+  Code,
+  Sparkles,
 } from 'lucide-react';
 
 // ─── Helpers ────────────────────────────────────────────
@@ -272,6 +276,9 @@ const sections = [
   { id: 'endpoints-sources', label: 'Sources', icon: Database },
   { id: 'endpoints-content', label: 'Content', icon: FileText },
   { id: 'endpoints-health', label: 'Health', icon: Heart },
+  { id: 'openapi-spec', label: 'OpenAPI Spec', icon: Download },
+  { id: 'ai-friendly', label: 'AI-Friendly', icon: Bot },
+  { id: 'embed-widget', label: 'Widget', icon: Code },
 ];
 
 // ─── Main Page ─────────────────────────────────────────
@@ -896,6 +903,185 @@ const data = await response.json();`}
 }`}
             language="json"
           />
+        </section>
+
+        {/* ─── OpenAPI Spec Download ─────────── */}
+        <section id="openapi-spec" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Download className="size-5 text-primary" />
+            OpenAPI Specification
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Download the complete OpenAPI specification for the Tokamak Pilot API. Use it to generate
+            client libraries, import into Postman, or integrate with any OpenAPI-compatible tool.
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/openapi.json`}
+              download="tokamak-pilot-openapi.json"
+              className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+                <Download className="size-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">OpenAPI JSON</p>
+                <p className="text-xs text-muted-foreground">Machine-readable format</p>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </a>
+            <a
+              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/openapi.yaml`}
+              download="tokamak-pilot-openapi.yaml"
+              className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
+            >
+              <div className="flex size-10 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+                <Download className="size-4" />
+              </div>
+              <div className="flex-1">
+                <p className="text-sm font-medium">OpenAPI YAML</p>
+                <p className="text-xs text-muted-foreground">Human-readable format</p>
+              </div>
+              <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
+            </a>
+          </div>
+        </section>
+
+        {/* ─── AI-Friendly Output ────────────── */}
+        <section id="ai-friendly" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Bot className="size-5 text-primary" />
+            AI-Friendly Output
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Tokamak Pilot provides AI-optimized endpoints for LLMs and agents to discover and consume knowledge.
+          </p>
+
+          {/* llms.txt */}
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="size-4 text-primary" />
+              <h4 className="text-sm font-semibold">llms.txt</h4>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Following the{' '}
+              <a
+                href="https://llmstxt.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2"
+              >
+                llms.txt specification
+              </a>
+              , Tokamak Pilot serves standardized files that LLMs and AI agents can discover and consume.
+            </p>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms.txt`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+              >
+                <FileText className="size-3.5" />
+                /llms.txt — Brief overview
+              </a>
+              <a
+                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms-full.txt`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
+              >
+                <FileText className="size-3.5" />
+                /llms-full.txt — Full knowledge base
+              </a>
+            </div>
+          </div>
+
+          {/* Structured Export */}
+          <div className="rounded-xl border border-border bg-card p-5 space-y-3">
+            <div className="flex items-center gap-2">
+              <Download className="size-4 text-primary" />
+              <h4 className="text-sm font-semibold">Structured Export</h4>
+            </div>
+            <p className="text-sm text-muted-foreground leading-relaxed">
+              Export any content entry, project, or AI answer as structured JSON or Markdown for use in other tools.
+            </p>
+            <div className="space-y-2">
+              <CodeBlock
+                code={`# Export a content entry as Markdown
+curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/content/{id}?format=markdown"
+
+# Export a project as JSON
+curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/project/{slug}?format=json"
+
+# Format as AI-ready prompt
+curl -X POST "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/prompt" \\
+  -H "Content-Type: application/json" \\
+  -d '{"type":"answer","title":"TON Staking","body":"...","sources":[]}'`}
+                language="bash"
+              />
+            </div>
+          </div>
+        </section>
+
+        {/* ─── Embeddable Widget ─────────────── */}
+        <section id="embed-widget" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Code className="size-5 text-primary" />
+            Embeddable Widget
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Add a &ldquo;Ask about Tokamak&rdquo; chat widget to any website with a single script tag.
+            The widget uses the Public API and requires an API key with the{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">ask</code> scope.
+          </p>
+          <CodeBlock
+            code={`<!-- Add this to your HTML -->
+<script
+  src="${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/widget.js"
+  data-api-key="tok_your_key_here"
+  data-position="bottom-right"
+  data-theme="dark"
+  defer
+></script>`}
+            language="html"
+          />
+          <div className="rounded-xl border border-border bg-muted/30 p-4 space-y-3">
+            <h4 className="text-sm font-medium">Configuration Options</h4>
+            <div className="rounded-lg border border-border overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/50">
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Attribute</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Required</th>
+                    <th className="px-3 py-2 text-left text-xs font-medium text-muted-foreground">Description</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 font-mono text-xs">data-api-key</td>
+                    <td className="px-3 py-2"><span className="text-[11px] font-medium text-red-500">Required</span></td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">Your API key with the <code className="bg-muted px-1 rounded">ask</code> scope</td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 font-mono text-xs">data-position</td>
+                    <td className="px-3 py-2"><span className="text-[11px] text-muted-foreground">Optional</span></td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground"><code className="bg-muted px-1 rounded">bottom-right</code> (default) or <code className="bg-muted px-1 rounded">bottom-left</code></td>
+                  </tr>
+                  <tr className="border-b border-border">
+                    <td className="px-3 py-2 font-mono text-xs">data-theme</td>
+                    <td className="px-3 py-2"><span className="text-[11px] text-muted-foreground">Optional</span></td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground"><code className="bg-muted px-1 rounded">dark</code> (default) or <code className="bg-muted px-1 rounded">light</code></td>
+                  </tr>
+                  <tr>
+                    <td className="px-3 py-2 font-mono text-xs">data-api-url</td>
+                    <td className="px-3 py-2"><span className="text-[11px] text-muted-foreground">Optional</span></td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">Override the API base URL (defaults to the Tokamak Pilot instance)</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
         </section>
 
         {/* ─── SDK ──────────────────────────── */}

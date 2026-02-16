@@ -1,16 +1,23 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { RequestMethod, ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import * as yaml from 'js-yaml';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
   const config = app.get(ConfigService);
 
-  // Global prefix
+  // Global prefix — exclude llms.txt, widget, and openapi spec routes
   const prefix = config.get<string>('API_PREFIX', '/api/v1');
-  app.setGlobalPrefix(prefix);
+  app.setGlobalPrefix(prefix, {
+    exclude: [
+      { path: 'llms.txt', method: RequestMethod.GET },
+      { path: 'llms-full.txt', method: RequestMethod.GET },
+      { path: 'widget.js', method: RequestMethod.GET },
+    ],
+  });
 
   // CORS
   app.enableCors({
@@ -45,14 +52,32 @@ async function bootstrap() {
     .addTag('auth', 'Authentication & authorization')
     .addTag('api-keys', 'API key management (create, rotate, revoke)')
     .addTag('public', 'Public API for third-party integrations (requires API key)')
+    .addTag('export', 'Structured export (JSON, Markdown, AI prompt)')
+    .addTag('llms-txt', 'LLM-friendly knowledge files (llms.txt spec)')
+    .addTag('widget', 'Embeddable chat widget')
     .build();
   const document = SwaggerModule.createDocument(app, swaggerConfig);
   SwaggerModule.setup('docs', app, document);
+
+  // ── OpenAPI spec download endpoints ──
+  const httpAdapter = app.getHttpAdapter();
+  httpAdapter.get(`${prefix}/openapi.json`, (_req: unknown, res: any) => {
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', 'attachment; filename="tokamak-pilot-openapi.json"');
+    res.send(JSON.stringify(document, null, 2));
+  });
+  httpAdapter.get(`${prefix}/openapi.yaml`, (_req: unknown, res: any) => {
+    res.setHeader('Content-Type', 'application/x-yaml');
+    res.setHeader('Content-Disposition', 'attachment; filename="tokamak-pilot-openapi.yaml"');
+    res.send(yaml.dump(document));
+  });
 
   const port = config.get<number>('API_PORT', 4000);
   await app.listen(port);
   console.log(`🚀 Tokamak Pilot API running on http://localhost:${port}${prefix}`);
   console.log(`📚 Swagger docs at http://localhost:${port}/docs`);
+  console.log(`📄 llms.txt at http://localhost:${port}/llms.txt`);
+  console.log(`📋 OpenAPI spec at http://localhost:${port}${prefix}/openapi.json`);
 }
 
 bootstrap();

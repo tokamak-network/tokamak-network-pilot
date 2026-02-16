@@ -120,6 +120,15 @@ The system can ingest knowledge from multiple source types:
 | POST   | `/api/v1/projects/:id/summary`  | Generate AI project summary          | JWT    |
 | GET    | `/api/v1/projects/:slug/public` | Public project overview              | —      |
 | GET    | `/api/v1/projects/:id/dashboard`| Project dashboard with stats         | JWT    |
+| GET    | `/api/v1/export/content/:id`| Export content as JSON/Markdown       | —      |
+| GET    | `/api/v1/export/project/:idOrSlug` | Export project as JSON/Markdown | —      |
+| POST   | `/api/v1/export/answer`     | Export RAG answer as JSON/Markdown    | —      |
+| POST   | `/api/v1/export/prompt`     | Format content as AI-ready prompt     | —      |
+| GET    | `/api/v1/openapi.json`      | Download OpenAPI spec (JSON)          | —      |
+| GET    | `/api/v1/openapi.yaml`      | Download OpenAPI spec (YAML)          | —      |
+| GET    | `/llms.txt`                 | Brief LLM knowledge file             | —      |
+| GET    | `/llms-full.txt`            | Full LLM knowledge file              | —      |
+| GET    | `/widget.js`                | Embeddable chat widget script         | —      |
 | POST   | `/api/v1/auth/request-otp`  | Request OTP login code               | —      |
 | POST   | `/api/v1/auth/verify-otp`   | Verify OTP → JWT token               | —      |
 | GET    | `/api/v1/auth/me`           | Get current user profile             | JWT    |
@@ -185,11 +194,11 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 > Make knowledge consumable by other AI tools and agents.
 
-- [ ] **`llms.txt` endpoint** — Serve a standardized `llms.txt` file at `/llms.txt` and `/llms-full.txt` following the [llms.txt spec](https://llmstxt.org/), so LLMs and AI agents can discover and consume Tokamak knowledge
-- [ ] **Structured export (JSON/Markdown)** — Export any answer, content entry, or project summary as structured JSON or Markdown for use in other tools
-- [ ] **One-click copy as AI prompt** — Copy button on docs/answers that formats content as a ready-to-paste prompt (with context, sources, and instructions)
-- [ ] **OpenAPI spec download** — One-click download of the full OpenAPI JSON/YAML spec from the docs page
-- [ ] **Embeddable widget** — JavaScript snippet that others can embed on their sites to add a "Ask about Tokamak" chat widget
+- [x] **`llms.txt` endpoint** — Serve a standardized `llms.txt` file at `/llms.txt` and `/llms-full.txt` following the [llms.txt spec](https://llmstxt.org/), so LLMs and AI agents can discover and consume Tokamak knowledge
+- [x] **Structured export (JSON/Markdown)** — Export any answer, content entry, or project summary as structured JSON or Markdown for use in other tools
+- [x] **One-click copy as AI prompt** — Copy button on docs/answers that formats content as a ready-to-paste prompt (with context, sources, and instructions)
+- [x] **OpenAPI spec download** — One-click download of the full OpenAPI JSON/YAML spec from the docs page
+- [x] **Embeddable widget** — JavaScript snippet that others can embed on their sites to add a "Ask about Tokamak" chat widget
 
 ---
 

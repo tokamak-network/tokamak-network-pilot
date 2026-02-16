@@ -12,6 +12,9 @@ import {
   Loader2,
   X,
   LogIn,
+  Sparkles,
+  Check,
+  Download,
 } from 'lucide-react';
 import Link from 'next/link';
 import { userAtom } from '@/store';
@@ -33,6 +36,66 @@ import {
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Input } from '@/components/ui/input';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+
+function CopyAsPromptButton({ entry }: { entry: ContentEntryResponse }) {
+  const [copied, setCopied] = useState(false);
+  const handleCopy = async () => {
+    const lines = [
+      '## Context from Tokamak Pilot Knowledge Base',
+      '',
+      `### ${entry.title}`,
+      '',
+      entry.body,
+      '',
+    ];
+    if (entry.project) lines.push(`*Project: ${entry.project}*`);
+    if (entry.category) lines.push(`*Category: ${entry.category}*`);
+    if (entry.tags.length > 0) lines.push(`*Tags: ${entry.tags.join(', ')}*`);
+    lines.push('', '---');
+    lines.push('*This information is from the Tokamak Pilot Knowledge Base. Use it as context for your response.*');
+    await navigator.clipboard.writeText(lines.join('\n'));
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+  return (
+    <button
+      onClick={handleCopy}
+      className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-card px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+      title="Copy as AI-ready prompt"
+    >
+      {copied ? <Check className="size-3 text-green-500" /> : <Sparkles className="size-3" />}
+      {copied ? 'Copied' : 'Copy as prompt'}
+    </button>
+  );
+}
+
+function ExportButton({ entryId, title }: { entryId: string; title: string }) {
+  const handleExport = (format: 'json' | 'markdown') => {
+    window.open(`${API_BASE}/export/content/${entryId}?format=${format}`, '_blank');
+  };
+  return (
+    <div className="inline-flex rounded-md border border-border/40 overflow-hidden">
+      <button
+        onClick={() => handleExport('json')}
+        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+        title={`Export "${title}" as JSON`}
+      >
+        <Download className="size-3" />
+        JSON
+      </button>
+      <div className="w-px bg-border/40" />
+      <button
+        onClick={() => handleExport('markdown')}
+        className="inline-flex items-center gap-1 px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
+        title={`Export "${title}" as Markdown`}
+      >
+        MD
+      </button>
+    </div>
+  );
+}
 
 export default function ContentPage() {
   const [user] = useAtom(userAtom);
@@ -337,6 +400,10 @@ export default function ContentPage() {
                     ))}
                   </div>
                 )}
+                <div className="flex items-center gap-2 pt-1">
+                  <CopyAsPromptButton entry={entry} />
+                  <ExportButton entryId={entry.id} title={entry.title} />
+                </div>
               </CardContent>
             </Card>
           ))}
