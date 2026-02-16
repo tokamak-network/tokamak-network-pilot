@@ -203,12 +203,12 @@ export function AppSidebar() {
       <SidebarHeader className="h-14 justify-center border-b border-sidebar-border p-2">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild>
+            <SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:justify-center">
               <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:text-foreground">
                   <Zap className="size-4" />
                 </div>
-                <div className="flex flex-col gap-0.5 leading-none">
+                <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
                   <span className="font-semibold">Tokamak Pilot</span>
                   <span className="text-xs text-muted-foreground">Knowledge Hub</span>
                 </div>
@@ -299,7 +299,7 @@ export function AppSidebar() {
           <SidebarGroupContent>
             <SidebarMenu>
               {conversationsList.length === 0 ? (
-                <div className="px-3 py-2 text-[11px] text-muted-foreground/60">
+                <div className="px-3 py-2 text-[11px] text-muted-foreground/60 group-data-[collapsible=icon]:hidden">
                   No conversations yet
                 </div>
               ) : (
@@ -366,7 +366,7 @@ export function AppSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton size="sm" className="cursor-default" tooltip={user.email}>
                   <User className="size-4" />
-                  <div className="flex flex-col leading-none">
+                  <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
                     <span className="text-xs font-medium truncate">{user.name || user.email}</span>
                     <span className="text-[10px] text-muted-foreground truncate">{user.role}</span>
                   </div>
