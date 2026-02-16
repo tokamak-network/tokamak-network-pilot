@@ -23,7 +23,18 @@ import {
   Bot,
   Code,
   Sparkles,
+  Play,
+  History,
+  Webhook,
+  BarChart3,
+  Wand2,
 } from 'lucide-react';
+import { MultiLangCodeBlock } from '@/components/docs/multi-lang-code';
+import { ApiPlayground } from '@/components/docs/api-playground';
+import { SdkGenerator } from '@/components/docs/sdk-generator';
+import { ChangelogSection } from '@/components/docs/changelog-section';
+import { WebhookDocs } from '@/components/docs/webhook-docs';
+import { RateLimitDashboard } from '@/components/docs/rate-limit-dashboard';
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -84,7 +95,7 @@ function CodeBlock({ code, language = 'bash' }: { code: string; language?: strin
   );
 }
 
-// ─── Endpoint Section ──────────────────────────────────
+// ─── Enhanced Endpoint Section ──────────────────────────
 
 interface EndpointProps {
   method: string;
@@ -92,12 +103,13 @@ interface EndpointProps {
   title: string;
   description: string;
   scope?: string;
-  queryParams?: Array<{ name: string; required: boolean; description: string; example?: string }>;
+  queryParams?: Array<{ name: string; type?: string; required: boolean; description: string; example?: string }>;
   bodyParams?: Array<{ name: string; type: string; required: boolean; description: string; example?: string }>;
   responseExample: string;
-  curlExample: string;
-  jsExample: string;
 }
+
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
 function Endpoint({
   method,
@@ -108,11 +120,9 @@ function Endpoint({
   queryParams,
   bodyParams,
   responseExample,
-  curlExample,
-  jsExample,
 }: EndpointProps) {
   const [expanded, setExpanded] = useState(false);
-  const [tab, setTab] = useState<'curl' | 'js'>('curl');
+  const [activeTab, setActiveTab] = useState<'code' | 'sdk' | 'playground'>('code');
 
   return (
     <div
@@ -220,34 +230,70 @@ function Endpoint({
             </div>
           )}
 
-          {/* Code Examples */}
-          <div>
-            <div className="flex items-center gap-1 mb-2">
-              <button
-                onClick={() => setTab('curl')}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  tab === 'curl'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-              >
-                cURL
-              </button>
-              <button
-                onClick={() => setTab('js')}
-                className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                  tab === 'js'
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                }`}
-              >
-                JavaScript
-              </button>
-            </div>
-            {tab === 'curl' ? (
-              <CodeBlock code={curlExample} language="bash" />
-            ) : (
-              <CodeBlock code={jsExample} language="javascript" />
+          {/* Tab Bar: Code Examples / SDK / Playground */}
+          <div className="flex items-center gap-1 border-b border-border pb-0">
+            <button
+              onClick={() => setActiveTab('code')}
+              className={`flex items-center gap-1.5 rounded-t-md border-b-2 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'code'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Code className="size-3.5" />
+              Code Examples
+            </button>
+            <button
+              onClick={() => setActiveTab('sdk')}
+              className={`flex items-center gap-1.5 rounded-t-md border-b-2 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'sdk'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Wand2 className="size-3.5" />
+              SDK
+            </button>
+            <button
+              onClick={() => setActiveTab('playground')}
+              className={`flex items-center gap-1.5 rounded-t-md border-b-2 px-4 py-2 text-xs font-medium transition-colors ${
+                activeTab === 'playground'
+                  ? 'border-primary text-primary'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              <Play className="size-3.5" />
+              Try It
+            </button>
+          </div>
+
+          {/* Tab Content */}
+          <div className="pt-1">
+            {activeTab === 'code' && (
+              <MultiLangCodeBlock
+                method={method}
+                path={path}
+                baseUrl={API_BASE_URL}
+                queryParams={queryParams}
+                bodyParams={bodyParams}
+              />
+            )}
+            {activeTab === 'sdk' && (
+              <SdkGenerator
+                method={method}
+                path={path}
+                queryParams={queryParams}
+                bodyParams={bodyParams}
+              />
+            )}
+            {activeTab === 'playground' && (
+              <ApiPlayground
+                method={method}
+                path={path}
+                baseUrl={API_BASE_URL}
+                queryParams={queryParams}
+                bodyParams={bodyParams}
+              />
             )}
           </div>
 
@@ -279,6 +325,9 @@ const sections = [
   { id: 'openapi-spec', label: 'OpenAPI Spec', icon: Download },
   { id: 'ai-friendly', label: 'AI-Friendly', icon: Bot },
   { id: 'embed-widget', label: 'Widget', icon: Code },
+  { id: 'rate-dashboard', label: 'Rate Dashboard', icon: BarChart3 },
+  { id: 'changelog', label: 'Changelog', icon: History },
+  { id: 'webhooks', label: 'Webhooks', icon: Webhook },
 ];
 
 // ─── Main Page ─────────────────────────────────────────
@@ -338,7 +387,7 @@ export default function DocsPage() {
                 </div>
                 <div>
                   <h1 className="text-2xl font-bold tracking-tight">Tokamak Pilot Public API</h1>
-                  <p className="text-sm text-muted-foreground">v0.1.0</p>
+                  <p className="text-sm text-muted-foreground">v0.4.0</p>
                 </div>
               </div>
               <p className="text-muted-foreground leading-relaxed max-w-2xl">
@@ -410,6 +459,24 @@ export default function DocsPage() {
               <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </a>
           </div>
+
+          {/* New features banner */}
+          <div className="mt-4 flex items-center gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+            <Sparkles className="size-5 text-primary shrink-0" />
+            <div className="flex-1">
+              <p className="text-sm font-medium">New in v0.4.0</p>
+              <p className="text-xs text-muted-foreground">
+                Interactive API playground, multi-language code examples (5 languages), SDK code generator,
+                changelog, webhook docs, and rate limit dashboard.
+              </p>
+            </div>
+            <a
+              href="#changelog"
+              className="text-xs text-primary font-medium hover:underline underline-offset-2 shrink-0"
+            >
+              View changelog
+            </a>
+          </div>
         </section>
 
         {/* ─── Authentication ───────────────── */}
@@ -477,13 +544,13 @@ export default function DocsPage() {
             All endpoints are relative to the base URL:
           </p>
           <CodeBlock
-            code={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public`}
+            code={`${API_BASE_URL}/public`}
             language="url"
           />
           <p className="text-xs text-muted-foreground">
             For example, the ask endpoint resolves to{' '}
             <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
-              {process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/ask
+              {API_BASE_URL}/public/ask
             </code>
           </p>
         </section>
@@ -552,12 +619,14 @@ export default function DocsPage() {
                 type: 'string',
                 required: true,
                 description: 'The question to ask about Tokamak Network',
+                example: 'What is the TON staking mechanism?',
               },
               {
                 name: 'filters',
                 type: 'string[]',
                 required: false,
                 description: 'Optional context filters (e.g., specific repo names or doc categories)',
+                example: 'tokamak-network/contracts-v2',
               },
               {
                 name: 'conversationHistory',
@@ -566,28 +635,6 @@ export default function DocsPage() {
                 description: 'Previous messages for follow-up questions. Each item has role ("user" | "assistant") and content.',
               },
             ]}
-            curlExample={`curl -X POST ${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/ask \\
-  -H "Content-Type: application/json" \\
-  -H "X-API-Key: tok_your_key_here" \\
-  -d '{
-    "question": "What is the TON staking mechanism?",
-    "filters": ["tokamak-network/contracts-v2"]
-  }'`}
-            jsExample={`const response = await fetch(
-  '${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/ask',
-  {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-API-Key': 'tok_your_key_here',
-    },
-    body: JSON.stringify({
-      question: 'What is the TON staking mechanism?',
-      filters: ['tokamak-network/contracts-v2'],
-    }),
-  }
-);
-const data = await response.json();`}
             responseExample={`{
   "answer": "The TON staking mechanism allows token holders to stake their TON tokens...",
   "question": "What is the TON staking mechanism?",
@@ -620,21 +667,9 @@ const data = await response.json();`}
             description="Search the vector store for relevant chunks. Returns raw matching content with source metadata and relevance scores — no LLM generation involved."
             scope="search"
             queryParams={[
-              { name: 'q', required: true, description: 'Search query string', example: '"TON staking"' },
+              { name: 'q', required: true, description: 'Search query string', example: 'TON staking' },
               { name: 'limit', required: false, description: 'Maximum number of results to return (default: 10)', example: '5' },
             ]}
-            curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/search?q=TON%20staking&limit=5" \\
-  -H "X-API-Key: tok_your_key_here"`}
-            jsExample={`const query = encodeURIComponent('TON staking');
-const response = await fetch(
-  \`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/search?q=\${query}&limit=5\`,
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
             responseExample={`{
   "query": "TON staking",
   "results": [
@@ -670,17 +705,6 @@ const data = await response.json();`}
               title="List all knowledge sources"
               description="Returns all registered knowledge sources including their sync status, document counts, and configuration details."
               scope="sources:read"
-              curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/sources" \\
-  -H "X-API-Key: tok_your_key_here"`}
-              jsExample={`const response = await fetch(
-  '${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/sources',
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
               responseExample={`{
   "sources": [
     {
@@ -702,18 +726,6 @@ const data = await response.json();`}
               title="Get details of a specific source"
               description="Returns detailed information about a single knowledge source, including document statistics, sync history, and configuration."
               scope="sources:read"
-              curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/sources/a1b2c3d4-..." \\
-  -H "X-API-Key: tok_your_key_here"`}
-              jsExample={`const sourceId = 'a1b2c3d4-...';
-const response = await fetch(
-  \`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/sources/\${sourceId}\`,
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
               responseExample={`{
   "id": "a1b2c3d4-...",
   "name": "tokamak-network/contracts-v2",
@@ -754,21 +766,6 @@ const data = await response.json();`}
                 { name: 'page', required: false, description: 'Page number (default: 1)', example: '1' },
                 { name: 'limit', required: false, description: 'Items per page (default: 20)', example: '20' },
               ]}
-              curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/content?project=titan&limit=10" \\
-  -H "X-API-Key: tok_your_key_here"`}
-              jsExample={`const params = new URLSearchParams({
-  project: 'titan',
-  limit: '10',
-});
-const response = await fetch(
-  \`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/content?\${params}\`,
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
               responseExample={`{
   "data": [
     {
@@ -794,18 +791,6 @@ const data = await response.json();`}
               title="Get a specific content entry"
               description="Retrieve a single content entry by ID, including its full body, author information, and metadata."
               scope="content:read"
-              curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/content/e5f6g7h8-..." \\
-  -H "X-API-Key: tok_your_key_here"`}
-              jsExample={`const entryId = 'e5f6g7h8-...';
-const response = await fetch(
-  \`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/content/\${entryId}\`,
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
               responseExample={`{
   "id": "e5f6g7h8-...",
   "title": "Titan Network Overview",
@@ -841,17 +826,6 @@ const data = await response.json();`}
             path="/public/health"
             title="Public API health check"
             description="Simple health check that verifies your API key is valid and returns key metadata. Useful for monitoring integrations."
-            curlExample={`curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/health" \\
-  -H "X-API-Key: tok_your_key_here"`}
-            jsExample={`const response = await fetch(
-  '${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/public/health',
-  {
-    headers: {
-      'X-API-Key': 'tok_your_key_here',
-    },
-  }
-);
-const data = await response.json();`}
             responseExample={`{
   "status": "ok",
   "keyPrefix": "tok_abc1",
@@ -917,7 +891,7 @@ const data = await response.json();`}
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <a
-              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/openapi.json`}
+              href={`${API_BASE_URL}/openapi.json`}
               download="tokamak-pilot-openapi.json"
               className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
             >
@@ -931,7 +905,7 @@ const data = await response.json();`}
               <ArrowRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors" />
             </a>
             <a
-              href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/openapi.yaml`}
+              href={`${API_BASE_URL}/openapi.yaml`}
               download="tokamak-pilot-openapi.yaml"
               className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
             >
@@ -977,7 +951,7 @@ const data = await response.json();`}
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <a
-                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms.txt`}
+                href={`${API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms.txt`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
@@ -986,7 +960,7 @@ const data = await response.json();`}
                 /llms.txt — Brief overview
               </a>
               <a
-                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms-full.txt`}
+                href={`${API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/llms-full.txt`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 rounded-lg border border-border px-3 py-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-primary/30 transition-colors"
@@ -1009,13 +983,13 @@ const data = await response.json();`}
             <div className="space-y-2">
               <CodeBlock
                 code={`# Export a content entry as Markdown
-curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/content/{id}?format=markdown"
+curl "${API_BASE_URL}/export/content/{id}?format=markdown"
 
 # Export a project as JSON
-curl "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/project/{slug}?format=json"
+curl "${API_BASE_URL}/export/project/{slug}?format=json"
 
 # Format as AI-ready prompt
-curl -X POST "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/export/prompt" \\
+curl -X POST "${API_BASE_URL}/export/prompt" \\
   -H "Content-Type: application/json" \\
   -d '{"type":"answer","title":"TON Staking","body":"...","sources":[]}'`}
                 language="bash"
@@ -1038,7 +1012,7 @@ curl -X POST "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1
           <CodeBlock
             code={`<!-- Add this to your HTML -->
 <script
-  src="${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/widget.js"
+  src="${API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/widget.js"
   data-api-key="tok_your_key_here"
   data-position="bottom-right"
   data-theme="dark"
@@ -1093,11 +1067,11 @@ curl -X POST "${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1
             package for a typed, ergonomic experience.
           </p>
           <CodeBlock
-            code={`import { TokamakPilot } from '@tokamak-pilot/sdk';
+            code={`import { TokamakPilotClient } from '@tokamak-pilot/sdk';
 
-const pilot = new TokamakPilot({
+const pilot = new TokamakPilotClient({
+  baseUrl: '${API_BASE_URL}',
   apiKey: 'tok_your_key_here',
-  // baseUrl: 'http://localhost:4000/api/v1', // optional
 });
 
 // Ask a question
@@ -1109,15 +1083,61 @@ const results = await pilot.search('layer 2 rollup');
 console.log(results.results);
 
 // List sources
-const sources = await pilot.sources.list();
-console.log(sources);`}
+const { sources } = await pilot.listSources();
+console.log(sources);
+
+// Browse content
+const content = await pilot.listContent({ project: 'titan' });
+console.log(content.data);`}
             language="typescript"
           />
         </section>
 
+        {/* ─── Rate Limit Dashboard ────────── */}
+        <section id="rate-dashboard" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <BarChart3 className="size-5 text-primary" />
+            Rate Limit Dashboard
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Monitor your API key usage, see remaining quota, check rate limit status, and view
+            recent API calls in real-time.
+          </p>
+          <RateLimitDashboard />
+        </section>
+
+        {/* ─── Changelog / Release Notes ───── */}
+        <section id="changelog" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <History className="size-5 text-primary" />
+            Changelog
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Track API changes, new features, fixes, and deprecations across releases. Also available
+            programmatically at{' '}
+            <code className="rounded bg-muted px-1.5 py-0.5 text-xs font-mono">
+              GET /api/v1/changelog
+            </code>
+          </p>
+          <ChangelogSection />
+        </section>
+
+        {/* ─── Webhook Documentation ────────── */}
+        <section id="webhooks" className="space-y-4">
+          <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
+            <Webhook className="size-5 text-primary" />
+            Webhooks
+          </h2>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            Receive real-time event notifications from Tokamak Pilot. Configure webhook URLs
+            to be notified when sources sync, content changes, or rate limits are hit.
+          </p>
+          <WebhookDocs />
+        </section>
+
         {/* Footer */}
         <footer className="border-t border-border pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <span>Tokamak Pilot API v0.1.0</span>
+          <span>Tokamak Pilot API v0.4.0</span>
           <div className="flex items-center gap-4">
             <a
               href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/docs`}
@@ -1133,6 +1153,12 @@ console.log(sources);`}
               className="hover:text-foreground transition-colors"
             >
               Manage API Keys
+            </a>
+            <a
+              href="#changelog"
+              className="hover:text-foreground transition-colors"
+            >
+              Changelog
             </a>
           </div>
         </footer>

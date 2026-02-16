@@ -458,6 +458,55 @@ export async function rotateApiKey(id: string) {
   });
 }
 
+// ───────────────────── Changelog API ─────────────────────
+
+export interface ChangelogChangeResponse {
+  type: 'added' | 'changed' | 'fixed' | 'deprecated' | 'removed' | 'security';
+  description: string;
+  breaking?: boolean;
+}
+
+export interface ChangelogEntryResponse {
+  version: string;
+  date: string;
+  changes: ChangelogChangeResponse[];
+}
+
+/** Fetch all changelog entries */
+export async function fetchChangelog(type?: string) {
+  const qs = type ? `?type=${type}` : '';
+  return apiFetch<{ entries: ChangelogEntryResponse[]; total: number }>(
+    `/changelog${qs}`,
+  );
+}
+
+/** Fetch the latest changelog entry */
+export async function fetchLatestChangelog() {
+  return apiFetch<ChangelogEntryResponse>('/changelog/latest');
+}
+
+/** Fetch API key usage logs */
+export async function fetchApiKeyUsage(
+  keyId: string,
+  page = 1,
+  limit = 20,
+) {
+  return apiFetch<{
+    data: Array<{
+      id: string;
+      endpoint: string;
+      method: string;
+      statusCode: number;
+      responseTimeMs?: number;
+      createdAt: string;
+    }>;
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  }>(`/api-keys/${keyId}/usage?page=${page}&limit=${limit}`);
+}
+
 // ───────────────────── Auth API ─────────────────────
 
 export interface AuthUser {

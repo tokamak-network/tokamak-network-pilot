@@ -22,6 +22,7 @@ import { ProjectsModule } from './modules/projects/projects.module';
 import { LlmsTxtModule } from './modules/llms-txt/llms-txt.module';
 import { ExportModule } from './modules/export/export.module';
 import { WidgetModule } from './modules/widget/widget.module';
+import { ChangelogModule } from './modules/changelog/changelog.module';
 
 @Module({
   imports: [
@@ -91,6 +92,9 @@ import { WidgetModule } from './modules/widget/widget.module';
     LlmsTxtModule,
     ExportModule,
     WidgetModule,
+
+    // ── Phase 4: Enhanced Docs & Developer Experience ──
+    ChangelogModule,
   ],
   controllers: [AppController],
   providers: [AppService],

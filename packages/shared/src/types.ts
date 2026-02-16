@@ -333,6 +333,48 @@ export interface ProjectPublicInfo {
   }>;
 }
 
+// ---- Changelog Types ----
+
+export type ChangeType =
+  | 'added'
+  | 'changed'
+  | 'fixed'
+  | 'deprecated'
+  | 'removed'
+  | 'security';
+
+export interface ChangelogChange {
+  type: ChangeType;
+  description: string;
+  breaking?: boolean;
+}
+
+export interface ChangelogEntry {
+  version: string;
+  date: string;
+  changes: ChangelogChange[];
+}
+
+export interface ChangelogResponse {
+  entries: ChangelogEntry[];
+  total: number;
+}
+
+// ---- Webhook Types ----
+
+export interface WebhookEvent {
+  name: string;
+  description: string;
+  payload: Record<string, unknown>;
+}
+
+export interface WebhookConfig {
+  url: string;
+  events: string[];
+  secret?: string;
+  isActive: boolean;
+}
+
 // ---- Common Types ----
 
 export interface PaginatedResponse<T> {

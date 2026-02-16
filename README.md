@@ -126,6 +126,9 @@ The system can ingest knowledge from multiple source types:
 | POST   | `/api/v1/export/prompt`     | Format content as AI-ready prompt     | —      |
 | GET    | `/api/v1/openapi.json`      | Download OpenAPI spec (JSON)          | —      |
 | GET    | `/api/v1/openapi.yaml`      | Download OpenAPI spec (YAML)          | —      |
+| GET    | `/api/v1/changelog`         | Get API changelog / release notes     | —      |
+| GET    | `/api/v1/changelog/latest`  | Get latest changelog entry            | —      |
+| GET    | `/api/v1/changelog/:version`| Get changelog for specific version    | —      |
 | GET    | `/llms.txt`                 | Brief LLM knowledge file             | —      |
 | GET    | `/llms-full.txt`            | Full LLM knowledge file              | —      |
 | GET    | `/widget.js`                | Embeddable chat widget script         | —      |
@@ -232,12 +235,12 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 > Make the docs page a best-in-class developer experience.
 
-- [ ] **Interactive API playground** — Try API calls directly from the docs page (like Swagger, but integrated into the custom docs UI)
-- [ ] **Multi-language code examples** — Show examples in cURL, JavaScript, Python, Go, and Rust with language tabs
-- [ ] **SDK code generator** — Auto-generate SDK usage snippets from the docs page based on selected endpoint + parameters
-- [ ] **Changelog / release notes** — Track API changes and display them in the docs
-- [ ] **Webhook documentation** — When webhooks are added, auto-document event payloads and provide testing tools
-- [ ] **Rate limit dashboard** — Show API key usage, remaining quota, and rate limit status in the docs page
+- [x] **Interactive API playground** — Try API calls directly from the docs page (like Swagger, but integrated into the custom docs UI)
+- [x] **Multi-language code examples** — Show examples in cURL, JavaScript, Python, Go, and Rust with language tabs
+- [x] **SDK code generator** — Auto-generate SDK usage snippets from the docs page based on selected endpoint + parameters
+- [x] **Changelog / release notes** — Track API changes and display them in the docs
+- [x] **Webhook documentation** — When webhooks are added, auto-document event payloads and provide testing tools
+- [x] **Rate limit dashboard** — Show API key usage, remaining quota, and rate limit status in the docs page
 
 ---
 

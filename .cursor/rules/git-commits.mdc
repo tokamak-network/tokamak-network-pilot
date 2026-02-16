@@ -1,0 +1,8 @@
+---
+description: Git commit conventions
+alwaysApply: true
+---
+
+# Git Commit Rules
+
+- **Never** add Cursor as a co-author in git commits (no `Co-authored-by: Cursor` trailers)
