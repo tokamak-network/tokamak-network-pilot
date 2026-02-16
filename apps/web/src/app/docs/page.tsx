@@ -12,7 +12,7 @@ import {
   ExternalLink,
   Key,
   Search,
-  Zap,
+  TreePine,
   BookOpen,
   Server,
   Shield,
@@ -118,11 +118,11 @@ const API_BASE_URL =
 function generatePageMarkdown(): string {
   const lines: string[] = [];
 
-  lines.push('# Tokamak Pilot Public API');
+  lines.push('# Tokamak Forest Public API');
   lines.push('');
   lines.push('> Version: v0.4.0');
   lines.push('');
-  lines.push('The Tokamak Pilot Public API provides programmatic access to the RAG-powered knowledge base for the Tokamak Network ecosystem. Ask questions, search indexed knowledge, browse sources, and access curated content — all authenticated with API keys.');
+  lines.push('The Tokamak Forest Public API provides programmatic access to the RAG-powered knowledge base for the Tokamak Network ecosystem. Ask questions, search indexed knowledge, browse sources, and access curated content — all authenticated with API keys.');
   lines.push('');
 
   // Authentication
@@ -132,7 +132,7 @@ function generatePageMarkdown(): string {
   lines.push('');
   lines.push('### Getting an API Key');
   lines.push('');
-  lines.push('1. Sign in to Tokamak Pilot and navigate to Settings');
+  lines.push('1. Sign in to Tokamak Forest and navigate to Settings');
   lines.push('2. Click **New API Key** and choose your desired scopes');
   lines.push('3. Copy the generated key — it will only be shown once');
   lines.push('4. Include it in every request as `X-API-Key: tok_your_key_here`');
@@ -312,7 +312,7 @@ function generatePageMarkdown(): string {
   // AI-Friendly
   lines.push('## AI-Friendly Output');
   lines.push('');
-  lines.push('Tokamak Pilot provides AI-optimized endpoints for LLMs and agents:');
+  lines.push('Tokamak Forest provides AI-optimized endpoints for LLMs and agents:');
   lines.push('');
   const llmsBaseUrl = API_BASE_URL?.replace('/api/v1', '') || 'http://localhost:4000';
   lines.push(`- \`${llmsBaseUrl}/llms.txt\` — Brief overview (llms.txt specification)`);
@@ -382,13 +382,13 @@ function generatePageMarkdown(): string {
   // Webhooks summary
   lines.push('## Webhooks');
   lines.push('');
-  lines.push('Receive real-time event notifications from Tokamak Pilot. Configure webhook URLs to be notified when sources sync, content changes, or rate limits are hit.');
+  lines.push('Receive real-time event notifications from Tokamak Forest. Configure webhook URLs to be notified when sources sync, content changes, or rate limits are hit.');
   lines.push('');
 
   // Footer
   lines.push('---');
   lines.push('');
-  lines.push(`*Exported from Tokamak Pilot API Docs (v0.4.0) on ${new Date().toISOString()}*`);
+  lines.push(`*Exported from Tokamak Forest API Docs (v0.4.0) on ${new Date().toISOString()}*`);
   lines.push(`*Source: ${typeof window !== 'undefined' ? window.location.href : 'https://tokamak-pilot.app/docs'}*`);
 
   return lines.join('\n');
@@ -720,7 +720,7 @@ const sections = [
   { id: 'authentication', label: 'Authentication', icon: Key },
   { id: 'base-url', label: 'Base URL', icon: Server },
   { id: 'rate-limits', label: 'Rate Limits', icon: Shield },
-  { id: 'endpoints-ask', label: 'Ask', icon: Zap },
+  { id: 'endpoints-ask', label: 'Ask', icon: TreePine },
   { id: 'endpoints-search', label: 'Search', icon: Search },
   { id: 'endpoints-sources', label: 'Sources', icon: Database },
   { id: 'endpoints-content', label: 'Content', icon: FileText },
@@ -749,7 +749,7 @@ export default function DocsPage() {
         </Link>
         <div className="flex items-center gap-2 mb-6">
           <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-            <Zap className="size-3.5" />
+            <TreePine className="size-3.5" />
           </div>
           <span className="text-sm font-semibold">API Docs</span>
         </div>
@@ -786,15 +786,15 @@ export default function DocsPage() {
             <div>
               <div className="flex items-center gap-3 mb-3">
                 <div className="flex size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <Zap className="size-5" />
+                  <TreePine className="size-5" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight">Tokamak Pilot Public API</h1>
+                  <h1 className="text-2xl font-bold tracking-tight">Tokamak Forest Public API</h1>
                   <p className="text-sm text-muted-foreground">v0.4.0</p>
                 </div>
               </div>
               <p className="text-muted-foreground leading-relaxed max-w-2xl">
-                The Tokamak Pilot Public API provides programmatic access to the RAG-powered knowledge base
+                The Tokamak Forest Public API provides programmatic access to the RAG-powered knowledge base
                 for the Tokamak Network ecosystem. Ask questions, search indexed knowledge, browse sources,
                 and access curated content — all authenticated with API keys.
               </p>
@@ -843,7 +843,7 @@ export default function DocsPage() {
               className="group flex items-center gap-3 rounded-xl border border-border bg-card p-4 hover:border-primary/30 hover:shadow-sm transition-all"
             >
               <div className="flex size-9 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <Zap className="size-4" />
+                <TreePine className="size-4" />
               </div>
               <div className="flex-1">
                 <p className="text-sm font-medium">Ask Endpoint</p>
@@ -901,7 +901,7 @@ export default function DocsPage() {
             <h4 className="text-sm font-medium">Getting an API Key</h4>
             <ol className="list-decimal list-inside space-y-1.5 text-sm text-muted-foreground">
               <li>
-                Sign in to Tokamak Pilot and navigate to{' '}
+                Sign in to Tokamak Forest and navigate to{' '}
                 <a href="/settings" className="text-primary underline underline-offset-2">
                   Settings
                 </a>
@@ -1006,7 +1006,7 @@ export default function DocsPage() {
         {/* Ask */}
         <section id="endpoints-ask" className="space-y-4">
           <h2 className="text-lg font-semibold tracking-tight flex items-center gap-2">
-            <Zap className="size-5 text-primary" />
+            <TreePine className="size-5 text-primary" />
             Ask
           </h2>
           <p className="text-sm text-muted-foreground">
@@ -1292,7 +1292,7 @@ export default function DocsPage() {
             OpenAPI Specification
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Download the complete OpenAPI specification for the Tokamak Pilot API. Use it to generate
+            Download the complete OpenAPI specification for the Tokamak Forest API. Use it to generate
             client libraries, import into Postman, or integrate with any OpenAPI-compatible tool.
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1334,7 +1334,7 @@ export default function DocsPage() {
             AI-Friendly Output
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Tokamak Pilot provides AI-optimized endpoints for LLMs and agents to discover and consume knowledge.
+            Tokamak Forest provides AI-optimized endpoints for LLMs and agents to discover and consume knowledge.
           </p>
 
           {/* llms.txt */}
@@ -1353,7 +1353,7 @@ export default function DocsPage() {
               >
                 llms.txt specification
               </a>
-              , Tokamak Pilot serves standardized files that LLMs and AI agents can discover and consume.
+              , Tokamak Forest serves standardized files that LLMs and AI agents can discover and consume.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               <a
@@ -1456,7 +1456,7 @@ curl -X POST "${API_BASE_URL}/export/prompt" \\
                   <tr>
                     <td className="px-3 py-2 font-mono text-xs">data-api-url</td>
                     <td className="px-3 py-2"><span className="text-[11px] text-muted-foreground">Optional</span></td>
-                    <td className="px-3 py-2 text-xs text-muted-foreground">Override the API base URL (defaults to the Tokamak Pilot instance)</td>
+                    <td className="px-3 py-2 text-xs text-muted-foreground">Override the API base URL (defaults to the Tokamak Forest instance)</td>
                   </tr>
                 </tbody>
               </table>
@@ -1535,7 +1535,7 @@ console.log(content.data);`}
             Webhooks
           </h2>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            Receive real-time event notifications from Tokamak Pilot. Configure webhook URLs
+            Receive real-time event notifications from Tokamak Forest. Configure webhook URLs
             to be notified when sources sync, content changes, or rate limits are hit.
           </p>
           <WebhookDocs />
@@ -1543,7 +1543,7 @@ console.log(content.data);`}
 
         {/* Footer */}
         <footer className="border-t border-border pt-8 pb-4 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-muted-foreground">
-          <span>Tokamak Pilot API v0.4.0</span>
+          <span>Tokamak Forest API v0.4.0</span>
           <div className="flex items-center gap-4">
             <a
               href={`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000'}/docs`}

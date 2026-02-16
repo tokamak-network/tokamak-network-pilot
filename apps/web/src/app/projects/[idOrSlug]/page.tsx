@@ -424,7 +424,7 @@ function ProjectCopyAsPromptButton({ project }: { project: ProjectDetailResponse
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     const lines = [
-      '## Context from Tokamak Pilot Knowledge Base',
+      '## Context from Tokamak Forest Knowledge Base',
       '',
       `### ${project.name}`,
       '',
@@ -445,7 +445,7 @@ function ProjectCopyAsPromptButton({ project }: { project: ProjectDetailResponse
       lines.push('');
     }
     lines.push('---');
-    lines.push('*This information is from the Tokamak Pilot Knowledge Base. Use it as context for your response. Cite sources when relevant.*');
+    lines.push('*This information is from the Tokamak Forest Knowledge Base. Use it as context for your response. Cite sources when relevant.*');
     await navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

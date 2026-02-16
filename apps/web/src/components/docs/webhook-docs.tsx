@@ -250,7 +250,7 @@ export function WebhookDocs() {
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Webhook support is currently in development. When ready, you&apos;ll be able to register
-          webhook URLs to receive real-time notifications about events in your Tokamak Pilot instance.
+          webhook URLs to receive real-time notifications about events in your Tokamak Forest instance.
           Below is a preview of the planned webhook events and their payloads.
         </p>
         <div className="rounded-lg border border-border bg-card p-4 space-y-2">
@@ -261,7 +261,7 @@ export function WebhookDocs() {
             <li>Register a webhook URL in your project settings</li>
             <li>Select which events you want to receive</li>
             <li>
-              Tokamak Pilot sends a <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">POST</code>{' '}
+              Tokamak Forest sends a <code className="rounded bg-muted px-1 py-0.5 text-xs font-mono">POST</code>{' '}
               request to your URL for each event
             </li>
             <li>Your server processes the event payload and responds with 2xx</li>

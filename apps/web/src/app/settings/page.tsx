@@ -345,7 +345,7 @@ export default function SettingsPage() {
               <Key className="size-8 text-muted-foreground mb-3" />
               <p className="text-sm font-medium">No API keys yet</p>
               <p className="text-xs text-muted-foreground mt-1 max-w-xs">
-                Create an API key to start using the Tokamak Pilot SDK or integrate
+                Create an API key to start using the Tokamak Forest SDK or integrate
                 with external services.
               </p>
               <Button

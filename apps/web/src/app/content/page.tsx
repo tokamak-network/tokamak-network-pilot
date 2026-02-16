@@ -43,7 +43,7 @@ function CopyAsPromptButton({ entry }: { entry: ContentEntryResponse }) {
   const [copied, setCopied] = useState(false);
   const handleCopy = async () => {
     const lines = [
-      '## Context from Tokamak Pilot Knowledge Base',
+      '## Context from Tokamak Forest Knowledge Base',
       '',
       `### ${entry.title}`,
       '',
@@ -54,7 +54,7 @@ function CopyAsPromptButton({ entry }: { entry: ContentEntryResponse }) {
     if (entry.category) lines.push(`*Category: ${entry.category}*`);
     if (entry.tags.length > 0) lines.push(`*Tags: ${entry.tags.join(', ')}*`);
     lines.push('', '---');
-    lines.push('*This information is from the Tokamak Pilot Knowledge Base. Use it as context for your response.*');
+    lines.push('*This information is from the Tokamak Forest Knowledge Base. Use it as context for your response.*');
     await navigator.clipboard.writeText(lines.join('\n'));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);

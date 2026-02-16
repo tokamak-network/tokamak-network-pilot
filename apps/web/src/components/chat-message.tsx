@@ -3,7 +3,7 @@
 import { useMemo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { Zap, User, ExternalLink, FileText, Copy, Check, Sparkles } from 'lucide-react';
+import { TreePine, User, ExternalLink, FileText, Copy, Check, Sparkles } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
 import type { ConversationMessage } from '@/store/ask';
@@ -65,7 +65,7 @@ function formatAsAiPrompt(
   sources?: Array<{ title: string; url: string }>,
 ): string {
   const lines: string[] = [];
-  lines.push('## Context from Tokamak Pilot Knowledge Base');
+  lines.push('## Context from Tokamak Forest Knowledge Base');
   lines.push('');
   lines.push(content);
   lines.push('');
@@ -85,7 +85,7 @@ function formatAsAiPrompt(
 
   lines.push('---');
   lines.push(
-    '*This information is from the Tokamak Pilot Knowledge Base. ' +
+    '*This information is from the Tokamak Forest Knowledge Base. ' +
       'Use it as context for your response. Cite sources when relevant.*',
   );
 
@@ -143,7 +143,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               : 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white'
           )}
         >
-          {isUser ? <User className="size-4" /> : <Zap className="size-4" />}
+          {isUser ? <User className="size-4" /> : <TreePine className="size-4" />}
         </AvatarFallback>
       </Avatar>
 
@@ -157,7 +157,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         {/* Role label + time */}
         <div className="flex items-center gap-2 px-1">
           <span className="text-xs font-medium text-muted-foreground">
-            {isUser ? 'You' : 'Tokamak Pilot'}
+            {isUser ? 'You' : 'Tokamak Forest'}
           </span>
           <span className="text-[11px] text-muted-foreground/60">
             {message.timestamp.toLocaleTimeString([], {

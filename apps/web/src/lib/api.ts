@@ -8,7 +8,7 @@ function getToken(): string | null {
 }
 
 /**
- * Typed fetch wrapper for the Tokamak Pilot API.
+ * Typed fetch wrapper for the Tokamak Forest API.
  * Automatically attaches JWT bearer token if available.
  */
 export async function apiFetch<T>(

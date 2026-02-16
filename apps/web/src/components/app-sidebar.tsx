@@ -9,7 +9,7 @@ import {
   Database,
   FileText,
   Settings,
-  Zap,
+  TreePine,
   Github,
   Globe,
   Upload,
@@ -206,10 +206,10 @@ export function AppSidebar() {
             <SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:justify-center">
               <Link href="/">
                 <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:text-foreground">
-                  <Zap className="size-4" />
+                  <TreePine className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                  <span className="font-semibold">Tokamak Pilot</span>
+                  <span className="font-semibold">Tokamak Forest</span>
                   <span className="text-xs text-muted-foreground">Knowledge Hub</span>
                 </div>
               </Link>

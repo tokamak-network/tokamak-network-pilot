@@ -208,7 +208,7 @@ export default function ProjectPublicPage() {
         <p className="text-sm text-muted-foreground">
           Powered by{' '}
           <Link href="/" className="text-primary hover:underline">
-            Tokamak Pilot
+            Tokamak Forest
           </Link>
         </p>
       </div>

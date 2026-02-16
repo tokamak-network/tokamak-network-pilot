@@ -2,7 +2,7 @@
 
 import { useAtom } from 'jotai';
 import { useEffect, useRef, useCallback } from 'react';
-import { Search, Send, Zap, Database, FileText, Loader2, LayoutDashboard, Plus } from 'lucide-react';
+import { Search, Send, TreePine, Database, FileText, Loader2, LayoutDashboard, Plus } from 'lucide-react';
 import Link from 'next/link';
 import {
   queryAtom,
@@ -133,11 +133,11 @@ export default function HomePage() {
             <div className="space-y-3">
               <div className="flex items-center justify-center gap-2 mb-4">
                 <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
-                  <Zap className="size-6" />
+                  <TreePine className="size-6" />
                 </div>
               </div>
               <h1 className="text-3xl font-bold tracking-tight">
-                Tokamak Pilot
+                Tokamak Forest
               </h1>
               <p className="text-muted-foreground text-base max-w-md mx-auto">
                 Your single source of truth for the Tokamak Network ecosystem.
@@ -222,7 +222,7 @@ export default function HomePage() {
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-sm flex items-center gap-2">
-                      <Zap className="size-4 text-muted-foreground" />
+                      <TreePine className="size-4 text-muted-foreground" />
                       API Docs
                     </CardTitle>
                   </CardHeader>
@@ -242,7 +242,7 @@ export default function HomePage() {
           {/* Conversation header bar */}
           <div className="flex items-center justify-between border-b px-4 py-2 bg-background/80 backdrop-blur-sm">
             <div className="flex items-center gap-2 min-w-0">
-              <Zap className="size-4 text-primary shrink-0" />
+              <TreePine className="size-4 text-primary shrink-0" />
               <span className="text-sm font-medium truncate text-muted-foreground">
                 {activeConversationId ? 'Conversation' : 'New Conversation'}
               </span>
@@ -267,7 +267,7 @@ export default function HomePage() {
               {isLoading && (
                 <div className="flex gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
-                    <Zap className="size-4 text-white" />
+                    <TreePine className="size-4 text-white" />
                   </div>
                   <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-muted/60 border border-border/50 px-4 py-3">
                     <div className="flex gap-1">

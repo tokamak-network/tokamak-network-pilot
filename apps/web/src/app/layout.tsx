@@ -7,7 +7,7 @@ import { AppShell } from '@/components/app-shell';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Tokamak Pilot — Knowledge Hub',
+  title: 'Tokamak Forest — Knowledge Hub',
   description:
     'Ask questions, explore documentation, and get reliable answers about the Tokamak Network ecosystem.',
 };
@@ -19,7 +19,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className={inter.className}>
+      <body className={inter.className} suppressHydrationWarning>
         <Providers>
           <AppShell>{children}</AppShell>
         </Providers>

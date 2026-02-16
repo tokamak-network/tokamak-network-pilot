@@ -126,7 +126,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-5" />
           <span className="text-sm text-muted-foreground">
-            Tokamak Network Knowledge Hub
+            Tokamak Forest
           </span>
         </header>
         <div className="flex-1 overflow-auto">{children}</div>

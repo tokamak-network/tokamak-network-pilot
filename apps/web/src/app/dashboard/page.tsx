@@ -16,7 +16,7 @@ import {
   Loader2,
   BarChart3,
   Github,
-  Zap,
+  TreePine,
   AlertTriangle,
   ChevronRight,
   TrendingUp,
