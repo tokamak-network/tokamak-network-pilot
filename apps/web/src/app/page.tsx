@@ -130,16 +130,16 @@ export default function HomePage() {
         /* Empty State — Hero + Quick Links */
         <div className="flex flex-col items-center justify-center flex-1 p-8">
           <div className="max-w-2xl w-full text-center space-y-8">
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
                   <TreePine className="size-6" />
                 </div>
               </div>
-              <h1 className="text-3xl font-bold tracking-tight">
+              <h1 className="text-4xl font-serif font-semibold tracking-tight">
                 Tokamak Forest
               </h1>
-              <p className="text-muted-foreground text-base max-w-md mx-auto">
+              <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
                 Your single source of truth for the Tokamak Network ecosystem.
                 Ask anything — powered by RAG + LLM.
               </p>
@@ -266,8 +266,8 @@ export default function HomePage() {
 
               {isLoading && (
                 <div className="flex gap-3">
-                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-violet-500 to-indigo-600">
-                    <TreePine className="size-4 text-white" />
+                  <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+                    <TreePine className="size-4 text-primary-foreground" />
                   </div>
                   <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-muted/60 border border-border/50 px-4 py-3">
                     <div className="flex gap-1">

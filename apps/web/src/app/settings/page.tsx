@@ -186,7 +186,7 @@ export default function SettingsPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">Settings</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Manage your API keys for SDK and external access.
           </p>

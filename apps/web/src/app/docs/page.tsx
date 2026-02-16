@@ -789,7 +789,7 @@ export default function DocsPage() {
                   <TreePine className="size-5" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold tracking-tight">Tokamak Forest Public API</h1>
+                  <h1 className="font-serif text-2xl font-semibold tracking-tight">Tokamak Forest Public API</h1>
                   <p className="text-sm text-muted-foreground">v0.4.0</p>
                 </div>
               </div>

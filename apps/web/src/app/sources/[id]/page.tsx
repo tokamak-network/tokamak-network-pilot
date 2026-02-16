@@ -215,7 +215,7 @@ export default function SourceDetailPage() {
               <Icon className="size-5 text-muted-foreground" />
             </div>
             <div>
-              <h1 className="text-xl font-bold tracking-tight flex items-center gap-2">
+              <h1 className="font-serif text-xl font-semibold tracking-tight flex items-center gap-2">
                 {source.name}
                 <div className={`size-2.5 rounded-full ${statusColors[source.status]}`} />
               </h1>

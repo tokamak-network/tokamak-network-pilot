@@ -140,7 +140,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
           className={cn(
             isUser
               ? 'bg-primary text-primary-foreground'
-              : 'bg-gradient-to-br from-violet-500 to-indigo-600 text-white'
+              : 'bg-primary text-primary-foreground'
           )}
         >
           {isUser ? <User className="size-4" /> : <TreePine className="size-4" />}

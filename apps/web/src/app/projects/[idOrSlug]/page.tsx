@@ -259,7 +259,7 @@ export default function ProjectDetailPage() {
             </div>
           )}
           <div>
-            <h1 className="text-2xl font-bold tracking-tight">{project.name}</h1>
+            <h1 className="font-serif text-2xl font-semibold tracking-tight">{project.name}</h1>
             <div className="flex items-center gap-2 mt-0.5">
               <span className="text-sm text-muted-foreground">/{project.slug}</span>
               {project.isPublic ? (

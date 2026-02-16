@@ -202,7 +202,7 @@ export default function ContentPage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold tracking-tight">Team Content</h1>
+          <h1 className="font-serif text-2xl font-semibold tracking-tight">Team Content</h1>
           <p className="text-muted-foreground text-sm mt-1">
             Curated knowledge entries managed by project leads and team members.
           </p>

@@ -209,7 +209,7 @@ export function AppSidebar() {
                   <TreePine className="size-4" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                  <span className="font-semibold">Tokamak Forest</span>
+                  <span className="font-serif font-semibold">Tokamak Forest</span>
                   <span className="text-xs text-muted-foreground">Knowledge Hub</span>
                 </div>
               </Link>

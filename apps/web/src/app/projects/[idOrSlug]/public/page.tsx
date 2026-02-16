@@ -98,7 +98,7 @@ export default function ProjectPublicPage() {
             </div>
           )}
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">{project.name}</h1>
+        <h1 className="font-serif text-3xl font-semibold tracking-tight">{project.name}</h1>
         {project.description && (
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             {project.description}

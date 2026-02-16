@@ -4,102 +4,104 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* Deep Forest - Light Mode (Sage/Mist/Moss) */
-  --background: oklch(0.97 0.01 150); /* Pale Mint/Sage White */
-  --foreground: oklch(0.2 0.03 145); /* Deep Forest Green (Text) */
-  
-  --card: oklch(1 0 0); /* Pure White Cards */
-  --card-foreground: oklch(0.2 0.03 145);
-  
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.2 0.03 145);
-  
-  --primary: oklch(0.5 0.15 145); /* Lush Green (Primary Buttons) */
-  --primary-foreground: oklch(0.98 0.01 150); /* White Text on Primary */
-  
-  --secondary: oklch(0.92 0.03 150); /* Light Moss/Sage (Secondary BG) */
-  --secondary-foreground: oklch(0.3 0.05 145);
-  
-  --muted: oklch(0.94 0.02 150); /* Mist Grey/Green */
-  --muted-foreground: oklch(0.5 0.05 145); /* Muted Green-Grey */
-  
-  --accent: oklch(0.92 0.03 150); /* Light Moss Accents */
-  --accent-foreground: oklch(0.3 0.05 145);
-  
-  --destructive: oklch(0.6 0.18 25); /* Muted Red/Rust */
+  /* Light Forest — Warm Cream / Deep Green (SERENE-inspired) */
+  --background: oklch(0.955 0.012 80); /* Warm Cream-Beige */
+  --foreground: oklch(0.2 0.04 150); /* Deep Forest Green (Text) */
+
+  --card: oklch(0.97 0.008 80); /* Soft Warm White */
+  --card-foreground: oklch(0.2 0.04 150);
+
+  --popover: oklch(0.97 0.008 80);
+  --popover-foreground: oklch(0.2 0.04 150);
+
+  --primary: oklch(0.3 0.06 150); /* Deep Forest Green (Buttons/CTA) */
+  --primary-foreground: oklch(0.96 0.01 80); /* Cream on Green */
+
+  --secondary: oklch(0.92 0.018 90); /* Warm Sage Background */
+  --secondary-foreground: oklch(0.28 0.05 150);
+
+  --muted: oklch(0.93 0.015 85); /* Warm Muted Beige */
+  --muted-foreground: oklch(0.5 0.04 140); /* Olive Gray */
+
+  --accent: oklch(0.91 0.025 130); /* Soft Sage-Green Accent */
+  --accent-foreground: oklch(0.25 0.05 150);
+
+  --destructive: oklch(0.55 0.14 25); /* Terra Cotta / Warm Rust */
   --destructive-foreground: oklch(0.98 0 0);
-  
-  --border: oklch(0.85 0.04 150); /* Soft Sage Border */
-  --input: oklch(0.85 0.04 150);
-  --ring: oklch(0.5 0.15 145); /* Focus Ring matches Primary */
-  
-  --radius: 0; /* Keep squared aesthetic */
-  
-  /* Chart colors tuned to forest/nature tones */
-  --chart-1: oklch(0.5 0.15 145); /* Primary Green */
-  --chart-2: oklch(0.6 0.12 110); /* Olive/Yellow-Green */
-  --chart-3: oklch(0.45 0.1 200); /* Teal/Blue-Green */
-  --chart-4: oklch(0.65 0.15 170); /* Mint/Spring Green */
-  --chart-5: oklch(0.7 0.1 80);  /* Earthy Brown/Orange */
-  
-  --sidebar: oklch(0.95 0.02 150); /* Slightly darker Sage for Sidebar */
-  --sidebar-foreground: oklch(0.2 0.03 145);
-  --sidebar-primary: oklch(0.5 0.15 145);
-  --sidebar-primary-foreground: oklch(0.98 0.01 150);
-  --sidebar-accent: oklch(0.9 0.04 150);
-  --sidebar-accent-foreground: oklch(0.2 0.03 145);
-  --sidebar-border: oklch(0.85 0.04 150);
-  --sidebar-ring: oklch(0.5 0.15 145);
+
+  --border: oklch(0.88 0.015 85); /* Warm Beige Border */
+  --input: oklch(0.88 0.015 85);
+  --ring: oklch(0.3 0.06 150); /* Focus Ring = Primary */
+
+  --radius: 0.75rem; /* Rounded organic shapes */
+
+  /* Chart colors — earthy naturals */
+  --chart-1: oklch(0.45 0.1 150); /* Forest Green */
+  --chart-2: oklch(0.65 0.1 90); /* Warm Amber */
+  --chart-3: oklch(0.5 0.08 30); /* Terra Cotta */
+  --chart-4: oklch(0.6 0.08 140); /* Sage */
+  --chart-5: oklch(0.55 0.06 60); /* Warm Brown */
+
+  --sidebar: oklch(0.94 0.015 85); /* Warm Sidebar */
+  --sidebar-foreground: oklch(0.2 0.04 150);
+  --sidebar-primary: oklch(0.3 0.06 150);
+  --sidebar-primary-foreground: oklch(0.96 0.01 80);
+  --sidebar-accent: oklch(0.9 0.02 100);
+  --sidebar-accent-foreground: oklch(0.2 0.04 150);
+  --sidebar-border: oklch(0.88 0.015 85);
+  --sidebar-ring: oklch(0.3 0.06 150);
 }
 
 .dark {
-  /* Deep Forest - Dark Mode (Deep Emerald/Terminal Green) */
-  --background: oklch(0.15 0.04 150); /* Very Dark Forest Green (Almost Black) */
-  --foreground: oklch(0.9 0.05 150); /* Pale Mint Text */
-  
-  --card: oklch(0.18 0.05 150); /* Dark Moss Card BG */
-  --card-foreground: oklch(0.9 0.05 150);
-  
-  --popover: oklch(0.18 0.05 150);
-  --popover-foreground: oklch(0.9 0.05 150);
-  
-  --primary: oklch(0.65 0.2 145); /* Bright Terminal Green (Matrix Green) */
-  --primary-foreground: oklch(0.1 0.05 150); /* Dark Text on Bright Green */
-  
-  --secondary: oklch(0.25 0.06 150); /* Darker Secondary Elements */
-  --secondary-foreground: oklch(0.85 0.05 150);
-  
-  --muted: oklch(0.2 0.05 150); /* Muted Dark Green */
-  --muted-foreground: oklch(0.6 0.08 150); /* Faded Mint */
-  
-  --accent: oklch(0.25 0.06 150);
-  --accent-foreground: oklch(0.9 0.05 150);
-  
-  --destructive: oklch(0.4 0.15 25); /* Darker Rust Red */
-  --destructive-foreground: oklch(0.9 0.05 150);
-  
-  --border: oklch(0.25 0.06 150); /* Subtle Dark Green Borders */
-  --input: oklch(0.25 0.06 150);
-  --ring: oklch(0.65 0.2 145); /* Bright Green Focus Ring */
-  
+  /* Dark Forest — Deep Evergreen / Warm Cream Accents */
+  --background: oklch(0.14 0.025 150); /* Deep Forest Green */
+  --foreground: oklch(0.92 0.015 80); /* Warm Cream Text */
+
+  --card: oklch(0.17 0.03 150); /* Dark Moss Card BG */
+  --card-foreground: oklch(0.92 0.015 80);
+
+  --popover: oklch(0.17 0.03 150);
+  --popover-foreground: oklch(0.92 0.015 80);
+
+  --primary: oklch(0.6 0.12 145); /* Bright Sage Green */
+  --primary-foreground: oklch(0.12 0.04 150); /* Dark Text on Green */
+
+  --secondary: oklch(0.22 0.04 150); /* Dark Moss Secondary */
+  --secondary-foreground: oklch(0.85 0.02 80);
+
+  --muted: oklch(0.2 0.035 150); /* Muted Dark Green */
+  --muted-foreground: oklch(0.6 0.05 130); /* Faded Sage */
+
+  --accent: oklch(0.22 0.04 150);
+  --accent-foreground: oklch(0.92 0.015 80);
+
+  --destructive: oklch(0.45 0.13 25); /* Darker Terra Cotta */
+  --destructive-foreground: oklch(0.92 0.015 80);
+
+  --border: oklch(0.24 0.04 150); /* Subtle Dark Green Borders */
+  --input: oklch(0.24 0.04 150);
+  --ring: oklch(0.6 0.12 145); /* Sage Green Focus Ring */
+
   /* Chart colors adapted for dark mode visibility */
-  --chart-1: oklch(0.65 0.2 145); /* Bright Green */
-  --chart-2: oklch(0.7 0.15 110); /* Yellow-Green */
-  --chart-3: oklch(0.55 0.15 200); /* Cyan/Teal */
-  --chart-4: oklch(0.75 0.18 170); /* Mint */
-  --chart-5: oklch(0.6 0.15 80);  /* Amber/Orange */
-  
-  --sidebar: oklch(0.12 0.04 150); /* Even Darker Forest Green for Sidebar */
-  --sidebar-foreground: oklch(0.9 0.05 150);
-  --sidebar-primary: oklch(0.65 0.2 145);
-  --sidebar-primary-foreground: oklch(0.1 0.05 150);
-  --sidebar-accent: oklch(0.22 0.05 150);
-  --sidebar-accent-foreground: oklch(0.9 0.05 150);
-  --sidebar-border: oklch(0.25 0.06 150);
-  --sidebar-ring: oklch(0.65 0.2 145);
+  --chart-1: oklch(0.6 0.12 145); /* Sage Green */
+  --chart-2: oklch(0.7 0.12 90); /* Warm Amber */
+  --chart-3: oklch(0.55 0.1 30); /* Warm Rust */
+  --chart-4: oklch(0.7 0.1 140); /* Light Sage */
+  --chart-5: oklch(0.6 0.08 60); /* Warm Brown */
+
+  --sidebar: oklch(0.12 0.025 150); /* Deeper Forest Sidebar */
+  --sidebar-foreground: oklch(0.92 0.015 80);
+  --sidebar-primary: oklch(0.6 0.12 145);
+  --sidebar-primary-foreground: oklch(0.12 0.04 150);
+  --sidebar-accent: oklch(0.2 0.035 150);
+  --sidebar-accent-foreground: oklch(0.92 0.015 80);
+  --sidebar-border: oklch(0.24 0.04 150);
+  --sidebar-ring: oklch(0.6 0.12 145);
 }
 
 @theme inline {
+  --font-serif: 'Playfair Display', 'Georgia', serif;
+
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
