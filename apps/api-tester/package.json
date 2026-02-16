@@ -1,0 +1,23 @@
+{
+  "name": "@tokamak-pilot/api-tester",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "End-to-end API testing scripts for Tokamak Pilot backend",
+  "scripts": {
+    "test": "node src/run-all.mjs",
+    "test:health": "node src/01-health.mjs",
+    "test:auth": "node src/02-auth.mjs",
+    "test:sources": "node src/03-sources.mjs",
+    "test:content": "node src/04-content.mjs",
+    "test:conversations": "node src/05-conversations.mjs",
+    "test:projects": "node src/06-projects.mjs",
+    "test:api-keys": "node src/07-api-keys.mjs",
+    "test:public-api": "node src/08-public-api.mjs",
+    "test:export": "node src/09-export.mjs",
+    "test:misc": "node src/10-changelog.mjs"
+  },
+  "engines": {
+    "node": ">=20.0.0"
+  }
+}

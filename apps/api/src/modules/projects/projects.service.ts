@@ -64,9 +64,14 @@ export class ProjectsService {
   }
 
   async findOne(idOrSlug: string) {
-    const project = await this.projectRepo.findOne({
-      where: [{ id: idOrSlug }, { slug: idOrSlug }],
-    });
+    const isUuid =
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        idOrSlug,
+      );
+    const where = isUuid
+      ? [{ id: idOrSlug }, { slug: idOrSlug }]
+      : [{ slug: idOrSlug }];
+    const project = await this.projectRepo.findOne({ where });
     if (!project) {
       throw new NotFoundException(`Project "${idOrSlug}" not found`);
     }

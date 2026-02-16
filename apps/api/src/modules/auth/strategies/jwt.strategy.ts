@@ -33,6 +33,6 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     if (!user || !user.isActive) {
       throw new UnauthorizedException('User not found or deactivated');
     }
-    return { sub: payload.sub, email: payload.email, role: payload.role };
+    return { id: payload.sub, sub: payload.sub, email: payload.email, role: payload.role };
   }
 }
