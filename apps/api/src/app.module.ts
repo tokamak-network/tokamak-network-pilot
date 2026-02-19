@@ -38,19 +38,21 @@ import { ChangelogModule } from './modules/changelog/changelog.module';
     // ── BullMQ (Redis-backed job queue) ──
     BullModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        connection: {
-          host: new URL(
-            config.get<string>('REDIS_URL', 'redis://localhost:6379'),
-          ).hostname,
-          port: parseInt(
-            new URL(
-              config.get<string>('REDIS_URL', 'redis://localhost:6379'),
-            ).port || '6379',
-            10,
-          ),
-        },
-      }),
+      useFactory: (config: ConfigService) => {
+        const redisUrl = new URL(
+          config.get<string>('REDIS_URL', 'redis://localhost:6379'),
+        );
+        return {
+          connection: {
+            host: redisUrl.hostname,
+            port: parseInt(redisUrl.port || '6379', 10),
+            password: redisUrl.password || undefined,
+            username: redisUrl.username || undefined,
+            tls: redisUrl.protocol === 'rediss:' ? {} : undefined,
+            maxRetriesPerRequest: null,
+          },
+        };
+      },
     }),
 
     // ── Rate limiting (used by public API with per-key limits) ──

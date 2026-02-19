@@ -18,16 +18,22 @@ import { ProjectSource } from '../../entities/project-source.entity';
   imports: [
     TypeOrmModule.forRootAsync({
       inject: [ConfigService],
-      useFactory: (config: ConfigService) => ({
-        type: 'postgres' as const,
-        url: config.get<string>(
+      useFactory: (config: ConfigService) => {
+        const dbUrl = config.get<string>(
           'DATABASE_URL',
           'postgresql://postgres:postgres@localhost:5432/tokamak_pilot',
-        ),
-        entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource],
-        synchronize: true, // Auto-sync schema in dev — disable in production
-        logging: config.get<string>('NODE_ENV') === 'development',
-      }),
+        );
+        const isProduction = config.get<string>('NODE_ENV') === 'production';
+
+        return {
+          type: 'postgres' as const,
+          url: dbUrl,
+          entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource],
+          synchronize: !isProduction,
+          logging: !isProduction,
+          ssl: isProduction ? { rejectUnauthorized: false } : false,
+        };
+      },
     }),
   ],
 })

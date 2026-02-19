@@ -72,8 +72,9 @@ async function bootstrap() {
     res.send(yaml.dump(document));
   });
 
-  const port = config.get<number>('API_PORT', 4000);
-  await app.listen(port);
+  // Railway injects PORT; fall back to API_PORT for local dev
+  const port = config.get<number>('PORT', config.get<number>('API_PORT', 4000));
+  await app.listen(port, '0.0.0.0');
   console.log(`🚀 Tokamak Pilot API running on http://localhost:${port}${prefix}`);
   console.log(`📚 Swagger docs at http://localhost:${port}/docs`);
   console.log(`📄 llms.txt at http://localhost:${port}/llms.txt`);
