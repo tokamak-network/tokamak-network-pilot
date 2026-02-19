@@ -20,6 +20,9 @@ export const metadata: Metadata = {
     "Layer 2",
     "documentation",
   ],
+  icons: {
+    icon: "/icon.svg",
+  },
 };
 
 export default function RootLayout({
