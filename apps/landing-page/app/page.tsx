@@ -1,6 +1,5 @@
 import Navbar from "./components/Navbar";
 import Hero from "./components/Hero";
-import TrustedBy from "./components/TrustedBy";
 import WhyChooseUs from "./components/WhyChooseUs";
 import Features from "./components/Features";
 import Integrations from "./components/Integrations";
@@ -16,7 +15,6 @@ export default function Home() {
     <div className="min-h-screen bg-surface">
       <Navbar />
       <Hero />
-      <TrustedBy />
       <WhyChooseUs />
       <Features />
       <Integrations />

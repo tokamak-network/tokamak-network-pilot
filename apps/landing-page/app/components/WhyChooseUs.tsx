@@ -26,7 +26,7 @@ export default function WhyChooseUs() {
     <section className="relative bg-surface py-24 md:py-32">
       <div className="bg-grid-light pointer-events-none absolute inset-0 opacity-50" />
       <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto mb-16 max-w-2xl text-center">
+        <div className="mx-auto mb-16 max-w-4xl text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-text-heading md:text-4xl lg:text-5xl">
             Why Choose{" "}
             <span className="text-gradient-emerald">the Forest?</span>

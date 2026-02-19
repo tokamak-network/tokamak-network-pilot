@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { Menu, X, TreePine } from "lucide-react";
 
 const navLinks = [
+  // { label: "Home", href: "#" },
   { label: "Features", href: "#features" },
   { label: "How It Works", href: "#how-it-works" },
-  { label: "Integrations", href: "#integrations" },
   { label: "FAQ", href: "#faq" },
 ];
 
@@ -75,13 +75,13 @@ export default function Navbar() {
           href={APP_URL}
           target="_blank"
           rel="noopener noreferrer"
-          className={`hidden rounded-lg px-5 py-2 text-sm font-medium transition-all md:inline-flex ${
+          className={`hidden rounded-full px-5 py-2 text-sm font-medium transition-all md:inline-flex ${
             scrolled
               ? "bg-emerald text-white hover:bg-emerald-dark"
-              : "bg-white text-surface-dark hover:bg-white/90"
+              : "border border-white/15 text-white hover:border-white/30 hover:bg-white/5"
           }`}
         >
-          Explore the App
+          Get started now
         </a>
 
         <button

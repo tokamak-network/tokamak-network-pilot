@@ -1,71 +1,77 @@
-import { Search, ArrowRight, Sparkles } from "lucide-react";
+import { ArrowRight, Sparkles } from "lucide-react";
+import {
+  GitBranch,
+  Layers,
+  Coins,
+  Shield,
+  Blocks,
+  Cpu,
+} from "lucide-react";
 
 const APP_URL = "https://app.tokamakforest.com/";
 
+const ecosystemPartners = [
+  { name: "Tokamak Network", icon: Blocks },
+  { name: "Titan L2", icon: Layers },
+  { name: "TON Staking", icon: Coins },
+  { name: "Ethereum", icon: Shield },
+  { name: "GitHub", icon: GitBranch },
+  { name: "Open Infra", icon: Cpu },
+];
+
 export default function Hero() {
   return (
-    <section className="relative overflow-hidden bg-surface-dark pb-20 pt-36 md:pb-28 md:pt-44 lg:pb-32 lg:pt-52">
-      <div className="bg-grid-dark pointer-events-none absolute inset-0 opacity-40" />
-      <div className="pointer-events-none absolute inset-0 bg-radial-emerald-top" />
+    <section className="relative flex min-h-screen flex-col overflow-hidden bg-[#060606]">
+      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_80%_50%_at_50%_-20%,rgba(16,185,129,0.08),transparent)]" />
 
-      <div className="absolute top-32 left-1/4 h-96 w-96 rounded-full bg-emerald/8 blur-[140px]" />
-
-      <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto max-w-4xl text-center">
-          <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1.5 backdrop-blur-sm">
-            <Sparkles className="h-3.5 w-3.5 text-emerald" />
-            <span className="text-xs font-medium text-emerald-light">
-              AI-Powered Knowledge Base for Tokamak Ecosystem
-            </span>
-          </div>
-
-          <h1 className="mb-8 text-5xl font-bold leading-[1.08] tracking-tight text-white md:text-6xl lg:text-7xl xl:text-8xl">
-            Navigate the
-            <br />
-            knowledge{" "}
-            <span className="text-gradient-emerald-light">forest</span>
-          </h1>
-
-          <p className="mx-auto mb-12 max-w-xl text-base leading-relaxed text-white/60 md:text-lg">
-            Every repo, every document, every line of code. Ingested,
-            understood, and connected. Ask anything and get sourced, cited
-            answers in real time.
-          </p>
-
-          <div className="mb-14 flex flex-col items-center justify-center gap-4 sm:flex-row">
-            <a
-              href={APP_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="glow-emerald-sm inline-flex items-center gap-2.5 rounded-xl bg-emerald px-8 py-4 text-sm font-semibold text-white transition-all hover:bg-emerald-light hover:shadow-lg"
-            >
-              Explore the Forest
-              <ArrowRight className="h-4 w-4" />
-            </a>
-            <a
-              href="#how-it-works"
-              className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-white/5 px-8 py-4 text-sm font-medium text-white/80 backdrop-blur-sm transition-all hover:border-white/25 hover:bg-white/10 hover:text-white"
-            >
-              See How It Works
-            </a>
-          </div>
-
+      <div className="relative flex flex-1 flex-col justify-center mx-auto w-full max-w-7xl px-6 pt-28 lg:px-8">
+        <div className="mx-auto max-w-5xl text-center">
           <a
             href={APP_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="mx-auto block max-w-2xl overflow-hidden rounded-2xl border border-white/10 bg-white/5 p-1.5 backdrop-blur-sm transition-all hover:border-white/20"
+            className="group mb-10 inline-flex items-center gap-2.5 rounded-full border border-white/[0.08] bg-white/[0.03] px-4 py-2 transition-all hover:border-emerald/20 hover:bg-white/[0.05]"
           >
-            <div className="flex items-center gap-3 rounded-xl bg-surface-dark-secondary/80 px-5 py-4">
-              <Search className="h-5 w-5 shrink-0 text-white/30" />
-              <span className="text-sm text-white/40">
-                Ask: &quot;How does TON staking delegation work?&quot;
-              </span>
-              <div className="ml-auto flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald/20">
-                <ArrowRight className="h-4 w-4 text-emerald" />
-              </div>
-            </div>
+            <span className="rounded-md bg-emerald px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white">
+              New
+            </span>
+            <span className="text-xs text-white/50 transition-colors group-hover:text-white/70">
+              AI-Powered Knowledge for Tokamak Ecosystem
+            </span>
+            <ArrowRight className="h-3 w-3 text-white/30 transition-colors group-hover:text-emerald" />
           </a>
+
+          <h1 className="mb-8 text-[2.75rem] font-bold leading-[1.1] tracking-tight text-white sm:text-5xl md:text-6xl lg:text-[5rem]">
+            Navigate the knowledge
+            <br />
+            forest of{" "}
+            <span className="text-emerald">Tokamak Network</span>
+          </h1>
+
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-white/40 md:text-[17px]">
+            Built for efficiency and scalability, it ingests every repo and
+            document across the ecosystem and delivers sourced, cited answers
+            instantly.
+          </p>
+        </div>
+      </div>
+
+      <div className="relative mx-auto w-full max-w-7xl px-6 pb-10 pt-8 lg:px-8">
+        <p className="mb-6 text-center text-xs text-white/50">
+          Trusted by developers and teams across the ecosystem
+        </p>
+        <div className="flex flex-wrap items-center justify-center gap-x-10 gap-y-5 md:gap-x-14">
+          {ecosystemPartners.map((partner) => (
+            <div
+              key={partner.name}
+              className="flex items-center gap-2"
+            >
+              <partner.icon className="h-4 w-4 text-white" />
+              <span className="text-sm font-medium text-white">
+                {partner.name}
+              </span>
+            </div>
+          ))}
         </div>
       </div>
     </section>

@@ -213,7 +213,7 @@ export default function Features() {
   return (
     <section id="features" className="relative bg-surface-secondary py-24 md:py-32">
       <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto mb-20 max-w-2xl text-center">
+        <div className="mx-auto mb-20 max-w-4xl text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-text-heading md:text-4xl lg:text-5xl">
             Features
           </h2>
