@@ -44,9 +44,9 @@ interface UsageResponse {
 }
 
 const TIER_COLORS: Record<string, string> = {
-  free: 'text-gray-500 bg-gray-500/10 border-gray-500/20',
-  standard: 'text-blue-500 bg-blue-500/10 border-blue-500/20',
-  premium: 'text-purple-500 bg-purple-500/10 border-purple-500/20',
+  free: 'text-muted-foreground bg-muted border-border',
+  standard: 'text-info bg-info/10 border-info/20',
+  premium: 'text-chart-4 bg-chart-4/10 border-chart-4/20',
 };
 
 const TIER_LIMITS: Record<string, number> = {
@@ -174,13 +174,13 @@ export function RateLimitDashboard() {
 
   if (error) {
     return (
-      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 flex items-center gap-3">
-        <AlertTriangle className="size-5 text-red-500 shrink-0" />
+      <div className="rounded-xl border border-destructive/20 bg-destructive/5 p-4 flex items-center gap-3">
+        <AlertTriangle className="size-5 text-destructive shrink-0" />
         <div>
-          <p className="text-sm font-medium text-red-400">{error}</p>
+          <p className="text-sm font-medium text-destructive">{error}</p>
           <button
             onClick={fetchKeys}
-            className="text-xs text-red-400 underline underline-offset-2 mt-1"
+            className="text-xs text-destructive underline underline-offset-2 mt-1"
           >
             Try again
           </button>
@@ -310,10 +310,10 @@ export function RateLimitDashboard() {
                   <div
                     className={`absolute inset-y-0 left-0 rounded-full transition-all ${
                       selectedKey.tier === 'premium'
-                        ? 'bg-purple-500'
+                        ? 'bg-chart-4'
                         : selectedKey.tier === 'standard'
-                        ? 'bg-blue-500'
-                        : 'bg-gray-500'
+                        ? 'bg-info'
+                        : 'bg-muted-foreground'
                     }`}
                     style={{ width: `${pct}%` }}
                   />
@@ -348,14 +348,14 @@ export function RateLimitDashboard() {
           <div className="flex items-center gap-2 rounded-xl border border-border bg-card p-4">
             {selectedKey.isActive ? (
               <>
-                <CheckCircle2 className="size-4 text-emerald-500" />
-                <span className="text-sm font-medium text-emerald-500">Active</span>
+                <CheckCircle2 className="size-4 text-success" />
+                <span className="text-sm font-medium text-success">Active</span>
                 <span className="text-xs text-muted-foreground">— This key is accepting requests</span>
               </>
             ) : (
               <>
-                <XCircle className="size-4 text-red-500" />
-                <span className="text-sm font-medium text-red-500">Inactive</span>
+                <XCircle className="size-4 text-destructive" />
+                <span className="text-sm font-medium text-destructive">Inactive</span>
                 <span className="text-xs text-muted-foreground">— This key is disabled and will reject all requests</span>
               </>
             )}
@@ -403,8 +403,8 @@ export function RateLimitDashboard() {
                           <span
                             className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-bold font-mono ${
                               entry.method === 'GET'
-                                ? 'bg-emerald-500/15 text-emerald-500'
-                                : 'bg-blue-500/15 text-blue-500'
+                                ? 'bg-success/15 text-success'
+                                : 'bg-info/15 text-info'
                             }`}
                           >
                             {entry.method}
@@ -417,10 +417,10 @@ export function RateLimitDashboard() {
                           <span
                             className={`text-xs font-mono font-bold ${
                               entry.statusCode < 400
-                                ? 'text-emerald-500'
+                                ? 'text-success'
                                 : entry.statusCode < 500
-                                ? 'text-amber-500'
-                                : 'text-red-500'
+                                ? 'text-warning'
+                                : 'text-destructive'
                             }`}
                           >
                             {entry.statusCode}

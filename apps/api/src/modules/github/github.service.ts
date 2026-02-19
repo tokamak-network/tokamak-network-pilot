@@ -200,57 +200,115 @@ export class GitHubService {
   }
 
   /**
-   * Fetch ALL markdown files anywhere in the repo tree (not just /docs).
+   * Fetch ALL markdown files across all branches of the repo.
+   * The default branch is fetched first; other branches contribute
+   * only files whose path doesn't already exist in the default branch,
+   * or whose content differs (tracked by SHA to avoid duplicate fetches).
    */
   async fetchAllMarkdown(owner: string, repo: string, maxFiles = 500): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
+    // Track (path -> sha) so we don't re-fetch identical blobs across branches
+    const seenBlobShas = new Map<string, Set<string>>();
 
+    let meta: RepoMeta | null = null;
     try {
-      const { tree, truncated } = await this.getRepoTree(owner, repo);
+      meta = await this.getRepoMeta(owner, repo);
+    } catch {
+      // proceed without metadata
+    }
+    const defaultBranch = meta?.defaultBranch ?? 'main';
 
-      if (truncated) {
-        this.logger.warn(
-          `Repository ${owner}/${repo} tree was truncated by GitHub — some deeply nested .md files may be missed`,
-        );
-      }
+    let branches: string[] = [defaultBranch];
+    try {
+      const allBranches = await this.listBranches(owner, repo);
+      // Put the default branch first, then add the rest
+      branches = [
+        defaultBranch,
+        ...allBranches.filter((b) => b !== defaultBranch),
+      ];
+    } catch {
+      this.logger.warn(`Could not list branches for ${owner}/${repo}, falling back to default branch only`);
+    }
 
-      const mdFiles = tree
-        .filter(
+    this.logger.log(`Scanning ${branches.length} branch(es) for markdown in ${owner}/${repo}`);
+
+    for (const branch of branches) {
+      if (docs.length >= maxFiles) break;
+
+      try {
+        const { tree, truncated } = await this.getRepoTreeForRef(owner, repo, branch);
+
+        if (truncated) {
+          this.logger.warn(
+            `Repository ${owner}/${repo} tree (branch: ${branch}) was truncated by GitHub — some deeply nested .md files may be missed`,
+          );
+        }
+
+        const mdFiles = tree.filter(
           (f) =>
             f.type === 'blob' &&
             f.path &&
             /\.(md|mdx|rst)$/i.test(f.path) &&
             !SKIP_DIRS.some((d) => f.path!.includes(`${d}/`)) &&
-            (f.size ?? 0) < 500_000, // allow up to 500KB markdown files
-        )
-        .slice(0, maxFiles);
+            (f.size ?? 0) < 500_000,
+        );
 
-      this.logger.log(
-        `Found ${mdFiles.length} markdown files in ${owner}/${repo} (tree had ${tree.length} entries${truncated ? ', truncated' : ''})`,
-      );
+        let branchDocsCount = 0;
+        for (const file of mdFiles) {
+          if (docs.length >= maxFiles) break;
 
-      for (const file of mdFiles) {
-        try {
-          const content = await this.fetchFileContent(owner, repo, file.path!);
-          // Skip truly empty files (< 20 chars) — things like just a title
-          if (content.trim().length < 20) continue;
+          const fileSha = file.sha ?? '';
+          const pathShas = seenBlobShas.get(file.path!);
+          if (pathShas?.has(fileSha)) continue;
 
-          docs.push({
-            title: `${owner}/${repo}: ${file.path}`,
-            content,
-            contentType: 'documentation',
-            url: `https://github.com/${owner}/${repo}/blob/main/${file.path}`,
-            metadata: { owner, repo, path: file.path, size: file.size },
-          });
-        } catch {
-          // skip unreadable
+          if (!pathShas) {
+            seenBlobShas.set(file.path!, new Set([fileSha]));
+          } else {
+            pathShas.add(fileSha);
+          }
+
+          try {
+            const content = await this.fetchFileContent(owner, repo, file.path!, branch);
+            if (content.trim().length < 20) continue;
+
+            const isDefault = branch === defaultBranch;
+            const branchLabel = isDefault ? '' : ` [${branch}]`;
+
+            docs.push({
+              title: `${owner}/${repo}: ${file.path}${branchLabel}`,
+              content,
+              contentType: 'documentation',
+              url: `https://github.com/${owner}/${repo}/blob/${branch}/${file.path}`,
+              metadata: {
+                owner,
+                repo,
+                path: file.path,
+                branch,
+                isDefaultBranch: isDefault,
+                size: file.size,
+              },
+            });
+            branchDocsCount++;
+          } catch {
+            // skip unreadable
+          }
         }
+
+        if (branchDocsCount > 0) {
+          this.logger.log(
+            `Branch "${branch}": found ${branchDocsCount} new markdown files in ${owner}/${repo}`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `Could not fetch markdown tree for ${owner}/${repo} branch "${branch}": ${error}`,
+        );
       }
-    } catch (error) {
-      this.logger.warn(`Could not fetch markdown tree for ${owner}/${repo}: ${error}`);
     }
 
-    this.logger.log(`Fetched ${docs.length} markdown files from ${owner}/${repo}`);
+    this.logger.log(
+      `Fetched ${docs.length} total markdown files from ${owner}/${repo} across ${branches.length} branch(es)`,
+    );
     return docs;
   }
 
@@ -372,8 +430,16 @@ export class GitHubService {
   ): Promise<RawDocument[]> {
     const docs: RawDocument[] = [];
 
+    let meta: RepoMeta | null = null;
     try {
-      const { tree } = await this.getRepoTree(owner, repo);
+      meta = await this.getRepoMeta(owner, repo);
+    } catch {
+      this.logger.warn(`Could not fetch metadata for ${owner}/${repo}, branch resolution may be inaccurate`);
+    }
+    const branch = meta?.defaultBranch ?? 'main';
+
+    try {
+      const { tree } = await this.getRepoTreeForRef(owner, repo, branch);
 
       const isCodeFile = (path: string) =>
         CODE_EXTENSIONS.some((ext) => path.endsWith(ext));
@@ -412,8 +478,8 @@ export class GitHubService {
             title: `${owner}/${repo}: ${file.path}`,
             content,
             contentType: 'code',
-            url: `https://github.com/${owner}/${repo}/blob/main/${file.path}`,
-            metadata: { owner, repo, path: file.path, size: file.size },
+            url: `https://github.com/${owner}/${repo}/blob/${branch}/${file.path}`,
+            metadata: { owner, repo, path: file.path, branch, size: file.size },
           });
         } catch {
           // skip unreadable files
@@ -538,6 +604,50 @@ export class GitHubService {
     return { documents: all, breakdown, meta };
   }
 
+  // ───────────────────── Branch helpers ─────────────────────
+
+  /**
+   * List all branch names for a repo.
+   */
+  async listBranches(owner: string, repo: string): Promise<string[]> {
+    const branches: string[] = [];
+    let page = 1;
+
+    try {
+      while (true) {
+        const { data } = await this.octokit.repos.listBranches({
+          owner,
+          repo,
+          per_page: 100,
+          page,
+        });
+        if (data.length === 0) break;
+        for (const b of data) {
+          branches.push(b.name);
+        }
+        if (data.length < 100) break;
+        page++;
+      }
+    } catch (error) {
+      this.logger.warn(`Could not list branches for ${owner}/${repo}: ${error}`);
+    }
+
+    return branches;
+  }
+
+  /**
+   * Fetch the repo tree for a specific branch/ref.
+   */
+  private async getRepoTreeForRef(owner: string, repo: string, ref: string) {
+    const { data } = await this.octokit.git.getTree({
+      owner,
+      repo,
+      tree_sha: ref,
+      recursive: 'true',
+    });
+    return { tree: data.tree, truncated: !!data.truncated };
+  }
+
   // ───────────────────── Private helpers ─────────────────────
 
   private async fetchIssueComments(
@@ -559,8 +669,18 @@ export class GitHubService {
     }
   }
 
-  private async fetchFileContent(owner: string, repo: string, path: string): Promise<string> {
-    const { data } = await this.octokit.repos.getContent({ owner, repo, path });
+  private async fetchFileContent(
+    owner: string,
+    repo: string,
+    path: string,
+    ref?: string,
+  ): Promise<string> {
+    const { data } = await this.octokit.repos.getContent({
+      owner,
+      repo,
+      path,
+      ...(ref ? { ref } : {}),
+    });
     if (Array.isArray(data) || data.type !== 'file') {
       throw new Error(`${path} is not a file`);
     }

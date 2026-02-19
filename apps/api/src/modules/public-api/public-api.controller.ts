@@ -8,6 +8,7 @@ import {
   UseGuards,
   UseInterceptors,
   Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,9 +18,10 @@ import {
   ApiBody,
   ApiResponse,
 } from '@nestjs/swagger';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 import { ApiKeyGuard } from '../api-keys/guards/api-key.guard';
 import { ApiKeyThrottlerGuard } from '../api-keys/guards/api-key-throttler.guard';
+import { ApiKeysService } from '../api-keys/api-keys.service';
 import { Scopes } from '../api-keys/decorators/scopes.decorator';
 import { RagService } from '../rag/rag.service';
 import { SourcesService } from '../sources/sources.service';
@@ -37,6 +39,7 @@ export class PublicApiController {
     private readonly ragService: RagService,
     private readonly sourcesService: SourcesService,
     private readonly contentService: ContentService,
+    private readonly apiKeysService: ApiKeysService,
   ) {}
 
   // ─── RAG ──────────────────────────────────────────────────
@@ -55,6 +58,69 @@ export class PublicApiController {
   @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
   async ask(@Body() dto: AskQuestionDto) {
     return this.ragService.ask(dto);
+  }
+
+  @Post('ask/stream')
+  @Scopes('ask')
+  @ApiOperation({
+    summary: 'Ask a question with streaming response (SSE)',
+    description:
+      'Submit a question and receive the answer as a Server-Sent Events stream. ' +
+      'Events: `metadata` (sources, confidence, provider), `chunk` (text token), `done` (completion signal), `error`. ' +
+      'Requires the `ask` scope.',
+  })
+  @ApiBody({ type: AskQuestionDto })
+  @ApiResponse({ status: 200, description: 'SSE stream of answer tokens' })
+  @ApiResponse({ status: 401, description: 'Invalid or missing API key' })
+  @ApiResponse({ status: 403, description: 'API key missing required scope' })
+  @ApiResponse({ status: 429, description: 'Rate limit exceeded' })
+  async askStream(
+    @Body() dto: AskQuestionDto,
+    @Req() req: Request,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    const start = Date.now();
+
+    try {
+      for await (const event of this.ragService.askStream(dto)) {
+        if (event.type === 'metadata') {
+          res.write(`event: metadata\ndata: ${JSON.stringify({
+            sources: event.sources,
+            confidence: event.confidence,
+            provider: event.provider,
+            model: event.model,
+          })}\n\n`);
+        } else if (event.type === 'chunk') {
+          res.write(`event: chunk\ndata: ${JSON.stringify({ text: event.text })}\n\n`);
+        } else if (event.type === 'done') {
+          res.write(`event: done\ndata: {}\n\n`);
+        }
+      }
+    } catch (err: any) {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+    }
+
+    // Log usage for the streaming request (interceptor is bypassed with @Res)
+    const apiKey = (req as any).apiKey;
+    if (apiKey) {
+      this.apiKeysService.logUsage({
+        apiKeyId: apiKey.id,
+        endpoint: req.path,
+        method: req.method,
+        statusCode: 200,
+        responseTimeMs: Date.now() - start,
+        ip: req.ip || req.socket.remoteAddress,
+        userAgent: req.headers['user-agent'],
+      }).catch(() => {});
+    }
+
+    res.end();
   }
 
   @Get('search')

@@ -9,6 +9,7 @@ import {
   Query,
   UseGuards,
   Req,
+  Res,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { UpdateConversationDto } from './dto/update-conversation.dto';
@@ -66,6 +68,33 @@ export class ConversationsController {
     return this.service.quickAsk(dto, req.user?.id);
   }
 
+  @Post('quick-ask/stream')
+  @ApiOperation({
+    summary: 'Quick ask with streaming — creates a conversation and streams the answer',
+    description:
+      'SSE streaming version of quick-ask. Returns events: metadata (sources), chunk (text tokens), done (assistant message ID).',
+  })
+  async quickAskStream(
+    @Body() dto: AskInConversationDto,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      for await (const chunk of this.service.quickAskStream(dto, req.user?.id)) {
+        res.write(chunk);
+      }
+    } catch (err: any) {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+    }
+    res.end();
+  }
+
   // ── Parameterized routes ──
 
   @Get(':id')
@@ -111,5 +140,34 @@ export class ConversationsController {
     @Req() req: any,
   ) {
     return this.service.askInConversation(id, dto, req.user?.id);
+  }
+
+  @Post(':id/ask/stream')
+  @ApiOperation({
+    summary: 'Ask a question within a conversation with streaming',
+    description:
+      'SSE streaming version. Returns events: metadata (sources), chunk (text tokens), done (assistant message ID).',
+  })
+  @ApiParam({ name: 'id', description: 'Conversation ID' })
+  async askInConversationStream(
+    @Param('id') id: string,
+    @Body() dto: AskInConversationDto,
+    @Req() req: any,
+    @Res() res: Response,
+  ) {
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      for await (const chunk of this.service.askInConversationStream(id, dto, req.user?.id)) {
+        res.write(chunk);
+      }
+    } catch (err: any) {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+    }
+    res.end();
   }
 }

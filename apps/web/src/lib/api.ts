@@ -150,6 +150,113 @@ export async function quickAsk(question: string, filters?: string[]) {
   });
 }
 
+// ───────────────────── Streaming API ─────────────────────
+
+export interface StreamMetadata {
+  conversationId: string;
+  userMessageId: string;
+  sources: Array<{ title: string; url: string; score: number; snippet?: string }>;
+  confidence: number;
+  provider: string;
+  model: string;
+}
+
+export interface StreamCallbacks {
+  onMetadata: (metadata: StreamMetadata) => void;
+  onChunk: (text: string) => void;
+  onDone: (data: { assistantMessageId: string }) => void;
+  onError: (error: Error) => void;
+}
+
+async function streamSSE(path: string, body: object, callbacks: StreamCallbacks) {
+  const url = `${API_BASE}${path}`;
+  const token = getToken();
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => ({ message: res.statusText }));
+    if (res.status === 401 && typeof window !== 'undefined') {
+      localStorage.removeItem('tokamak_token');
+      window.dispatchEvent(new Event('tokamak:unauthorized'));
+    }
+    throw new Error(error.message || `API error: ${res.status}`);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error('No response body');
+
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    const lines = buffer.split('\n');
+    buffer = lines.pop() || '';
+
+    let currentEvent = '';
+    for (const line of lines) {
+      if (line.startsWith('event: ')) {
+        currentEvent = line.slice(7).trim();
+      } else if (line.startsWith('data: ')) {
+        const data = JSON.parse(line.slice(6));
+        switch (currentEvent) {
+          case 'metadata':
+            callbacks.onMetadata(data);
+            break;
+          case 'chunk':
+            callbacks.onChunk(data.text);
+            break;
+          case 'done':
+            callbacks.onDone(data);
+            break;
+          case 'error':
+            callbacks.onError(new Error(data.message));
+            break;
+        }
+        currentEvent = '';
+      }
+    }
+  }
+}
+
+/** Quick ask with streaming */
+export function quickAskStream(
+  question: string,
+  callbacks: StreamCallbacks,
+  filters?: string[],
+) {
+  return streamSSE('/conversations/quick-ask/stream', { question, filters }, callbacks);
+}
+
+/** Ask in conversation with streaming */
+export function askInConversationStream(
+  conversationId: string,
+  question: string,
+  callbacks: StreamCallbacks,
+  filters?: string[],
+) {
+  return streamSSE(
+    `/conversations/${conversationId}/ask/stream`,
+    { question, filters },
+    callbacks,
+  );
+}
+
 /**
  * Semantic search across the knowledge base.
  */

@@ -59,6 +59,7 @@ import {
   SidebarGroupLabel,
   SidebarHeader,
   SidebarMenu,
+  SidebarMenuAction,
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
@@ -70,10 +71,6 @@ const mainNav = [
   { label: 'Content', href: '/content', icon: FileText },
 ];
 
-const secondaryNav = [
-  { label: 'Settings', href: '/settings', icon: Settings },
-  { label: 'API Docs', href: '/docs', icon: BookOpen },
-];
 
 const sourceTypeIcons: Record<string, React.ElementType> = {
   github_repo: Github,
@@ -85,10 +82,10 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
 };
 
 const statusDots: Record<string, string> = {
-  active: 'bg-green-500',
-  syncing: 'bg-yellow-500 animate-pulse',
-  error: 'bg-red-500',
-  disabled: 'bg-gray-400',
+  active: 'bg-success',
+  syncing: 'bg-warning animate-pulse',
+  error: 'bg-destructive',
+  disabled: 'bg-muted-foreground/50',
 };
 
 export function AppSidebar() {
@@ -99,6 +96,8 @@ export function AppSidebar() {
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [repoSearch, setRepoSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
+  const userMenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Conversation state
   const [conversationsList, setConversationsList] = useAtom(conversationsListAtom);
@@ -122,8 +121,18 @@ export function AppSidebar() {
   const handleLogout = useCallback(() => {
     localStorage.removeItem('tokamak_token');
     setUser(null);
+    setUserMenuOpen(false);
     router.push('/');
   }, [setUser, router]);
+
+  const openUserMenu = useCallback(() => {
+    if (userMenuTimeoutRef.current) clearTimeout(userMenuTimeoutRef.current);
+    setUserMenuOpen(true);
+  }, []);
+
+  const closeUserMenu = useCallback(() => {
+    userMenuTimeoutRef.current = setTimeout(() => setUserMenuOpen(false), 200);
+  }, []);
 
   const handleNewChat = useCallback(() => {
     setActiveConversationId(null);
@@ -313,14 +322,15 @@ export function AppSidebar() {
                     >
                       <MessageSquare className="size-4 shrink-0" />
                       <span className="flex-1 truncate text-xs">{conv.title}</span>
-                      <button
-                        onClick={(e) => handleDeleteConversation(conv.id, e)}
-                        className="opacity-0 group-hover/conv:opacity-100 p-0.5 rounded hover:bg-destructive/10 hover:text-destructive transition-all shrink-0"
-                        title="Delete conversation"
-                      >
-                        <Trash2 className="size-3" />
-                      </button>
                     </SidebarMenuButton>
+                    <SidebarMenuAction
+                      onClick={(e) => handleDeleteConversation(conv.id, e)}
+                      className="opacity-0 group-hover:opacity-100 hover:bg-destructive/10 hover:text-destructive transition-all"
+                      title="Delete conversation"
+                      showOnHover
+                    >
+                      <Trash2 className="size-3" />
+                    </SidebarMenuAction>
                   </SidebarMenuItem>
                 ))
               )}
@@ -328,57 +338,54 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarGroup>
-          <SidebarGroupLabel>Tools</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {secondaryNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={!('external' in item) && isActive(item.href)}
-                    tooltip={item.label}
-                  >
-                    {'external' in item ? (
-                      <a href={item.href} target="_blank" rel="noopener noreferrer">
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </a>
-                    ) : (
-                      <Link href={item.href}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </Link>
-                    )}
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
       </SidebarContent>
 
       {/* Footer — Auth */}
       <SidebarFooter>
         <SidebarMenu>
           {user ? (
-            <>
-              <SidebarMenuItem>
-                <SidebarMenuButton size="sm" className="cursor-default" tooltip={user.email}>
-                  <User className="size-4" />
-                  <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
-                    <span className="text-xs font-medium truncate">{user.name || user.email}</span>
-                    <span className="text-[10px] text-muted-foreground truncate">{user.role}</span>
-                  </div>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-              <SidebarMenuItem>
-                <SidebarMenuButton size="sm" tooltip="Sign out" onClick={handleLogout}>
-                  <LogOut className="size-4" />
-                  <span>Sign Out</span>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            </>
+            <SidebarMenuItem
+              onMouseEnter={openUserMenu}
+              onMouseLeave={closeUserMenu}
+            >
+              <Popover open={userMenuOpen} onOpenChange={setUserMenuOpen}>
+                <PopoverTrigger asChild>
+                  <SidebarMenuButton size="sm" tooltip={user.email} className="w-full">
+                    <User className="size-4" />
+                    <div className="flex flex-col leading-none group-data-[collapsible=icon]:hidden">
+                      <span className="text-xs font-medium truncate">{user.name || user.email}</span>
+                      <span className="text-[10px] text-muted-foreground truncate">{user.role}</span>
+                    </div>
+                    <ChevronRight className={`ml-auto size-3 text-muted-foreground transition-transform group-data-[collapsible=icon]:hidden ${userMenuOpen ? 'rotate-90' : ''}`} />
+                  </SidebarMenuButton>
+                </PopoverTrigger>
+                <PopoverContent
+                  side="right"
+                  align="end"
+                  sideOffset={8}
+                  className="w-48 p-1"
+                  onMouseEnter={openUserMenu}
+                  onMouseLeave={closeUserMenu}
+                >
+                  <Link
+                    href="/settings"
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-muted transition-colors"
+                  >
+                    <Settings className="size-4 text-muted-foreground" />
+                    <span>Settings</span>
+                  </Link>
+                  <div className="my-1 h-px bg-border" />
+                  <button
+                    onClick={handleLogout}
+                    className="flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-sm hover:bg-destructive/10 hover:text-destructive transition-colors"
+                  >
+                    <LogOut className="size-4" />
+                    <span>Sign Out</span>
+                  </button>
+                </PopoverContent>
+              </Popover>
+            </SidebarMenuItem>
           ) : (
             <SidebarMenuItem>
               <SidebarMenuButton asChild size="sm" tooltip="Sign in">
@@ -487,7 +494,7 @@ function RepoFlyout({
                   <div className="relative mt-0.5 shrink-0">
                     <Icon className="size-4 text-muted-foreground" />
                     <div
-                      className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${statusDots[source.status] || 'bg-gray-400'}`}
+                      className={`absolute -top-0.5 -right-0.5 size-1.5 rounded-full ${statusDots[source.status] || 'bg-muted-foreground/50'}`}
                     />
                   </div>
                   <div className="flex-1 min-w-0">

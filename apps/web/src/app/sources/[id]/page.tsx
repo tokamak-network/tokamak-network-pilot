@@ -27,6 +27,7 @@ import {
   fetchSourceDocuments,
   generateSourceSummary,
   syncSource,
+  syncSourceFull,
   type SourceResponse,
   type DocumentResponse,
   type SourceSummary,
@@ -74,10 +75,10 @@ const contentTypeLabels: Record<string, string> = {
 };
 
 const statusColors: Record<string, string> = {
-  active: 'bg-green-500',
-  syncing: 'bg-yellow-500',
-  error: 'bg-red-500',
-  disabled: 'bg-gray-400',
+  active: 'bg-success',
+  syncing: 'bg-warning',
+  error: 'bg-destructive',
+  disabled: 'bg-muted-foreground/50',
 };
 
 export default function SourceDetailPage() {
@@ -91,6 +92,7 @@ export default function SourceDetailPage() {
   const [loading, setLoading] = useState(true);
   const [summaryLoading, setSummaryLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [deepSyncing, setDeepSyncing] = useState(false);
   const [activeFilter, setActiveFilter] = useState<string | undefined>();
   const [expandedDocs, setExpandedDocs] = useState<Set<string>>(new Set());
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +148,6 @@ export default function SourceDetailPage() {
     setSyncing(true);
     try {
       await syncSource(sourceId);
-      // Reload after a brief delay to let the job start
       setTimeout(() => {
         loadSource();
         loadDocuments(activeFilter);
@@ -155,6 +156,21 @@ export default function SourceDetailPage() {
     } catch (err: any) {
       setError(`Sync failed: ${err.message}`);
       setSyncing(false);
+    }
+  };
+
+  const handleDeepSync = async () => {
+    setDeepSyncing(true);
+    try {
+      await syncSourceFull(sourceId);
+      setTimeout(() => {
+        loadSource();
+        loadDocuments(activeFilter);
+        setDeepSyncing(false);
+      }, 2000);
+    } catch (err: any) {
+      setError(`Deep sync failed: ${err.message}`);
+      setDeepSyncing(false);
     }
   };
 
@@ -199,6 +215,10 @@ export default function SourceDetailPage() {
   const Icon = typeIcons[source.type] || Database;
   const stats = source.stats || {};
   const totalChunks = Object.values(stats).reduce((a, b) => a + b, 0);
+  const hasDeepContent = Object.keys(stats).some((type) =>
+    ['code', 'issue', 'pull_request', 'wiki'].includes(type),
+  );
+  const isSyncing = source.status === 'syncing';
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -218,6 +238,11 @@ export default function SourceDetailPage() {
               <h1 className="font-serif text-xl font-semibold tracking-tight flex items-center gap-2">
                 {source.name}
                 <div className={`size-2.5 rounded-full ${statusColors[source.status]}`} />
+                {totalChunks > 0 && (
+                  <Badge variant={hasDeepContent ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
+                    {hasDeepContent ? 'Full' : 'Docs only'}
+                  </Badge>
+                )}
               </h1>
               <p className="text-sm text-muted-foreground">
                 {source.type.replace('_', ' ')}
@@ -228,9 +253,15 @@ export default function SourceDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={handleSync} disabled={syncing}>
-            <RefreshCw className={`size-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Re-sync'}
+          {!hasDeepContent && !isSyncing && (
+            <Button variant="outline" onClick={handleDeepSync} disabled={deepSyncing}>
+              <Code2 className={`size-4 ${deepSyncing ? 'animate-pulse' : ''}`} />
+              {deepSyncing ? 'Deep Syncing...' : 'Deep Sync'}
+            </Button>
+          )}
+          <Button variant="outline" onClick={handleSync} disabled={syncing || isSyncing}>
+            <RefreshCw className={`size-4 ${syncing || isSyncing ? 'animate-spin' : ''}`} />
+            {syncing || isSyncing ? 'Syncing...' : 'Re-sync'}
           </Button>
           <Button onClick={handleGenerateSummary} disabled={summaryLoading}>
             <Sparkles className={`size-4 ${summaryLoading ? 'animate-pulse' : ''}`} />
@@ -243,6 +274,29 @@ export default function SourceDetailPage() {
         <Card className="border-destructive">
           <CardContent className="py-3">
             <p className="text-sm text-destructive">{error}</p>
+          </CardContent>
+        </Card>
+      )}
+
+      {!hasDeepContent && totalChunks > 0 && !isSyncing && (
+        <Card className="border-info-border bg-info-bg/50">
+          <CardContent className="py-3 px-4 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Code2 className="size-4 text-info" />
+              <p className="text-sm text-foreground/80">
+                This repo has only docs synced. Deep Sync fetches code, issues, PRs, and wiki for richer search results.
+              </p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              className="shrink-0 border-info-border text-info hover:bg-info-bg"
+              onClick={handleDeepSync}
+              disabled={deepSyncing}
+            >
+              <Code2 className="size-3" />
+              {deepSyncing ? 'Syncing...' : 'Deep Sync Now'}
+            </Button>
           </CardContent>
         </Card>
       )}

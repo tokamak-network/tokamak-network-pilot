@@ -106,6 +106,24 @@ export class LlmService implements OnModuleInit {
     }
   }
 
+  /**
+   * Stream a chat completion, yielding text chunks as they arrive.
+   */
+  async *chatCompletionStream(
+    options: ChatCompletionOptions,
+  ): AsyncGenerator<string, void, undefined> {
+    switch (this.provider) {
+      case 'openai':
+        yield* this.openaiCompletionStream(options);
+        break;
+      case 'anthropic':
+        yield* this.anthropicCompletionStream(options);
+        break;
+      default:
+        throw new Error(`Unsupported LLM provider: ${this.provider}`);
+    }
+  }
+
   // ───────────────────── OpenAI ─────────────────────
 
   private async openaiCompletion(
@@ -140,6 +158,28 @@ export class LlmService implements OnModuleInit {
     };
   }
 
+  private async *openaiCompletionStream(
+    options: ChatCompletionOptions,
+  ): AsyncGenerator<string, void, undefined> {
+    if (!this.openai) throw new Error('OpenAI client not initialized');
+
+    const stream = await this.openai.chat.completions.create({
+      model: this.model,
+      messages: options.messages.map((m) => ({
+        role: m.role,
+        content: m.content,
+      })),
+      temperature: options.temperature ?? 0.3,
+      max_tokens: options.maxTokens ?? 1500,
+      stream: true,
+    });
+
+    for await (const chunk of stream) {
+      const delta = chunk.choices[0]?.delta?.content;
+      if (delta) yield delta;
+    }
+  }
+
   // ───────────────────── Anthropic ─────────────────────
 
   private async anthropicCompletion(
@@ -147,7 +187,6 @@ export class LlmService implements OnModuleInit {
   ): Promise<ChatCompletionResult> {
     if (!this.anthropic) throw new Error('Anthropic client not initialized');
 
-    // Anthropic separates the system prompt from messages
     const systemMessage = options.messages.find((m) => m.role === 'system');
     const conversationMessages = options.messages
       .filter((m) => m.role !== 'system')
@@ -178,5 +217,35 @@ export class LlmService implements OnModuleInit {
         totalTokens: response.usage.input_tokens + response.usage.output_tokens,
       },
     };
+  }
+
+  private async *anthropicCompletionStream(
+    options: ChatCompletionOptions,
+  ): AsyncGenerator<string, void, undefined> {
+    if (!this.anthropic) throw new Error('Anthropic client not initialized');
+
+    const systemMessage = options.messages.find((m) => m.role === 'system');
+    const conversationMessages = options.messages
+      .filter((m) => m.role !== 'system')
+      .map((m) => ({
+        role: m.role as 'user' | 'assistant',
+        content: m.content,
+      }));
+
+    const stream = this.anthropic.messages.stream({
+      model: this.model,
+      max_tokens: options.maxTokens ?? 1500,
+      ...(systemMessage ? { system: systemMessage.content } : {}),
+      messages: conversationMessages,
+    });
+
+    for await (const event of stream) {
+      if (
+        event.type === 'content_block_delta' &&
+        event.delta.type === 'text_delta'
+      ) {
+        yield event.delta.text;
+      }
+    }
   }
 }

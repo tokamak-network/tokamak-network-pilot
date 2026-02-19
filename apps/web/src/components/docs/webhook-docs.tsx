@@ -153,7 +153,7 @@ function CopyBtn({ text }: { text: string }) {
       onClick={handleCopy}
       className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
     >
-      {copied ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+      {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
       {copied ? 'Copied' : 'Copy'}
     </button>
   );
@@ -188,14 +188,14 @@ function WebhookEventCard({ event }: { event: WebhookEvent }) {
             <h5 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-2">
               Example Payload
             </h5>
-            <div className="relative group rounded-lg border border-border bg-[#0d1117] overflow-hidden">
+            <div className="relative group rounded-lg border border-border bg-code-block overflow-hidden">
               <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
                 <span className="text-[11px] text-muted-foreground font-mono uppercase">
                   json
                 </span>
                 <CopyBtn text={event.payload} />
               </div>
-              <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-gray-300">
+              <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-code-text">
                 <code>{event.payload}</code>
               </pre>
             </div>
@@ -245,8 +245,8 @@ export function WebhookDocs() {
       {/* Overview */}
       <div className="rounded-xl border border-border bg-muted/30 p-5 space-y-3">
         <div className="flex items-center gap-2">
-          <Clock className="size-4 text-amber-500" />
-          <span className="text-sm font-semibold text-amber-500">Coming Soon</span>
+          <Clock className="size-4 text-warning" />
+          <span className="text-sm font-semibold text-warning">Coming Soon</span>
         </div>
         <p className="text-sm text-muted-foreground leading-relaxed">
           Webhook support is currently in development. When ready, you&apos;ll be able to register
@@ -343,18 +343,18 @@ export function WebhookDocs() {
             <div
               className={`flex items-center gap-2 rounded-lg border p-3 ${
                 testResult.success
-                  ? 'border-emerald-500/20 bg-emerald-500/5'
-                  : 'border-red-500/20 bg-red-500/5'
+                  ? 'border-success/20 bg-success/5'
+                  : 'border-destructive/20 bg-destructive/5'
               }`}
             >
               {testResult.success ? (
-                <Check className="size-4 text-emerald-500 shrink-0" />
+                <Check className="size-4 text-success shrink-0" />
               ) : (
-                <AlertCircle className="size-4 text-red-500 shrink-0" />
+                <AlertCircle className="size-4 text-destructive shrink-0" />
               )}
               <p
                 className={`text-xs ${
-                  testResult.success ? 'text-emerald-400' : 'text-red-400'
+                  testResult.success ? 'text-success' : 'text-destructive'
                 }`}
               >
                 {testResult.message}

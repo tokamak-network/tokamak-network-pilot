@@ -54,9 +54,9 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 const roleColors: Record<string, string> = {
-  lead: 'bg-amber-100 text-amber-800 border-amber-200',
-  contributor: 'bg-blue-100 text-blue-800 border-blue-200',
-  viewer: 'bg-gray-100 text-gray-700 border-gray-200',
+  lead: 'bg-warning-bg text-warning border-warning-border',
+  contributor: 'bg-info-bg text-info border-info-border',
+  viewer: 'bg-muted text-muted-foreground border-border',
 };
 
 const contentTypeLabels: Record<string, string> = {
@@ -456,7 +456,7 @@ function ProjectCopyAsPromptButton({ project }: { project: ProjectDetailResponse
       className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-card px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
       title="Copy project info as AI-ready prompt"
     >
-      {copied ? <span className="size-3 text-green-500">&#10003;</span> : <Sparkles className="size-3" />}
+      {copied ? <span className="size-3 text-success">&#10003;</span> : <Sparkles className="size-3" />}
       {copied ? 'Copied' : 'Copy as prompt'}
     </button>
   );
@@ -935,21 +935,55 @@ function ChatTab({ project }: { project: ProjectDetailResponse }) {
     setLoading(true);
     setAnswer('');
     setSources([]);
+
+    const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+
     try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1'}/ask`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${localStorage.getItem('tokamak_token') || ''}`,
-          },
-          body: JSON.stringify({ question: question.trim(), projectId: project.id }),
+      const res = await fetch(`${apiBase}/ask/stream`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('tokamak_token') || ''}`,
         },
-      );
-      const data = await res.json();
-      setAnswer(data.answer || 'No answer received.');
-      setSources(data.sources || []);
+        body: JSON.stringify({ question: question.trim(), projectId: project.id }),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({ message: res.statusText }));
+        throw new Error(err.message || `API error: ${res.status}`);
+      }
+
+      const reader = res.body?.getReader();
+      if (!reader) throw new Error('No response body');
+
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        let currentEvent = '';
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.slice(7).trim();
+          } else if (line.startsWith('data: ')) {
+            const data = JSON.parse(line.slice(6));
+            if (currentEvent === 'metadata') {
+              setSources(data.sources || []);
+            } else if (currentEvent === 'chunk') {
+              setAnswer((prev) => prev + data.text);
+            } else if (currentEvent === 'error') {
+              setAnswer('Failed to get answer: ' + data.message);
+            }
+            currentEvent = '';
+          }
+        }
+      }
     } catch (err: any) {
       setAnswer('Failed to get answer: ' + (err.message || 'Unknown error'));
     } finally {
@@ -988,10 +1022,15 @@ function ChatTab({ project }: { project: ProjectDetailResponse }) {
             </Button>
           </div>
 
-          {answer && (
+          {(answer || loading) && (
             <div className="space-y-3">
               <div className="prose prose-sm max-w-none text-sm p-4 rounded-lg bg-muted/50 whitespace-pre-wrap">
-                {answer}
+                {answer || (
+                  <span className="text-muted-foreground flex items-center gap-2">
+                    <Loader2 className="size-3 animate-spin" />
+                    Thinking...
+                  </span>
+                )}
               </div>
               {sources.length > 0 && (
                 <div>
@@ -1023,10 +1062,10 @@ function ChatTab({ project }: { project: ProjectDetailResponse }) {
 
 function StatusBadge({ status }: { status: string }) {
   const colors: Record<string, string> = {
-    active: 'bg-green-100 text-green-800 border-green-200',
-    syncing: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    error: 'bg-red-100 text-red-800 border-red-200',
-    disabled: 'bg-gray-100 text-gray-600 border-gray-200',
+    active: 'bg-success-bg text-success border-success-border',
+    syncing: 'bg-warning-bg text-warning border-warning-border',
+    error: 'bg-destructive/10 text-destructive border-destructive/20',
+    disabled: 'bg-muted text-muted-foreground border-border',
   };
   return (
     <span

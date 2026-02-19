@@ -22,7 +22,7 @@ function CopyBtn({ text }: { text: string }) {
       onClick={handleCopy}
       className="flex items-center gap-1 rounded-md border border-white/10 bg-white/5 px-2 py-1 text-[11px] text-muted-foreground hover:bg-white/10 hover:text-foreground transition-colors"
     >
-      {copied ? <Check className="size-3 text-green-400" /> : <Copy className="size-3" />}
+      {copied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
       {copied ? 'Copied' : 'Copy'}
     </button>
   );
@@ -48,7 +48,29 @@ function generateSdkCode(
   ];
 
   // Match path patterns to SDK methods
-  if (path === '/public/ask' && method === 'POST') {
+  if (path === '/public/ask/stream' && method === 'POST') {
+    const question = bodyParams?.find((p) => p.name === 'question')?.example || 'What is TON staking?';
+    lines.push(`// Stream answer token-by-token via SSE`);
+    lines.push(`let fullAnswer = '';`);
+    lines.push('');
+    lines.push(`await pilot.askStream('${question}', {`);
+    lines.push(`  onMetadata: (meta) => {`);
+    lines.push(`    console.log(\`Sources: \${meta.sources.length} found\`);`);
+    lines.push(`    console.log(\`Confidence: \${meta.confidence}\`);`);
+    lines.push(`  },`);
+    lines.push(`  onChunk: (chunk) => {`);
+    lines.push(`    fullAnswer += chunk.text;`);
+    lines.push(`    process.stdout.write(chunk.text);`);
+    lines.push(`  },`);
+    lines.push(`  onDone: () => {`);
+    lines.push(`    console.log('\\n--- Stream complete ---');`);
+    lines.push(`    console.log('Full answer:', fullAnswer);`);
+    lines.push(`  },`);
+    lines.push(`  onError: (err) => {`);
+    lines.push(`    console.error('Stream error:', err.message);`);
+    lines.push(`  },`);
+    lines.push(`});`);
+  } else if (path === '/public/ask' && method === 'POST') {
     const question = bodyParams?.find((p) => p.name === 'question')?.example || 'What is TON staking?';
     const hasFilters = bodyParams?.some((p) => p.name === 'filters');
     lines.push(`// Ask a question with RAG-powered answer`);
@@ -124,14 +146,14 @@ export function SdkGenerator({ method, path, queryParams, bodyParams }: SdkGener
           SDK Snippet
         </span>
       </div>
-      <div className="relative group rounded-lg border border-border bg-[#0d1117] overflow-hidden">
+      <div className="relative group rounded-lg border border-border bg-code-block overflow-hidden">
         <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
           <span className="text-[11px] text-muted-foreground font-mono uppercase">
             typescript — @tokamak-pilot/sdk
           </span>
           <CopyBtn text={code} />
         </div>
-        <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-gray-300">
+        <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-code-text">
           <code>{code}</code>
         </pre>
       </div>

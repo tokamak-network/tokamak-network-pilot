@@ -39,9 +39,9 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
 };
 
 const roleColors: Record<string, string> = {
-  lead: 'bg-amber-100 text-amber-800',
-  contributor: 'bg-blue-100 text-blue-800',
-  viewer: 'bg-gray-100 text-gray-700',
+  lead: 'bg-warning-bg text-warning',
+  contributor: 'bg-info-bg text-info',
+  viewer: 'bg-muted text-muted-foreground',
 };
 
 export default function ProjectPublicPage() {
@@ -166,7 +166,7 @@ export default function ProjectPublicPage() {
                     {member.user.name || member.user.email.split('@')[0]}
                   </p>
                   <span
-                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${roleColors[member.role] || 'bg-gray-100 text-gray-700'}`}
+                    className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${roleColors[member.role] || 'bg-muted text-muted-foreground'}`}
                   >
                     {member.role.charAt(0).toUpperCase() + member.role.slice(1)}
                   </span>

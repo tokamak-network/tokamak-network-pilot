@@ -15,19 +15,30 @@ interface ChatMessageProps {
 /**
  * Cleans AI response content:
  * - Removes trailing "Sources" sections that are already in the sources array
- * - Converts inline [Source N] references into subtle superscript-style markers
+ * - Converts inline [Source N] references into clickable markdown links
+ *   that the custom `a` component renders as interactive badges
  */
 function cleanContent(content: string): string {
-  // Remove trailing "Sources" / "References" block (plain-text list of source URLs/paths)
   let cleaned = content.replace(
     /\n*(Sources|References)\s*\n[\s\S]*$/i,
     ''
   );
 
-  // Convert [Source N] references to superscript-style markers
+  // Expand grouped source references:
+  //   [Source 1, Source 2, Source 4] → [Source 1][Source 2][Source 4]
+  cleaned = cleaned.replace(
+    /\[Source\s*\d+(?:\s*,\s*Source\s*\d+)+\]/gi,
+    (match) => {
+      const numbers = match.match(/\d+/g) || [];
+      return numbers.map((n) => `[Source ${n}]`).join('');
+    },
+  );
+
+  // Convert [Source N] → markdown link [ˢN](#source-N)
+  // The custom `a` component detects #source- links and renders as badges
   cleaned = cleaned.replace(
     /\[Source\s*(\d+)\]/gi,
-    '<sup class="source-ref">$1</sup>'
+    '[ˢ$1](#source-$1)',
   );
 
   return cleaned.trim();
@@ -49,7 +60,7 @@ function CopyButton({ text }: { text: string }) {
       title="Copy code"
     >
       {copied ? (
-        <Check className="size-3 text-green-500" />
+        <Check className="size-3 text-success" />
       ) : (
         <Copy className="size-3 text-muted-foreground" />
       )}
@@ -115,7 +126,7 @@ function CopyAsPromptButton({
       title="Copy as AI-ready prompt with context and sources"
     >
       {copied ? (
-        <Check className="size-3 text-green-500" />
+        <Check className="size-3 text-success" />
       ) : (
         <Sparkles className="size-3" />
       )}
@@ -126,11 +137,15 @@ function CopyAsPromptButton({
 
 export function ChatMessage({ message }: ChatMessageProps) {
   const isUser = message.role === 'user';
+  const isStreaming = !isUser && message.content === '';
+  const sources = message.sources || [];
 
   const processedContent = useMemo(
     () => (isUser ? message.content : cleanContent(message.content)),
     [message.content, isUser]
   );
+
+  if (isStreaming) return null;
 
   return (
     <div className={cn('group flex gap-3', isUser && 'flex-row-reverse')}>
@@ -248,16 +263,16 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     const isBlock = className?.includes('language-');
                     if (isBlock) {
                       return (
-                        <div className="group/code relative my-3 rounded-lg bg-zinc-950 dark:bg-zinc-900 border border-border/40 overflow-hidden">
-                          <div className="flex items-center justify-between px-3 py-1.5 bg-zinc-900 dark:bg-zinc-800 border-b border-border/20">
-                            <span className="text-[10px] font-mono text-zinc-400 uppercase tracking-wider">
+                        <div className="group/code relative my-3 rounded-lg bg-code-block border border-border/40 overflow-hidden">
+                          <div className="flex items-center justify-between px-3 py-1.5 bg-code-header border-b border-border/20">
+                            <span className="text-[10px] font-mono text-code-muted uppercase tracking-wider">
                               {className?.replace('language-', '') || 'code'}
                             </span>
                           </div>
                           <pre className="p-3 overflow-x-auto">
                             <code
                               className={cn(
-                                'text-xs font-mono text-zinc-100 leading-relaxed',
+                                'text-xs font-mono text-code-text leading-relaxed',
                                 className
                               )}
                               {...props}
@@ -279,18 +294,41 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     );
                   },
                   pre: ({ children }) => <>{children}</>,
-                  // Links
-                  a: ({ href, children }) => (
-                    <a
-                      href={href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 transition-colors inline-flex items-center gap-0.5"
-                    >
-                      {children}
-                      <ExternalLink className="size-3 inline shrink-0 opacity-60" />
-                    </a>
-                  ),
+                  // Links (including clickable source references)
+                  a: ({ href, children }) => {
+                    const sourceMatch = href?.match(/^#source-(\d+)$/);
+                    if (sourceMatch) {
+                      const idx = parseInt(sourceMatch[1], 10) - 1;
+                      const source = sources[idx];
+                      if (source) {
+                        return (
+                          <a
+                            href={source.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center justify-center min-w-[1.25rem] h-5 rounded-full bg-primary/10 text-primary text-[10px] font-semibold hover:bg-primary/25 hover:scale-110 transition-all cursor-pointer no-underline align-super mx-[1px] px-1"
+                            title={source.title}
+                          >
+                            {sourceMatch[1]}
+                          </a>
+                        );
+                      }
+                      return (
+                        <sup className="text-[10px] text-muted-foreground/60">{sourceMatch[1]}</sup>
+                      );
+                    }
+                    return (
+                      <a
+                        href={href}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-primary underline decoration-primary/30 underline-offset-2 hover:decoration-primary/60 transition-colors inline-flex items-center gap-0.5"
+                      >
+                        {children}
+                        <ExternalLink className="size-3 inline shrink-0 opacity-60" />
+                      </a>
+                    );
+                  },
                   // Blockquote
                   blockquote: ({ children }) => (
                     <blockquote className="border-l-[3px] border-primary/25 pl-3 my-3 text-muted-foreground/80 [&>p]:mb-1">
@@ -329,7 +367,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         </div>
 
         {/* Sources */}
-        {!isUser && message.sources && message.sources.length > 0 && (
+        {!isUser && sources.length > 0 && (
           <div className="mt-2 w-full">
             <div className="flex items-center gap-1.5 px-1 mb-2">
               <FileText className="size-3 text-muted-foreground/50" />
@@ -338,7 +376,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {message.sources.map((src, j) => (
+              {sources.map((src, j) => (
                 <a
                   key={j}
                   href={src.url}
@@ -346,7 +384,9 @@ export function ChatMessage({ message }: ChatMessageProps) {
                   rel="noopener noreferrer"
                   className="group/source inline-flex items-center gap-1.5 rounded-lg border border-border/40 bg-card px-3 py-2 text-xs text-muted-foreground hover:bg-muted/80 hover:text-foreground hover:border-border/80 hover:shadow-sm transition-all duration-150"
                 >
-                  <FileText className="size-3 shrink-0 text-muted-foreground/50 group-hover/source:text-primary/60 transition-colors" />
+                  <span className="flex items-center justify-center size-4 rounded-full bg-primary/10 text-primary text-[9px] font-semibold shrink-0">
+                    {j + 1}
+                  </span>
                   <span className="truncate max-w-[240px]">{src.title}</span>
                   <ExternalLink className="size-3 shrink-0 opacity-0 group-hover/source:opacity-60 transition-opacity" />
                 </a>

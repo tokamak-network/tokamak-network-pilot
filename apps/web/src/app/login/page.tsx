@@ -291,7 +291,7 @@ function LoginContent() {
       <div className="flex flex-col items-center justify-center bg-background p-6 sm:p-10">
         <div className="w-full max-w-[420px]">
           {/* Mobile-only brand header */}
-          <div className="mb-10 flex items-center gap-2.5 lg:hidden">
+          <div className="mb-10 flex items-center justify-center gap-2.5 lg:hidden">
             <div className="flex size-9 items-center justify-center rounded-2xl bg-primary">
               <TreePine className="size-4.5 text-primary-foreground" />
             </div>
@@ -301,7 +301,7 @@ function LoginContent() {
           </div>
 
           {/* Heading */}
-          <div className="mb-8">
+          <div className="mb-8 text-center">
             <h2 className="font-serif mb-2 text-2xl font-semibold tracking-tight">
               {step === 'email' ? 'Enter the Forest' : 'Check your email'}
             </h2>

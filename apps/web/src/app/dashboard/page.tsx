@@ -42,13 +42,13 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 
 const contentTypeConfig: Record<string, { label: string; icon: React.ElementType; color: string }> = {
-  readme: { label: 'READMEs', icon: FileText, color: 'bg-blue-500' },
-  documentation: { label: 'Docs / Markdown', icon: FileText, color: 'bg-indigo-500' },
-  code: { label: 'Code Files', icon: Code2, color: 'bg-emerald-500' },
-  issue: { label: 'Issues', icon: MessageSquare, color: 'bg-amber-500' },
-  pull_request: { label: 'Pull Requests', icon: GitPullRequest, color: 'bg-purple-500' },
-  wiki: { label: 'Wiki Pages', icon: BookOpen, color: 'bg-pink-500' },
-  other: { label: 'Other', icon: Database, color: 'bg-gray-500' },
+  readme: { label: 'READMEs', icon: FileText, color: 'bg-chart-1' },
+  documentation: { label: 'Docs / Markdown', icon: FileText, color: 'bg-chart-4' },
+  code: { label: 'Code Files', icon: Code2, color: 'bg-chart-2' },
+  issue: { label: 'Issues', icon: MessageSquare, color: 'bg-chart-3' },
+  pull_request: { label: 'Pull Requests', icon: GitPullRequest, color: 'bg-chart-5' },
+  wiki: { label: 'Wiki Pages', icon: BookOpen, color: 'bg-primary' },
+  other: { label: 'Other', icon: Database, color: 'bg-muted-foreground' },
 };
 
 export default function DashboardPage() {
@@ -167,11 +167,11 @@ export default function DashboardPage() {
 
       {/* ─── Ingestion Status Row ──────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
-        <StatusPill label="Fetched" value={summary?.fetched ?? 0} icon={CheckCircle2} color="text-green-600 bg-green-50" />
-        <StatusPill label="Syncing" value={summary?.syncing ?? 0} icon={RefreshCw} color="text-yellow-600 bg-yellow-50" pulse={!!summary?.syncing} />
-        <StatusPill label="Failed" value={summary?.failed ?? 0} icon={XCircle} color="text-red-600 bg-red-50" />
-        <StatusPill label="Empty" value={summary?.empty ?? 0} icon={AlertTriangle} color="text-orange-500 bg-orange-50" />
-        <StatusPill label="Pending" value={summary?.pending ?? 0} icon={Clock} color="text-blue-500 bg-blue-50" />
+        <StatusPill label="Fetched" value={summary?.fetched ?? 0} icon={CheckCircle2} color="text-success bg-success-bg" />
+        <StatusPill label="Syncing" value={summary?.syncing ?? 0} icon={RefreshCw} color="text-warning bg-warning-bg" pulse={!!summary?.syncing} />
+        <StatusPill label="Failed" value={summary?.failed ?? 0} icon={XCircle} color="text-destructive bg-destructive/10" />
+        <StatusPill label="Empty" value={summary?.empty ?? 0} icon={AlertTriangle} color="text-warning bg-warning-bg" />
+        <StatusPill label="Pending" value={summary?.pending ?? 0} icon={Clock} color="text-info bg-info-bg" />
       </div>
 
       {summary?.syncing ? (
@@ -309,10 +309,10 @@ export default function DashboardPage() {
         </Card>
 
         {/* Errors */}
-        <Card className={failedRepos.length > 0 ? 'border-red-200' : ''}>
+        <Card className={failedRepos.length > 0 ? 'border-destructive/30' : ''}>
           <CardHeader>
             <CardTitle className="text-sm flex items-center gap-2">
-              <XCircle className={`size-4 ${failedRepos.length > 0 ? 'text-red-500' : ''}`} />
+              <XCircle className={`size-4 ${failedRepos.length > 0 ? 'text-destructive' : ''}`} />
               Failed Ingestions
               {failedRepos.length > 0 && (
                 <Badge variant="destructive" className="text-[10px] px-1.5 py-0">
@@ -332,7 +332,7 @@ export default function DashboardPage() {
                     >
                       {repo.name}
                     </Link>
-                    <p className="text-xs text-red-500 line-clamp-2">
+                    <p className="text-xs text-destructive line-clamp-2">
                       {repo.errorMessage || 'Unknown error'}
                     </p>
                   </div>
@@ -340,7 +340,7 @@ export default function DashboardPage() {
               </div>
             ) : (
               <div className="flex flex-col items-center py-4 text-center">
-                <CheckCircle2 className="size-8 text-green-500 mb-2" />
+                <CheckCircle2 className="size-8 text-success mb-2" />
                 <p className="text-sm text-muted-foreground">
                   All repositories synced successfully
                 </p>
@@ -436,10 +436,10 @@ export default function DashboardPage() {
 // ─── Sub-components ─────────────────────────────────────────
 
 const statusColors: Record<string, string> = {
-  active: 'text-green-700 bg-green-50 border border-green-200',
-  syncing: 'text-yellow-700 bg-yellow-50 border border-yellow-200',
-  error: 'text-red-700 bg-red-50 border border-red-200',
-  disabled: 'text-gray-500 bg-gray-50 border border-gray-200',
+  active: 'text-success bg-success-bg border border-success-border',
+  syncing: 'text-warning bg-warning-bg border border-warning-border',
+  error: 'text-destructive bg-destructive/10 border border-destructive/20',
+  disabled: 'text-muted-foreground bg-muted border border-border',
 };
 
 function KpiCard({

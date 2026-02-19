@@ -1,6 +1,8 @@
 import type {
   AskRequest,
   AskResponse,
+  AskStreamCallbacks,
+  AskStreamMetadata,
   SearchResponse,
   Source,
   ContentEntry,
@@ -23,6 +25,7 @@ export interface TokamakPilotClientOptions {
  * | Method          | Required Scope    |
  * |-----------------|-------------------|
  * | `ask()`         | `ask`             |
+ * | `askStream()`   | `ask`             |
  * | `search()`      | `search`          |
  * | `listSources()` | `sources:read`    |
  * | `getSource()`   | `sources:read`    |
@@ -37,8 +40,17 @@ export interface TokamakPilotClientOptions {
  *   apiKey: 'tkp_a1b2c3d4e5f6...',
  * });
  *
+ * // Standard (wait for full response)
  * const answer = await pilot.ask('How does TON staking work?');
  * console.log(answer.answer);
+ *
+ * // Streaming (tokens arrive in real-time)
+ * await pilot.askStream('How does TON staking work?', {
+ *   onMetadata: (meta) => console.log('Sources:', meta.sources),
+ *   onChunk: (chunk) => process.stdout.write(chunk.text),
+ *   onDone: () => console.log('\n--- Done ---'),
+ *   onError: (err) => console.error('Error:', err.message),
+ * });
  *
  * const results = await pilot.search('staking rewards');
  * console.log(results.results);
@@ -62,6 +74,92 @@ export class TokamakPilotClient {
   async ask(question: string, filters?: string[]): Promise<AskResponse> {
     const body: AskRequest = { question, filters };
     return this.post<AskResponse>('/public/ask', body);
+  }
+
+  /**
+   * Ask a question with a **streaming** response.
+   *
+   * The answer is delivered token-by-token via Server-Sent Events.
+   * Provide callbacks to handle each event type:
+   *
+   * - `onMetadata` — fired first with sources, confidence, provider, and model
+   * - `onChunk`    — fired for each text token as it arrives
+   * - `onDone`     — fired when the full answer has been streamed
+   * - `onError`    — fired if an error occurs during streaming
+   *
+   * The returned promise resolves when the stream ends.
+   * Requires scope: `ask`.
+   *
+   * @example
+   * ```ts
+   * let fullAnswer = '';
+   * await pilot.askStream('What is Tokamak Network?', {
+   *   onMetadata: (meta) => console.log(`${meta.sources.length} sources found`),
+   *   onChunk: (chunk) => { fullAnswer += chunk.text; },
+   *   onDone: () => console.log('Answer:', fullAnswer),
+   * });
+   * ```
+   */
+  async askStream(
+    question: string,
+    callbacks: AskStreamCallbacks,
+    filters?: string[],
+  ): Promise<void> {
+    const body: AskRequest = { question, filters };
+
+    const res = await fetch(`${this.baseUrl}/public/ask/stream`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-API-Key': this.apiKey,
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ message: res.statusText }));
+      throw new Error(err.message || `API error: ${res.status}`);
+    }
+
+    const reader = res.body?.getReader();
+    if (!reader) throw new Error('No response body — streaming not supported');
+
+    const decoder = new TextDecoder();
+    let buffer = '';
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+
+      const lines = buffer.split('\n');
+      buffer = lines.pop() || '';
+
+      let currentEvent = '';
+      for (const line of lines) {
+        if (line.startsWith('event: ')) {
+          currentEvent = line.slice(7).trim();
+        } else if (line.startsWith('data: ')) {
+          const data = JSON.parse(line.slice(6));
+          switch (currentEvent) {
+            case 'metadata':
+              callbacks.onMetadata?.(data as AskStreamMetadata);
+              break;
+            case 'chunk':
+              callbacks.onChunk?.(data);
+              break;
+            case 'done':
+              callbacks.onDone?.();
+              break;
+            case 'error':
+              callbacks.onError?.(data);
+              break;
+          }
+          currentEvent = '';
+        }
+      }
+    }
   }
 
   /** Perform a semantic search across the knowledge base. Requires scope: `search`. */

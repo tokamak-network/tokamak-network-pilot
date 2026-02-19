@@ -257,7 +257,7 @@ export default function SettingsPage() {
                 onClick={() => handleCopy(createdKey.key)}
               >
                 {copiedKey ? (
-                  <Check className="size-4 text-green-600" />
+                  <Check className="size-4 text-success" />
                 ) : (
                   <Copy className="size-4" />
                 )}

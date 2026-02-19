@@ -258,6 +258,108 @@ export class ConversationsService {
     return this.askInConversation(saved.id, dto, userId);
   }
 
+  /**
+   * Streaming version of askInConversation.
+   * Yields SSE events: metadata → text chunks → done.
+   */
+  async *askInConversationStream(
+    conversationId: string,
+    dto: AskInConversationDto,
+    userId?: string,
+  ): AsyncGenerator<string, void, undefined> {
+    const conversation = await this.conversationRepo.findOne({
+      where: { id: conversationId },
+    });
+    if (!conversation) {
+      throw new NotFoundException(`Conversation ${conversationId} not found`);
+    }
+
+    const existingMessages = await this.messageRepo.find({
+      where: { conversationId },
+      order: { createdAt: 'ASC' },
+    });
+    const conversationHistory = existingMessages.map((m) => ({
+      role: m.role,
+      content: m.content,
+    }));
+
+    const userMessage = this.messageRepo.create({
+      conversationId,
+      role: 'user' as const,
+      content: dto.question,
+    });
+    const savedUserMsg = await this.messageRepo.save(userMessage);
+
+    let fullContent = '';
+    let sources: any[] = [];
+    let confidence = 0;
+    let provider = '';
+    let model = '';
+
+    for await (const event of this.ragService.askStream({
+      question: dto.question,
+      filters: dto.filters,
+      conversationHistory,
+    })) {
+      if (event.type === 'metadata') {
+        sources = event.sources;
+        confidence = event.confidence;
+        provider = event.provider;
+        model = event.model;
+
+        yield `event: metadata\ndata: ${JSON.stringify({
+          conversationId,
+          userMessageId: savedUserMsg.id,
+          sources,
+          confidence,
+          provider,
+          model,
+        })}\n\n`;
+      } else if (event.type === 'chunk') {
+        fullContent += event.text;
+        yield `event: chunk\ndata: ${JSON.stringify({ text: event.text })}\n\n`;
+      } else if (event.type === 'done') {
+        const assistantMessage = this.messageRepo.create({
+          conversationId,
+          role: 'assistant' as const,
+          content: fullContent,
+          sources,
+          confidence,
+          provider,
+          model,
+        });
+        const savedAssistantMsg = await this.messageRepo.save(assistantMessage);
+
+        if (conversation.title === 'New conversation') {
+          conversation.title = this.generateTitle(dto.question);
+          await this.conversationRepo.save(conversation);
+        } else {
+          await this.conversationRepo.update(conversationId, {});
+        }
+
+        yield `event: done\ndata: ${JSON.stringify({
+          assistantMessageId: savedAssistantMsg.id,
+        })}\n\n`;
+      }
+    }
+  }
+
+  /**
+   * Streaming quick-ask: create a conversation + stream in one step.
+   */
+  async *quickAskStream(
+    dto: AskInConversationDto,
+    userId?: string,
+  ): AsyncGenerator<string, void, undefined> {
+    const conversation = this.conversationRepo.create({
+      title: this.generateTitle(dto.question),
+      userId: userId || undefined,
+    });
+    const saved = await this.conversationRepo.save(conversation);
+
+    yield* this.askInConversationStream(saved.id, dto, userId);
+  }
+
   // ───── Helpers ─────
 
   private generateTitle(question: string): string {

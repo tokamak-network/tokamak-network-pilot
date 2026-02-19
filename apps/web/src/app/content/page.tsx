@@ -65,7 +65,7 @@ function CopyAsPromptButton({ entry }: { entry: ContentEntryResponse }) {
       className="inline-flex items-center gap-1 rounded-md border border-border/40 bg-card px-2 py-1 text-[11px] text-muted-foreground hover:bg-muted/80 hover:text-foreground transition-colors"
       title="Copy as AI-ready prompt"
     >
-      {copied ? <Check className="size-3 text-green-500" /> : <Sparkles className="size-3" />}
+      {copied ? <Check className="size-3 text-success" /> : <Sparkles className="size-3" />}
       {copied ? 'Copied' : 'Copy as prompt'}
     </button>
   );

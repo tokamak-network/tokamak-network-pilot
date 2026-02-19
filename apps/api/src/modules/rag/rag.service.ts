@@ -97,6 +97,79 @@ export class RagService {
   }
 
   /**
+   * Streaming version of ask(): performs the RAG pipeline but streams
+   * the LLM answer token-by-token via an AsyncGenerator.
+   *
+   * Callers get metadata (sources, confidence) up front, then text chunks.
+   */
+  async *askStream(dto: AskQuestionDto): AsyncGenerator<
+    | { type: 'metadata'; sources: any[]; confidence: number; provider: string; model: string }
+    | { type: 'chunk'; text: string }
+    | { type: 'done' },
+    void,
+    undefined
+  > {
+    this.logger.log(
+      `[stream] Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${dto.projectId ? ` [project=${dto.projectId}]` : ''}`,
+    );
+
+    const questionVector = await this.embedding.embedText(dto.question);
+
+    let filter: Record<string, unknown> | undefined;
+    if (dto.projectId) {
+      const sourceIds = await this.projects.getProjectSourceIds(dto.projectId);
+      if (sourceIds.length > 0) {
+        filter = {
+          must: [{ key: 'sourceId', match: { any: sourceIds } }],
+        };
+      }
+    }
+
+    const searchResults = await this.vector.search(questionVector, TOP_K, filter);
+
+    if (searchResults.length === 0) {
+      yield {
+        type: 'metadata',
+        sources: [],
+        confidence: 0,
+        provider: this.llm.getProvider(),
+        model: this.llm.getModel(),
+      };
+      yield {
+        type: 'chunk',
+        text: 'I don\'t have enough information to answer this question. No relevant documents were found in the knowledge base. Please try adding knowledge sources first.',
+      };
+      yield { type: 'done' };
+      return;
+    }
+
+    const context = this.buildContext(searchResults);
+    const sources = this.extractCitations(searchResults);
+    const avgScore =
+      searchResults.reduce((sum, r) => sum + r.score, 0) / searchResults.length;
+
+    yield {
+      type: 'metadata',
+      sources,
+      confidence: Math.round(avgScore * 100) / 100,
+      provider: this.llm.getProvider(),
+      model: this.llm.getModel(),
+    };
+
+    const messages = this.buildMessages(dto, context);
+
+    for await (const text of this.llm.chatCompletionStream({
+      messages,
+      temperature: 0.3,
+      maxTokens: 1500,
+    })) {
+      yield { type: 'chunk', text };
+    }
+
+    yield { type: 'done' };
+  }
+
+  /**
    * Semantic search — return relevant chunks without LLM generation.
    * Optionally scoped to a project's sources.
    */

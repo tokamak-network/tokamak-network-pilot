@@ -48,6 +48,40 @@ export interface CitedSource {
   snippet?: string;
 }
 
+// ---- Streaming Types ----
+
+/** SSE event types emitted during a streaming ask response */
+export type AskStreamEventType = 'metadata' | 'chunk' | 'done' | 'error';
+
+/** Metadata event — sent first with sources and model info */
+export interface AskStreamMetadata {
+  sources: CitedSource[];
+  confidence: number;
+  provider: string;
+  model: string;
+}
+
+/** Text chunk event — a piece of the streamed answer */
+export interface AskStreamChunk {
+  text: string;
+}
+
+/** Done event — signals completion */
+export interface AskStreamDone {}
+
+/** Error event — signals a failure */
+export interface AskStreamError {
+  message: string;
+}
+
+/** Callbacks for consuming a streaming ask response */
+export interface AskStreamCallbacks {
+  onMetadata?: (metadata: AskStreamMetadata) => void;
+  onChunk?: (chunk: AskStreamChunk) => void;
+  onDone?: () => void;
+  onError?: (error: AskStreamError) => void;
+}
+
 export interface SearchResult {
   content: string;
   source: string;

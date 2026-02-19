@@ -60,10 +60,10 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
 };
 
 const statusConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  active: { label: 'Fetched', color: 'text-green-600 bg-green-50 border-green-200', icon: CheckCircle2 },
-  syncing: { label: 'Syncing', color: 'text-yellow-600 bg-yellow-50 border-yellow-200', icon: RefreshCw },
-  error: { label: 'Failed', color: 'text-red-600 bg-red-50 border-red-200', icon: XCircle },
-  disabled: { label: 'Disabled', color: 'text-gray-500 bg-gray-50 border-gray-200', icon: Clock },
+  active: { label: 'Fetched', color: 'text-success bg-success-bg border-success-border', icon: CheckCircle2 },
+  syncing: { label: 'Syncing', color: 'text-warning bg-warning-bg border-warning-border', icon: RefreshCw },
+  error: { label: 'Failed', color: 'text-destructive bg-destructive/10 border-destructive/20', icon: XCircle },
+  disabled: { label: 'Disabled', color: 'text-muted-foreground bg-muted border-border', icon: Clock },
 };
 
 const contentTypeIcons: Record<string, React.ElementType> = {
@@ -529,7 +529,7 @@ export default function SourcesPage() {
                         </span>
                         <button
                           onClick={() => removeFile(i)}
-                          className="text-muted-foreground hover:text-red-500 shrink-0"
+                          className="text-muted-foreground hover:text-destructive shrink-0"
                         >
                           <X className="size-3.5" />
                         </button>
@@ -540,13 +540,13 @@ export default function SourcesPage() {
 
                 {/* Error / success messages */}
                 {uploadError && (
-                  <div className="flex items-center gap-2 text-xs text-red-600 bg-red-50 rounded-md p-2">
+                  <div className="flex items-center gap-2 text-xs text-destructive bg-destructive/10 rounded-md p-2">
                     <XCircle className="size-3.5 shrink-0" />
                     {uploadError}
                   </div>
                 )}
                 {uploadSuccess && (
-                  <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 rounded-md p-2">
+                  <div className="flex items-center gap-2 text-xs text-success bg-success-bg rounded-md p-2">
                     <CheckCircle2 className="size-3.5 shrink-0" />
                     {uploadSuccess}
                   </div>
@@ -584,28 +584,28 @@ export default function SourcesPage() {
             label="Fetched"
             value={summary.fetched}
             icon={CheckCircle2}
-            color="text-green-600"
+            color="text-success"
           />
           <SummaryCard
             label="Syncing"
             value={summary.syncing}
             icon={RefreshCw}
-            color="text-yellow-600"
+            color="text-warning"
             pulse={summary.syncing > 0}
           />
           <SummaryCard
             label="Failed"
             value={summary.failed}
             icon={XCircle}
-            color="text-red-600"
+            color="text-destructive"
           />
         </div>
       )}
 
       {summary && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <SummaryCard label="Empty Repos" value={summary.empty} icon={AlertTriangle} color="text-orange-500" />
-          <SummaryCard label="Pending" value={summary.pending} icon={Clock} color="text-blue-500" />
+          <SummaryCard label="Empty Repos" value={summary.empty} icon={AlertTriangle} color="text-warning" />
+          <SummaryCard label="Pending" value={summary.pending} icon={Clock} color="text-info" />
           <SummaryCard label="Total Documents" value={summary.totalDocuments} icon={FileText} />
           <SummaryCard label="Total Chunks" value={summary.totalChunks} icon={BarChart3} />
         </div>
@@ -882,7 +882,7 @@ function RepoStatusRow({
 
   return (
     <Card
-      className={`transition-colors ${repo.status === 'error' ? 'border-red-200' : ''}`}
+      className={`transition-colors ${repo.status === 'error' ? 'border-destructive/30' : ''}`}
     >
       <CardHeader className="py-3 px-4">
         <div className="flex items-center gap-3">
@@ -928,7 +928,7 @@ function RepoStatusRow({
                   {repo.pushedAt && <> · Last commit {timeAgo(repo.pushedAt)}</>}
                 </>
               ) : repo.status === 'error' ? (
-                <span className="text-red-500">{repo.errorMessage}</span>
+                <span className="text-destructive">{repo.errorMessage}</span>
               ) : (
                 <>
                   Not yet synced

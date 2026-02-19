@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAtom } from 'jotai';
-import { Loader2, LogIn } from 'lucide-react';
+import Link from 'next/link';
+import { BookOpen, Loader2, LogIn } from 'lucide-react';
 import { userAtom } from '@/store';
 import { fetchMe } from '@/lib/api';
 import { AppSidebar } from '@/components/app-sidebar';
@@ -86,7 +87,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     router.replace(`/login?next=${next}`);
   }, [authChecking, pathname, protectedPath, router, user]);
 
-  if (pathname === '/login' || pathname === '/docs') {
+  if (pathname === '/login') {
     return <>{children}</>;
   }
 
@@ -128,6 +129,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-serif text-muted-foreground">
             Tokamak Forest
           </span>
+          <div className="ml-auto flex items-center gap-1">
+            <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+              <Link href="/docs">
+                <BookOpen className="size-3.5" />
+                <span className="text-xs">API Docs</span>
+              </Link>
+            </Button>
+          </div>
         </header>
         <div className="flex-1 overflow-auto">{children}</div>
       </SidebarInset>

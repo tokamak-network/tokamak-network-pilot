@@ -203,7 +203,7 @@ export function ApiPlayground({
             <div key={qp.name} className="flex items-center gap-2">
               <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
                 {qp.name}
-                {qp.required && <span className="text-red-500">*</span>}
+                {qp.required && <span className="text-destructive">*</span>}
               </span>
               <input
                 type="text"
@@ -227,7 +227,7 @@ export function ApiPlayground({
             <div key={bp.name} className="flex items-center gap-2">
               <span className="text-xs font-mono text-muted-foreground w-20 shrink-0">
                 {bp.name}
-                {bp.required && <span className="text-red-500">*</span>}
+                {bp.required && <span className="text-destructive">*</span>}
               </span>
               <input
                 type="text"
@@ -265,13 +265,13 @@ export function ApiPlayground({
         <div className="space-y-2">
           <div className="flex items-center gap-2">
             {response.status < 400 ? (
-              <CheckCircle2 className="size-3.5 text-emerald-500" />
+              <CheckCircle2 className="size-3.5 text-success" />
             ) : (
-              <AlertCircle className="size-3.5 text-red-500" />
+              <AlertCircle className="size-3.5 text-destructive" />
             )}
             <span
               className={`text-xs font-mono font-bold ${
-                response.status < 400 ? 'text-emerald-500' : 'text-red-500'
+                response.status < 400 ? 'text-success' : 'text-destructive'
               }`}
             >
               {response.status} {response.statusText}
@@ -280,13 +280,13 @@ export function ApiPlayground({
               {response.duration}ms
             </span>
           </div>
-          <div className="rounded-lg border border-border bg-[#0d1117] overflow-hidden">
+          <div className="rounded-lg border border-border bg-code-block overflow-hidden">
             <div className="flex items-center justify-between border-b border-white/5 px-4 py-2">
-              <span className="text-[11px] text-muted-foreground font-mono uppercase">
+              <span className="text-[11px] text-code-muted font-mono uppercase">
                 Response
               </span>
             </div>
-            <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-gray-300 max-h-80 overflow-y-auto">
+            <pre className="overflow-x-auto p-4 text-[13px] leading-relaxed text-code-text max-h-80 overflow-y-auto">
               <code>{response.body}</code>
             </pre>
           </div>
@@ -295,9 +295,9 @@ export function ApiPlayground({
 
       {/* Error */}
       {error && (
-        <div className="flex items-center gap-2 rounded-lg border border-red-500/20 bg-red-500/5 p-3">
-          <AlertCircle className="size-4 text-red-500 shrink-0" />
-          <p className="text-xs text-red-400">{error}</p>
+        <div className="flex items-center gap-2 rounded-lg border border-destructive/20 bg-destructive/5 p-3">
+          <AlertCircle className="size-4 text-destructive shrink-0" />
+          <p className="text-xs text-destructive">{error}</p>
         </div>
       )}
     </div>

@@ -16,12 +16,12 @@ export interface ChangelogEntry {
 }
 
 const TYPE_CONFIG: Record<ChangeType, { label: string; icon: typeof Plus; color: string }> = {
-  added: { label: 'Added', icon: Plus, color: 'text-emerald-500 bg-emerald-500/10 border-emerald-500/20' },
-  changed: { label: 'Changed', icon: Wrench, color: 'text-blue-500 bg-blue-500/10 border-blue-500/20' },
-  fixed: { label: 'Fixed', icon: Wrench, color: 'text-amber-500 bg-amber-500/10 border-amber-500/20' },
-  deprecated: { label: 'Deprecated', icon: AlertTriangle, color: 'text-orange-500 bg-orange-500/10 border-orange-500/20' },
-  removed: { label: 'Removed', icon: Trash2, color: 'text-red-500 bg-red-500/10 border-red-500/20' },
-  security: { label: 'Security', icon: AlertTriangle, color: 'text-purple-500 bg-purple-500/10 border-purple-500/20' },
+  added: { label: 'Added', icon: Plus, color: 'text-success bg-success/10 border-success/20' },
+  changed: { label: 'Changed', icon: Wrench, color: 'text-info bg-info/10 border-info/20' },
+  fixed: { label: 'Fixed', icon: Wrench, color: 'text-warning bg-warning/10 border-warning/20' },
+  deprecated: { label: 'Deprecated', icon: AlertTriangle, color: 'text-chart-5 bg-chart-5/10 border-chart-5/20' },
+  removed: { label: 'Removed', icon: Trash2, color: 'text-destructive bg-destructive/10 border-destructive/20' },
+  security: { label: 'Security', icon: AlertTriangle, color: 'text-chart-3 bg-chart-3/10 border-chart-3/20' },
 };
 
 const CHANGELOG_DATA: ChangelogEntry[] = [
@@ -186,7 +186,7 @@ export function ChangelogSection() {
                         <span className="text-sm text-muted-foreground leading-relaxed pt-0.5">
                           {change.description}
                           {change.breaking && (
-                            <span className="ml-1.5 inline-flex items-center rounded-md border border-red-500/20 bg-red-500/10 px-1.5 py-0.5 text-[10px] font-bold text-red-500 uppercase">
+                            <span className="ml-1.5 inline-flex items-center rounded-md border border-destructive/20 bg-destructive/10 px-1.5 py-0.5 text-[10px] font-bold text-destructive uppercase">
                               Breaking
                             </span>
                           )}

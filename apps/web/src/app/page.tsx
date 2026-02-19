@@ -13,10 +13,11 @@ import {
 } from '@/store';
 import { dbMessageToLocal } from '@/store/ask';
 import {
-  quickAsk,
-  askInConversation,
+  quickAskStream,
+  askInConversationStream,
   fetchConversations,
 } from '@/lib/api';
+import type { StreamMetadata } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -77,49 +78,87 @@ export default function HomePage() {
     setIsLoading(true);
     setQuery('');
 
+    // Add a placeholder assistant message that will be progressively filled
+    const placeholderAssistant: ConversationMessage = {
+      role: 'assistant',
+      content: '',
+      sources: [],
+      timestamp: new Date(),
+    };
+    setConversation((prev) => [...prev, placeholderAssistant]);
+
+    const callbacks = {
+      onMetadata: (meta: StreamMetadata) => {
+        setConversation((prev) => {
+          const updated = [...prev];
+          // Update user message with DB id
+          const userIdx = updated.length - 2;
+          if (userIdx >= 0) {
+            updated[userIdx] = { ...updated[userIdx], id: meta.userMessageId };
+          }
+          // Update assistant message with sources
+          const assistantIdx = updated.length - 1;
+          updated[assistantIdx] = {
+            ...updated[assistantIdx],
+            sources: meta.sources,
+          };
+          return updated;
+        });
+        if (!activeConversationId) {
+          setActiveConversationId(meta.conversationId);
+          refreshConversationsList();
+        }
+      },
+      onChunk: (text: string) => {
+        setConversation((prev) => {
+          const updated = [...prev];
+          const last = updated[updated.length - 1];
+          updated[updated.length - 1] = {
+            ...last,
+            content: last.content + text,
+          };
+          return updated;
+        });
+      },
+      onDone: (data: { assistantMessageId: string }) => {
+        setConversation((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            id: data.assistantMessageId,
+          };
+          return updated;
+        });
+        setIsLoading(false);
+      },
+      onError: (error: Error) => {
+        setConversation((prev) => {
+          const updated = [...prev];
+          updated[updated.length - 1] = {
+            ...updated[updated.length - 1],
+            content: `Sorry, something went wrong: ${error.message}`,
+          };
+          return updated;
+        });
+        setIsLoading(false);
+      },
+    };
+
     try {
       if (activeConversationId) {
-        // Follow-up in existing conversation
-        const result = await askInConversation(activeConversationId, currentQuery);
-
-        const assistantMessage: ConversationMessage = dbMessageToLocal(result.assistantMessage);
-        setConversation((prev) => {
-          // Update the user message with the DB id
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            id: result.userMessage.id,
-          };
-          return [...updated, assistantMessage];
-        });
+        await askInConversationStream(activeConversationId, currentQuery, callbacks);
       } else {
-        // New conversation — quick ask
-        const result = await quickAsk(currentQuery);
-
-        setActiveConversationId(result.conversationId);
-
-        const assistantMessage: ConversationMessage = dbMessageToLocal(result.assistantMessage);
-        setConversation((prev) => {
-          const updated = [...prev];
-          updated[updated.length - 1] = {
-            ...updated[updated.length - 1],
-            id: result.userMessage.id,
-          };
-          return [...updated, assistantMessage];
-        });
-
-        // Refresh the sidebar list
-        refreshConversationsList();
+        await quickAskStream(currentQuery, callbacks);
       }
     } catch (error: any) {
-      const errorMessage: ConversationMessage = {
-        role: 'assistant',
-        content: `Sorry, something went wrong: ${error.message || 'Could not reach the API'}. Make sure the API server is running and knowledge sources have been indexed.`,
-        sources: [],
-        timestamp: new Date(),
-      };
-      setConversation((prev) => [...prev, errorMessage]);
-    } finally {
+      setConversation((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          content: `Sorry, something went wrong: ${error.message || 'Could not reach the API'}. Make sure the API server is running and knowledge sources have been indexed.`,
+        };
+        return updated;
+      });
       setIsLoading(false);
     }
   };
@@ -264,7 +303,7 @@ export default function HomePage() {
                 <ChatMessage key={msg.id || i} message={msg} />
               ))}
 
-              {isLoading && (
+              {isLoading && conversation.length > 0 && conversation[conversation.length - 1].content === '' && (
                 <div className="flex gap-3">
                   <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
                     <TreePine className="size-4 text-primary-foreground" />
