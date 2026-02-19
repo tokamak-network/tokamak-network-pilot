@@ -25,11 +25,13 @@ import { ProjectSource } from '../../entities/project-source.entity';
         );
         const isProduction = config.get<string>('NODE_ENV') === 'production';
 
+        const dbSync = config.get<string>('DB_SYNC');
+
         return {
           type: 'postgres' as const,
           url: dbUrl,
           entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource],
-          synchronize: !isProduction,
+          synchronize: dbSync !== undefined ? dbSync === 'true' : !isProduction,
           logging: !isProduction,
           ssl: isProduction ? { rejectUnauthorized: false } : false,
         };

@@ -54,6 +54,14 @@ export class BootstrapService implements OnApplicationBootstrap {
       return;
     }
 
+    // Pre-flight rate limit check — pause if nearly exhausted
+    try {
+      const { remaining, limit } = await this.github.checkRateLimit();
+      this.logger.log(`GitHub API budget: ${remaining}/${limit} requests remaining`);
+    } catch (error: any) {
+      this.logger.warn(`Could not check GitHub rate limit: ${error.message}`);
+    }
+
     this.logger.log(
       `Auto-seed: ${orgs.length} org(s), ${repos.length} explicit repo(s)`,
     );
@@ -63,6 +71,7 @@ export class BootstrapService implements OnApplicationBootstrap {
 
     for (const org of orgs) {
       try {
+        await this.github.guardRateLimit();
         const orgRepos = await this.github.listOrgRepos(org);
         for (const r of orgRepos) {
           repoList.push({ owner: r.owner, repo: r.repo, pushedAt: r.pushedAt, stars: r.stars });

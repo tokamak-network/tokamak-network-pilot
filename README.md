@@ -328,6 +328,12 @@ The MCP server will:
 }
 ```
 
+# Redeploy API
+railway up -s api -d
+
+# Redeploy Web
+railway up -s web -d
+
 ## License
 
 MIT

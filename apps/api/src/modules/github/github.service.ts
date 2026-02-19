@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
+import { throttling } from '@octokit/plugin-throttling';
 
 /** A raw document fetched from GitHub before chunking. */
 export interface RawDocument {
@@ -63,14 +64,119 @@ const SKIP_DIRS = [
   'artifacts', 'cache', 'typechain-types', 'out',
 ];
 
+const ThrottledOctokit = Octokit.plugin(throttling);
+
+/** Default ms to wait between consecutive GitHub API requests */
+const DEFAULT_REQUEST_DELAY_MS = 100;
+
 @Injectable()
 export class GitHubService {
   private readonly logger = new Logger(GitHubService.name);
-  private readonly octokit: Octokit;
+  private readonly octokit: InstanceType<typeof ThrottledOctokit>;
+  private readonly requestDelayMs: number;
+  private lastRequestTime = 0;
 
   constructor(private readonly config: ConfigService) {
     const token = this.config.get<string>('GITHUB_TOKEN');
-    this.octokit = new Octokit({ auth: token || undefined });
+    const logger = this.logger;
+
+    this.requestDelayMs = parseInt(
+      this.config.get<string>('GITHUB_REQUEST_DELAY_MS', String(DEFAULT_REQUEST_DELAY_MS)),
+      10,
+    );
+
+    this.octokit = new ThrottledOctokit({
+      auth: token || undefined,
+      throttle: {
+        onRateLimit: (retryAfter: number, options: any, _octokit: any, retryCount: number) => {
+          const route = `${options.method} ${options.url}`;
+          const waitMin = Math.ceil(retryAfter / 60);
+          logger.warn(
+            `GitHub rate limit hit on ${route} — attempt ${retryCount + 1}/5, ` +
+            `waiting ${retryAfter}s (~${waitMin} min) before retry...`,
+          );
+          return retryCount < 5;
+        },
+        onSecondaryRateLimit: (retryAfter: number, options: any, _octokit: any, retryCount: number) => {
+          const route = `${options.method} ${options.url}`;
+          const waitMin = Math.ceil(retryAfter / 60);
+          logger.warn(
+            `GitHub secondary rate limit (abuse) on ${route} — attempt ${retryCount + 1}/3, ` +
+            `waiting ${retryAfter}s (~${waitMin} min) before retry...`,
+          );
+          return retryCount < 3;
+        },
+      },
+    });
+
+    logger.log(
+      `GitHub client initialized (authenticated: ${!!token}, inter-request delay: ${this.requestDelayMs}ms)`,
+    );
+  }
+
+  /**
+   * Enforce a minimum delay between consecutive GitHub API requests
+   * to spread load and avoid bursting into rate limits.
+   */
+  private async throttle(): Promise<void> {
+    const now = Date.now();
+    const elapsed = now - this.lastRequestTime;
+    if (elapsed < this.requestDelayMs) {
+      await new Promise((resolve) => setTimeout(resolve, this.requestDelayMs - elapsed));
+    }
+    this.lastRequestTime = Date.now();
+  }
+
+  /**
+   * Check remaining rate limit. If nearly exhausted, sleep until reset
+   * and re-verify before returning. Guaranteed to return only when
+   * there is usable quota available.
+   */
+  async checkRateLimit(): Promise<{ remaining: number; limit: number; resetAt: Date }> {
+    const MAX_WAIT_CHECKS = 5;
+
+    for (let attempt = 0; attempt < MAX_WAIT_CHECKS; attempt++) {
+      const { data } = await this.octokit.rateLimit.get();
+      const { remaining, limit, reset } = data.rate;
+      const resetAt = new Date(reset * 1000);
+
+      if (remaining >= 50) {
+        if (remaining < 200) {
+          this.logger.warn(`GitHub API: ${remaining}/${limit} requests remaining — running low`);
+        } else {
+          this.logger.debug(`GitHub API rate limit: ${remaining}/${limit} remaining`);
+        }
+        return { remaining, limit, resetAt };
+      }
+
+      // Quota is critically low — must wait for reset
+      const waitMs = Math.max(0, resetAt.getTime() - Date.now()) + 5_000; // +5s buffer
+      const waitMin = Math.ceil(waitMs / 60_000);
+      this.logger.warn(
+        `GitHub API: only ${remaining}/${limit} requests remaining. ` +
+        `Pausing ~${waitMin} minute(s) until reset at ${resetAt.toISOString()}...`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitMs));
+      this.logger.log('Rate limit wait complete — re-checking quota...');
+    }
+
+    // Fallback: return whatever the current state is
+    const { data } = await this.octokit.rateLimit.get();
+    const { remaining, limit, reset } = data.rate;
+    this.logger.warn(`Rate limit after ${MAX_WAIT_CHECKS} wait cycles: ${remaining}/${limit}`);
+    return { remaining, limit, resetAt: new Date(reset * 1000) };
+  }
+
+  /**
+   * Lightweight guard to call between batches of work.
+   * Only pauses if quota is critically low (< 50 remaining).
+   */
+  async guardRateLimit(): Promise<void> {
+    try {
+      await this.checkRateLimit();
+    } catch {
+      this.logger.debug('Rate limit guard check skipped (non-critical)');
+    }
   }
 
   // ───────────────────── Org-level helpers ─────────────────────
@@ -83,6 +189,7 @@ export class GitHubService {
     let page = 1;
 
     while (true) {
+      await this.throttle();
       const { data } = await this.octokit.repos.listForOrg({
         org,
         type: 'public',
@@ -119,6 +226,7 @@ export class GitHubService {
    * Get metadata for a single repo.
    */
   async getRepoMeta(owner: string, repo: string): Promise<RepoMeta> {
+    await this.throttle();
     const { data: r } = await this.octokit.repos.get({ owner, repo });
     return {
       owner: r.owner.login,
@@ -178,6 +286,7 @@ export class GitHubService {
    */
   async fetchRepoReadme(owner: string, repo: string): Promise<RawDocument[]> {
     try {
+      await this.throttle();
       const { data } = await this.octokit.repos.getReadme({ owner, repo });
       const content = Buffer.from(data.content, 'base64').toString('utf-8');
 
@@ -320,6 +429,7 @@ export class GitHubService {
     let page = 1;
 
     while (docs.length < maxIssues) {
+      await this.throttle();
       const { data } = await this.octokit.issues.listForRepo({
         owner,
         repo,
@@ -335,6 +445,7 @@ export class GitHubService {
       for (const issue of data) {
         if (issue.pull_request) continue;
 
+        await this.throttle();
         const comments = await this.fetchIssueComments(owner, repo, issue.number);
         const body = [
           `# ${issue.title}`,
@@ -376,6 +487,7 @@ export class GitHubService {
     let page = 1;
 
     while (docs.length < maxPRs) {
+      await this.throttle();
       const { data } = await this.octokit.pulls.list({
         owner,
         repo,
@@ -499,6 +611,7 @@ export class GitHubService {
   async fetchWiki(owner: string, repo: string): Promise<RawDocument[]> {
     try {
       const wikiRepo = `${repo}.wiki`;
+      await this.throttle();
       const { data } = await this.octokit.repos.getContent({
         owner,
         repo: wikiRepo,
@@ -552,6 +665,8 @@ export class GitHubService {
     meta: RepoMeta | null;
   }> {
     this.logger.log(`Fetching ${mode} content from ${owner}/${repo}...`);
+
+    await this.guardRateLimit();
 
     // Fetch repo metadata separately so we can return it for the caller
     let meta: RepoMeta | null = null;
@@ -615,6 +730,7 @@ export class GitHubService {
 
     try {
       while (true) {
+        await this.throttle();
         const { data } = await this.octokit.repos.listBranches({
           owner,
           repo,
@@ -639,6 +755,7 @@ export class GitHubService {
    * Fetch the repo tree for a specific branch/ref.
    */
   private async getRepoTreeForRef(owner: string, repo: string, ref: string) {
+    await this.throttle();
     const { data } = await this.octokit.git.getTree({
       owner,
       repo,
@@ -657,6 +774,7 @@ export class GitHubService {
     maxComments = 10,
   ): Promise<string[]> {
     try {
+      await this.throttle();
       const { data } = await this.octokit.issues.listComments({
         owner,
         repo,
@@ -675,6 +793,7 @@ export class GitHubService {
     path: string,
     ref?: string,
   ): Promise<string> {
+    await this.throttle();
     const { data } = await this.octokit.repos.getContent({
       owner,
       repo,
@@ -688,6 +807,7 @@ export class GitHubService {
   }
 
   private async getRepoTree(owner: string, repo: string) {
+    await this.throttle();
     const { data } = await this.octokit.git.getTree({
       owner,
       repo,

@@ -27,6 +27,7 @@
     "@nestjs/swagger": "^11.0.0",
     "@nestjs/throttler": "^6.5.0",
     "@nestjs/typeorm": "^11.0.0",
+    "@octokit/plugin-throttling": "^11.0.3",
     "@octokit/rest": "^22.0.1",
     "@qdrant/js-client-rest": "^1.16.2",
     "bullmq": "^5.67.3",
