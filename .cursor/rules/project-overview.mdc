@@ -11,16 +11,18 @@ This is a **pnpm monorepo** managed by **Turborepo** for a RAG-powered knowledge
 
 - `apps/api` — NestJS 11 backend (REST API, port 4000)
 - `apps/web` — Next.js 15 frontend (React 19, port 3000)
+- `apps/landing-page` — Next.js 16 landing page (React 19, port 3001)
 - `packages/shared` — Shared TypeScript types, constants (imported as `@tokamak-pilot/shared`)
 - `packages/sdk` — Public TypeScript SDK (`@tokamak-pilot/sdk`)
 - `packages/eslint-config` — Shared ESLint config
 
 ## Commands
 
-- `pnpm dev` — Runs both API + Web in parallel (single command)
+- `pnpm dev` — Runs API + Web + Landing Page in parallel (single command)
 - `pnpm build` — Builds everything
 - `pnpm --filter @tokamak-pilot/api dev` — Run only the API
 - `pnpm --filter @tokamak-pilot/web dev` — Run only the frontend
+- `pnpm --filter @tokamak-pilot/landing-page dev` — Run only the landing page
 
 ## Key Conventions
 

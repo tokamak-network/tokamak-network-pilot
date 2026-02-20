@@ -334,6 +334,9 @@ railway up -s api -d
 # Redeploy Web
 railway up -s web -d
 
+# Redeploy Landing Page
+railway up -s landing-page -d
+
 ## License
 
 MIT
