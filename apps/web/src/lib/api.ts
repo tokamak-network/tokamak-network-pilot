@@ -934,3 +934,24 @@ export async function generateProjectSummary(projectId: string) {
     method: 'POST',
   });
 }
+
+/** Get the current user's role in a project */
+export async function fetchMyProjectRole(projectId: string) {
+  return apiFetch<{ role: 'lead' | 'contributor' | 'viewer' | null }>(
+    `/projects/${projectId}/my-role`,
+  );
+}
+
+/** Transfer project ownership to another member */
+export async function transferProjectOwnership(
+  projectId: string,
+  newOwnerId: string,
+) {
+  return apiFetch<{ message: string; newOwner: { userId: string; email: string; name?: string; role: string } }>(
+    `/projects/${projectId}/transfer-ownership`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ newOwnerId }),
+    },
+  );
+}

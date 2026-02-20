@@ -2,6 +2,7 @@ import {
   Injectable,
   Logger,
   NotFoundException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -72,10 +73,14 @@ export class ContentService {
     return this.findOne(saved.id);
   }
 
-  async update(id: string, dto: UpdateContentDto) {
+  async update(id: string, dto: UpdateContentDto, userId: string) {
     const entry = await this.entryRepo.findOneBy({ id });
     if (!entry) {
       throw new NotFoundException(`Content entry ${id} not found`);
+    }
+
+    if (entry.authorId !== userId) {
+      throw new ForbiddenException('You can only edit your own content entries');
     }
 
     Object.assign(entry, dto);
@@ -84,18 +89,22 @@ export class ContentService {
     }
 
     await this.entryRepo.save(entry);
-    this.logger.log(`Content updated: "${entry.title}" (${id})`);
+    this.logger.log(`Content updated: "${entry.title}" (${id}) by user ${userId}`);
     return this.findOne(id);
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId: string) {
     const entry = await this.entryRepo.findOneBy({ id });
     if (!entry) {
       throw new NotFoundException(`Content entry ${id} not found`);
     }
 
+    if (entry.authorId !== userId) {
+      throw new ForbiddenException('You can only delete your own content entries');
+    }
+
     await this.entryRepo.remove(entry);
-    this.logger.log(`Content removed: "${entry.title}" (${id})`);
+    this.logger.log(`Content removed: "${entry.title}" (${id}) by user ${userId}`);
     return { message: `Content entry "${entry.title}" deleted` };
   }
 

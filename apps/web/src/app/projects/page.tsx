@@ -21,6 +21,7 @@ import {
   fetchProjects,
   createProject,
   deleteProject,
+  fetchMyProjectRole,
   type ProjectResponse,
 } from '@/lib/api';
 import { projectsAtom } from '@/store';
@@ -45,17 +46,33 @@ export default function ProjectsPage() {
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [userRoles, setUserRoles] = useState<Record<string, string | null>>({});
 
   const loadProjects = useCallback(async () => {
     try {
       const data = await fetchProjects();
       setProjects(data.projects);
+
+      if (user) {
+        const roles: Record<string, string | null> = {};
+        await Promise.all(
+          data.projects.map(async (p) => {
+            try {
+              const { role } = await fetchMyProjectRole(p.id);
+              roles[p.id] = role;
+            } catch {
+              roles[p.id] = null;
+            }
+          }),
+        );
+        setUserRoles(roles);
+      }
     } catch {
       // API may not be running
     } finally {
       setLoading(false);
     }
-  }, [setProjects]);
+  }, [setProjects, user]);
 
   useEffect(() => {
     loadProjects();
@@ -246,7 +263,7 @@ export default function ProjectsPage() {
                           Private
                         </Badge>
                       )}
-                      {user && (
+                      {user && userRoles[project.id] === 'lead' && (
                         <button
                           onClick={(e) => handleDelete(project.id, project.name, e)}
                           className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-all"

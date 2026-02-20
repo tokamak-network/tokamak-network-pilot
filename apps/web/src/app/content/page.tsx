@@ -365,7 +365,7 @@ export default function ContentPage() {
                       )}
                     </CardDescription>
                   </div>
-                  {user && (
+                  {user && user.id === entry.authorId && (
                     <div className="flex gap-1 shrink-0">
                       <Button
                         variant="outline"

@@ -25,6 +25,7 @@ import {
   Pencil,
   Save,
   MessageSquare,
+  Shield,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -37,6 +38,8 @@ import {
   removeProjectMember,
   generateProjectSummary,
   fetchSources,
+  fetchMyProjectRole,
+  transferProjectOwnership,
   type ProjectDetailResponse,
   type ProjectDashboardResponse,
   type SourceResponse,
@@ -78,6 +81,7 @@ export default function ProjectDetailPage() {
   const [allSources, setAllSources] = useState<SourceResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [myRole, setMyRole] = useState<'lead' | 'contributor' | 'viewer' | null>(null);
 
   // UI state
   const [showAddSource, setShowAddSource] = useState(false);
@@ -97,15 +101,26 @@ export default function ProjectDetailPage() {
         fetchProjectDashboard(idOrSlug),
         fetchSources(),
       ]);
-      if (dashData.status === 'fulfilled') setDashboard(dashData.value);
-      else setError('Project not found');
+      if (dashData.status === 'fulfilled') {
+        setDashboard(dashData.value);
+        if (user) {
+          try {
+            const { role } = await fetchMyProjectRole(dashData.value.project.id);
+            setMyRole(role);
+          } catch {
+            setMyRole(null);
+          }
+        }
+      } else {
+        setError('Project not found');
+      }
       if (sourcesData.status === 'fulfilled') setAllSources(sourcesData.value.sources);
     } catch {
       setError('Failed to load project');
     } finally {
       setLoading(false);
     }
-  }, [idOrSlug]);
+  }, [idOrSlug, user]);
 
   useEffect(() => {
     loadData();
@@ -113,6 +128,9 @@ export default function ProjectDetailPage() {
 
   const project = dashboard?.project;
   const stats = dashboard?.stats;
+
+  const isLead = myRole === 'lead';
+  const canEdit = myRole === 'lead' || myRole === 'contributor';
 
   // Sources not yet assigned
   const availableSources = allSources.filter(
@@ -203,6 +221,17 @@ export default function ProjectDetailPage() {
       alert(err.message);
     } finally {
       setSavingSummary(false);
+    }
+  };
+
+  const handleTransferOwnership = async (targetUserId: string) => {
+    if (!project) return;
+    if (!confirm('Transfer ownership of this project? You will become a contributor.')) return;
+    try {
+      await transferProjectOwnership(project.id, targetUserId);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
     }
   };
 
@@ -340,7 +369,7 @@ export default function ProjectDetailPage() {
         <OverviewTab
           project={project}
           stats={stats}
-          user={user}
+          canEdit={canEdit}
           editingSummary={editingSummary}
           summaryDraft={summaryDraft}
           savingSummary={savingSummary}
@@ -361,7 +390,7 @@ export default function ProjectDetailPage() {
           project={project}
           availableSources={availableSources}
           showAddSource={showAddSource}
-          user={user}
+          canEdit={canEdit}
           onToggleAddSource={() => setShowAddSource(!showAddSource)}
           onAddSource={handleAddSource}
           onRemoveSource={handleRemoveSource}
@@ -372,6 +401,7 @@ export default function ProjectDetailPage() {
         <TeamTab
           project={project}
           user={user}
+          isLead={isLead}
           showAddMember={showAddMember}
           memberEmail={memberEmail}
           memberRole={memberRole}
@@ -382,6 +412,7 @@ export default function ProjectDetailPage() {
           onAddMember={handleAddMember}
           onUpdateMemberRole={handleUpdateMemberRole}
           onRemoveMember={handleRemoveMember}
+          onTransferOwnership={handleTransferOwnership}
         />
       )}
 
@@ -493,7 +524,7 @@ function ProjectExportButtons({ slug }: { slug: string }) {
 function OverviewTab({
   project,
   stats,
-  user,
+  canEdit,
   editingSummary,
   summaryDraft,
   savingSummary,
@@ -506,7 +537,7 @@ function OverviewTab({
 }: {
   project: ProjectDetailResponse;
   stats: ProjectDashboardResponse['stats'];
-  user: any;
+  canEdit: boolean;
   editingSummary: boolean;
   summaryDraft: string;
   savingSummary: boolean;
@@ -530,7 +561,7 @@ function OverviewTab({
               <Sparkles className="size-4" />
               Project Summary
             </CardTitle>
-            {user && (
+            {canEdit && (
               <div className="flex gap-2">
                 {!editingSummary && (
                   <>
@@ -656,7 +687,7 @@ function SourcesTab({
   project,
   availableSources,
   showAddSource,
-  user,
+  canEdit,
   onToggleAddSource,
   onAddSource,
   onRemoveSource,
@@ -664,14 +695,14 @@ function SourcesTab({
   project: ProjectDetailResponse;
   availableSources: SourceResponse[];
   showAddSource: boolean;
-  user: any;
+  canEdit: boolean;
   onToggleAddSource: () => void;
   onAddSource: (sourceId: string) => void;
   onRemoveSource: (sourceId: string) => void;
 }) {
   return (
     <div className="space-y-4">
-      {user && (
+      {canEdit && (
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={onToggleAddSource}>
             <Plus className="size-4" />
@@ -740,7 +771,7 @@ function SourcesTab({
                 </p>
               </div>
               <StatusBadge status={ps.source.status} />
-              {user && (
+              {canEdit && (
                 <button
                   onClick={() => onRemoveSource(ps.sourceId)}
                   className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
@@ -771,6 +802,7 @@ function SourcesTab({
 function TeamTab({
   project,
   user,
+  isLead,
   showAddMember,
   memberEmail,
   memberRole,
@@ -781,9 +813,11 @@ function TeamTab({
   onAddMember,
   onUpdateMemberRole,
   onRemoveMember,
+  onTransferOwnership,
 }: {
   project: ProjectDetailResponse;
   user: any;
+  isLead: boolean;
   showAddMember: boolean;
   memberEmail: string;
   memberRole: 'lead' | 'contributor' | 'viewer';
@@ -794,10 +828,11 @@ function TeamTab({
   onAddMember: () => void;
   onUpdateMemberRole: (userId: string, role: 'lead' | 'contributor' | 'viewer') => void;
   onRemoveMember: (userId: string) => void;
+  onTransferOwnership: (userId: string) => void;
 }) {
   return (
     <div className="space-y-4">
-      {user && (
+      {isLead && (
         <div className="flex justify-end">
           <Button variant="outline" size="sm" onClick={onToggleAddMember}>
             <UserPlus className="size-4" />
@@ -874,7 +909,7 @@ function TeamTab({
                   <p className="text-xs text-muted-foreground">{member.user.email}</p>
                 )}
               </div>
-              {user ? (
+              {isLead && member.userId !== user?.id ? (
                 <select
                   value={member.role}
                   onChange={(e) =>
@@ -885,7 +920,6 @@ function TeamTab({
                   }
                   className={`text-xs px-2 py-1 rounded-full border font-medium ${roleColors[member.role] || ''}`}
                 >
-                  <option value="lead">Lead</option>
                   <option value="contributor">Contributor</option>
                   <option value="viewer">Viewer</option>
                 </select>
@@ -896,7 +930,16 @@ function TeamTab({
                   {member.role}
                 </span>
               )}
-              {user && (
+              {isLead && member.userId !== user?.id && (
+                <button
+                  onClick={() => onTransferOwnership(member.userId)}
+                  className="p-1 rounded hover:bg-warning/10 hover:text-warning transition-colors"
+                  title="Transfer ownership to this member"
+                >
+                  <Shield className="size-4" />
+                </button>
+              )}
+              {isLead && member.userId !== user?.id && (
                 <button
                   onClick={() => onRemoveMember(member.userId)}
                   className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"

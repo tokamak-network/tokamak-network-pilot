@@ -79,18 +79,22 @@ export class ProjectsController {
   @Put(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update a project' })
+  @ApiOperation({ summary: 'Update a project (requires lead role)' })
   @ApiBody({ type: UpdateProjectDto })
-  async update(@Param('id') id: string, @Body() dto: UpdateProjectDto) {
-    return this.projectsService.update(id, dto);
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateProjectDto,
+    @Request() req: any,
+  ) {
+    return this.projectsService.update(id, dto, req.user.sub);
   }
 
   @Delete(':id')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Delete a project' })
-  async remove(@Param('id') id: string) {
-    return this.projectsService.remove(id);
+  @ApiOperation({ summary: 'Delete a project (requires lead role)' })
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.projectsService.remove(id, req.user.sub);
   }
 
   // ─── Source Mapping ───────────────────────────────────────
@@ -104,21 +108,26 @@ export class ProjectsController {
   @Post(':id/sources')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Assign a knowledge source to this project' })
+  @ApiOperation({ summary: 'Assign a knowledge source (requires lead or contributor role)' })
   @ApiBody({ type: AddProjectSourceDto })
-  async addSource(@Param('id') id: string, @Body() dto: AddProjectSourceDto) {
-    return this.projectsService.addSource(id, dto);
+  async addSource(
+    @Param('id') id: string,
+    @Body() dto: AddProjectSourceDto,
+    @Request() req: any,
+  ) {
+    return this.projectsService.addSource(id, dto, req.user.sub);
   }
 
   @Delete(':id/sources/:sourceId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Remove a source from this project' })
+  @ApiOperation({ summary: 'Remove a source (requires lead or contributor role)' })
   async removeSource(
     @Param('id') id: string,
     @Param('sourceId') sourceId: string,
+    @Request() req: any,
   ) {
-    return this.projectsService.removeSource(id, sourceId);
+    return this.projectsService.removeSource(id, sourceId, req.user.sub);
   }
 
   // ─── Team Members ─────────────────────────────────────────
@@ -133,36 +142,42 @@ export class ProjectsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: 'Add a team member to the project',
+    summary: 'Add a team member (requires lead role)',
     description: 'Invite a user by email. They must have signed in at least once.',
   })
   @ApiBody({ type: AddProjectMemberDto })
-  async addMember(@Param('id') id: string, @Body() dto: AddProjectMemberDto) {
-    return this.projectsService.addMember(id, dto);
+  async addMember(
+    @Param('id') id: string,
+    @Body() dto: AddProjectMemberDto,
+    @Request() req: any,
+  ) {
+    return this.projectsService.addMember(id, dto, req.user.sub);
   }
 
   @Put(':id/members/:userId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Update a team member role' })
+  @ApiOperation({ summary: 'Update a team member role (requires lead role)' })
   @ApiBody({ type: UpdateProjectMemberDto })
   async updateMember(
     @Param('id') id: string,
     @Param('userId') userId: string,
     @Body() dto: UpdateProjectMemberDto,
+    @Request() req: any,
   ) {
-    return this.projectsService.updateMember(id, userId, dto);
+    return this.projectsService.updateMember(id, userId, dto, req.user.sub);
   }
 
   @Delete(':id/members/:userId')
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
-  @ApiOperation({ summary: 'Remove a team member from the project' })
+  @ApiOperation({ summary: 'Remove a team member (requires lead role)' })
   async removeMember(
     @Param('id') id: string,
     @Param('userId') userId: string,
+    @Request() req: any,
   ) {
-    return this.projectsService.removeMember(id, userId);
+    return this.projectsService.removeMember(id, userId, req.user.sub);
   }
 
   // ─── AI Summary ───────────────────────────────────────────
@@ -171,11 +186,47 @@ export class ProjectsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard)
   @ApiOperation({
-    summary: 'Generate an AI summary for the project',
+    summary: 'Generate an AI summary (requires lead or contributor role)',
     description:
       'Uses the LLM to analyze all assigned sources and generate a comprehensive project summary.',
   })
-  async generateSummary(@Param('id') id: string) {
-    return this.projectsService.generateSummary(id);
+  async generateSummary(@Param('id') id: string, @Request() req: any) {
+    return this.projectsService.generateSummary(id, req.user.sub);
+  }
+
+  // ─── Ownership Transfer ─────────────────────────────────
+
+  @Post(':id/transfer-ownership')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Transfer project ownership to another member (requires lead role)',
+    description:
+      'Promotes the target member to lead and demotes the current lead to contributor.',
+  })
+  @ApiBody({
+    schema: {
+      type: 'object',
+      required: ['newOwnerId'],
+      properties: { newOwnerId: { type: 'string', format: 'uuid' } },
+    },
+  })
+  async transferOwnership(
+    @Param('id') id: string,
+    @Body('newOwnerId') newOwnerId: string,
+    @Request() req: any,
+  ) {
+    return this.projectsService.transferOwnership(id, newOwnerId, req.user.sub);
+  }
+
+  // ─── User's Role in Project ──────────────────────────────
+
+  @Get(':id/my-role')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Get the current user\'s role in a project' })
+  async getMyRole(@Param('id') id: string, @Request() req: any) {
+    const role = await this.projectsService.getUserRole(id, req.user.sub);
+    return { role };
   }
 }

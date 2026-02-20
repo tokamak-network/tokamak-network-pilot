@@ -69,20 +69,26 @@ export class ContentController {
 
   @Put(':id')
   @ApiOperation({
-    summary: 'Update a content entry',
-    description: 'Mark content as outdated, update answers, add notes, etc.',
+    summary: 'Update a content entry (author only)',
+    description: 'Only the original author can edit their content entries.',
   })
   @ApiResponse({ status: 200, description: 'Content entry updated' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  async update(@Param('id') id: string, @Body() dto: UpdateContentDto) {
-    return this.contentService.update(id, dto);
+  @ApiResponse({ status: 403, description: 'Not the author of this entry' })
+  async update(
+    @Param('id') id: string,
+    @Body() dto: UpdateContentDto,
+    @Request() req: any,
+  ) {
+    return this.contentService.update(id, dto, req.user.sub);
   }
 
   @Delete(':id')
-  @ApiOperation({ summary: 'Delete a content entry' })
+  @ApiOperation({ summary: 'Delete a content entry (author only)' })
   @ApiResponse({ status: 200, description: 'Content entry deleted' })
   @ApiResponse({ status: 401, description: 'Not authenticated' })
-  async remove(@Param('id') id: string) {
-    return this.contentService.remove(id);
+  @ApiResponse({ status: 403, description: 'Not the author of this entry' })
+  async remove(@Param('id') id: string, @Request() req: any) {
+    return this.contentService.remove(id, req.user.sub);
   }
 }

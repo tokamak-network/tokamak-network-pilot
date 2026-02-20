@@ -8,7 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Project } from '../../entities/project.entity';
-import { ProjectMember } from '../../entities/project-member.entity';
+import { ProjectMember, ProjectRole } from '../../entities/project-member.entity';
 import { ProjectSource } from '../../entities/project-source.entity';
 import { Source } from '../../entities/source.entity';
 import { User } from '../../entities/user.entity';
@@ -154,11 +154,13 @@ export class ProjectsService {
     return this.findOne(saved.id);
   }
 
-  async update(id: string, dto: UpdateProjectDto) {
+  async update(id: string, dto: UpdateProjectDto, userId: string) {
     const project = await this.projectRepo.findOneBy({ id });
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
+
+    await this.requireRole(id, userId, ['lead']);
 
     if (dto.slug && dto.slug !== project.slug) {
       const existing = await this.projectRepo.findOneBy({ slug: dto.slug });
@@ -179,27 +181,31 @@ export class ProjectsService {
     }
 
     await this.projectRepo.save(project);
-    this.logger.log(`Project ${id} updated`);
+    this.logger.log(`Project ${id} updated by user ${userId}`);
 
     return this.findOne(id);
   }
 
-  async remove(id: string) {
+  async remove(id: string, userId: string) {
     const project = await this.projectRepo.findOneBy({ id });
     if (!project) {
       throw new NotFoundException(`Project ${id} not found`);
     }
 
+    await this.requireRole(id, userId, ['lead']);
+
     await this.projectRepo.remove(project);
-    this.logger.log(`Project "${project.name}" removed`);
+    this.logger.log(`Project "${project.name}" removed by user ${userId}`);
     return { message: `Project "${project.name}" removed successfully` };
   }
 
   // ─── Source Mapping ───────────────────────────────────────
 
-  async addSource(projectId: string, dto: AddProjectSourceDto) {
+  async addSource(projectId: string, dto: AddProjectSourceDto, userId: string) {
     const project = await this.projectRepo.findOneBy({ id: projectId });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    await this.requireRole(projectId, userId, ['lead', 'contributor']);
 
     const source = await this.sourceRepo.findOneBy({ id: dto.sourceId });
     if (!source) throw new NotFoundException(`Source ${dto.sourceId} not found`);
@@ -234,12 +240,14 @@ export class ProjectsService {
     };
   }
 
-  async removeSource(projectId: string, sourceId: string) {
+  async removeSource(projectId: string, sourceId: string, userId: string) {
+    await this.requireRole(projectId, userId, ['lead', 'contributor']);
+
     const ps = await this.projectSourceRepo.findOneBy({ projectId, sourceId });
     if (!ps) throw new NotFoundException('Source is not assigned to this project');
 
     await this.projectSourceRepo.remove(ps);
-    this.logger.log(`Source ${sourceId} removed from project ${projectId}`);
+    this.logger.log(`Source ${sourceId} removed from project ${projectId} by user ${userId}`);
     return { message: 'Source removed from project' };
   }
 
@@ -281,9 +289,11 @@ export class ProjectsService {
 
   // ─── Team Members ─────────────────────────────────────────
 
-  async addMember(projectId: string, dto: AddProjectMemberDto) {
+  async addMember(projectId: string, dto: AddProjectMemberDto, requesterId: string) {
     const project = await this.projectRepo.findOneBy({ id: projectId });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    await this.requireRole(projectId, requesterId, ['lead']);
 
     const user = await this.userRepo.findOneBy({ email: dto.email });
     if (!user) {
@@ -324,7 +334,10 @@ export class ProjectsService {
     projectId: string,
     userId: string,
     dto: UpdateProjectMemberDto,
+    requesterId: string,
   ) {
+    await this.requireRole(projectId, requesterId, ['lead']);
+
     const member = await this.memberRepo.findOne({
       where: { projectId, userId },
       relations: ['user'],
@@ -336,7 +349,7 @@ export class ProjectsService {
     member.role = dto.role;
     await this.memberRepo.save(member);
 
-    this.logger.log(`Member ${userId} role updated to ${dto.role} in project ${projectId}`);
+    this.logger.log(`Member ${userId} role updated to ${dto.role} in project ${projectId} by user ${requesterId}`);
     return {
       id: member.id,
       userId: member.userId,
@@ -351,14 +364,20 @@ export class ProjectsService {
     };
   }
 
-  async removeMember(projectId: string, userId: string) {
+  async removeMember(projectId: string, userId: string, requesterId: string) {
+    await this.requireRole(projectId, requesterId, ['lead']);
+
+    if (userId === requesterId) {
+      throw new ForbiddenException('You cannot remove yourself. Transfer ownership first.');
+    }
+
     const member = await this.memberRepo.findOneBy({ projectId, userId });
     if (!member) {
       throw new NotFoundException('Member not found in this project');
     }
 
     await this.memberRepo.remove(member);
-    this.logger.log(`Member ${userId} removed from project ${projectId}`);
+    this.logger.log(`Member ${userId} removed from project ${projectId} by user ${requesterId}`);
     return { message: 'Member removed from project' };
   }
 
@@ -388,7 +407,9 @@ export class ProjectsService {
 
   // ─── AI Summary ───────────────────────────────────────────
 
-  async generateSummary(projectId: string) {
+  async generateSummary(projectId: string, userId: string) {
+    await this.requireRole(projectId, userId, ['lead', 'contributor']);
+
     const project = await this.projectRepo.findOneBy({ id: projectId });
     if (!project) throw new NotFoundException(`Project ${projectId} not found`);
 
@@ -564,6 +585,70 @@ ${sampleContent}`,
         chunkBreakdown: docStats,
       },
     };
+  }
+
+  // ─── Ownership Transfer ──────────────────────────────────
+
+  async transferOwnership(projectId: string, newOwnerId: string, requesterId: string) {
+    await this.requireRole(projectId, requesterId, ['lead']);
+
+    const newOwnerMember = await this.memberRepo.findOne({
+      where: { projectId, userId: newOwnerId },
+      relations: ['user'],
+    });
+    if (!newOwnerMember) {
+      throw new NotFoundException('Target user is not a member of this project. Add them first.');
+    }
+
+    const requesterMember = await this.memberRepo.findOneBy({
+      projectId,
+      userId: requesterId,
+    });
+    if (!requesterMember) {
+      throw new NotFoundException('You are not a member of this project');
+    }
+
+    newOwnerMember.role = 'lead';
+    requesterMember.role = 'contributor';
+    await this.memberRepo.save([newOwnerMember, requesterMember]);
+
+    this.logger.log(
+      `Project ${projectId} ownership transferred from ${requesterId} to ${newOwnerId}`,
+    );
+
+    return {
+      message: `Ownership transferred to ${newOwnerMember.user.email}`,
+      newOwner: {
+        userId: newOwnerMember.userId,
+        email: newOwnerMember.user.email,
+        name: newOwnerMember.user.name,
+        role: newOwnerMember.role,
+      },
+    };
+  }
+
+  // ─── Authorization Helpers ──────────────────────────────
+
+  async getUserRole(projectId: string, userId: string): Promise<ProjectRole | null> {
+    const member = await this.memberRepo.findOneBy({ projectId, userId });
+    return member?.role ?? null;
+  }
+
+  private async requireRole(
+    projectId: string,
+    userId: string,
+    allowedRoles: ProjectRole[],
+  ): Promise<ProjectMember> {
+    const member = await this.memberRepo.findOneBy({ projectId, userId });
+    if (!member) {
+      throw new ForbiddenException('You are not a member of this project');
+    }
+    if (!allowedRoles.includes(member.role)) {
+      throw new ForbiddenException(
+        `This action requires one of these roles: ${allowedRoles.join(', ')}. You are a "${member.role}".`,
+      );
+    }
+    return member;
   }
 
   // ─── Helpers ──────────────────────────────────────────────
