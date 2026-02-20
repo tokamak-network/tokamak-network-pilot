@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAtom } from 'jotai';
@@ -27,6 +27,8 @@ import {
   MessageSquare,
   Shield,
   Search,
+  Send,
+  TreePine,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -56,6 +58,10 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Input } from '@/components/ui/input';
+import { ChatMessage } from '@/components/chat-message';
+import type { ConversationMessage } from '@/store/ask';
 
 const roleColors: Record<string, string> = {
   lead: 'bg-warning-bg text-warning border-warning-border',
@@ -1006,15 +1012,36 @@ function TeamTab({
 
 function ChatTab({ project }: { project: ProjectDetailResponse }) {
   const [question, setQuestion] = useState('');
-  const [answer, setAnswer] = useState('');
-  const [sources, setSources] = useState<Array<{ title: string; url: string; score: number }>>([]);
-  const [loading, setLoading] = useState(false);
+  const [messages, setMessages] = useState<ConversationMessage[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const scrollEndRef = useRef<HTMLDivElement>(null);
 
-  const handleAsk = async () => {
-    if (!question.trim()) return;
-    setLoading(true);
-    setAnswer('');
-    setSources([]);
+  useEffect(() => {
+    scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, isLoading]);
+
+  const handleAsk = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    if (!question.trim() || isLoading) return;
+
+    const currentQuery = question;
+    const userMessage: ConversationMessage = {
+      role: 'user',
+      content: currentQuery,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, userMessage]);
+    setIsLoading(true);
+    setQuestion('');
+
+    const placeholderAssistant: ConversationMessage = {
+      role: 'assistant',
+      content: '',
+      sources: [],
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, placeholderAssistant]);
 
     const apiBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
 
@@ -1025,7 +1052,7 @@ function ChatTab({ project }: { project: ProjectDetailResponse }) {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${localStorage.getItem('tokamak_token') || ''}`,
         },
-        body: JSON.stringify({ question: question.trim(), projectId: project.id }),
+        body: JSON.stringify({ question: currentQuery, projectId: project.id }),
       });
 
       if (!res.ok) {
@@ -1054,87 +1081,181 @@ function ChatTab({ project }: { project: ProjectDetailResponse }) {
           } else if (line.startsWith('data: ')) {
             const data = JSON.parse(line.slice(6));
             if (currentEvent === 'metadata') {
-              setSources(data.sources || []);
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  sources: data.sources || [],
+                };
+                return updated;
+              });
             } else if (currentEvent === 'chunk') {
-              setAnswer((prev) => prev + data.text);
+              setMessages((prev) => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                updated[updated.length - 1] = {
+                  ...last,
+                  content: last.content + data.text,
+                };
+                return updated;
+              });
             } else if (currentEvent === 'error') {
-              setAnswer('Failed to get answer: ' + data.message);
+              setMessages((prev) => {
+                const updated = [...prev];
+                updated[updated.length - 1] = {
+                  ...updated[updated.length - 1],
+                  content: `Sorry, something went wrong: ${data.message}`,
+                };
+                return updated;
+              });
             }
             currentEvent = '';
           }
         }
       }
     } catch (err: any) {
-      setAnswer('Failed to get answer: ' + (err.message || 'Unknown error'));
+      setMessages((prev) => {
+        const updated = [...prev];
+        updated[updated.length - 1] = {
+          ...updated[updated.length - 1],
+          content: `Sorry, something went wrong: ${err.message || 'Could not reach the API'}`,
+        };
+        return updated;
+      });
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
-  return (
-    <div className="space-y-4">
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-sm flex items-center gap-2">
-            <MessageSquare className="size-4" />
-            Ask About {project.name}
-          </CardTitle>
-          <CardDescription>
-            Questions are scoped to this project&apos;s knowledge sources only.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
-            <input
-              value={question}
-              onChange={(e) => setQuestion(e.target.value)}
-              placeholder={`Ask anything about ${project.name}...`}
-              className="flex-1 h-10 px-3 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-              onKeyDown={(e) => e.key === 'Enter' && handleAsk()}
-            />
-            <Button onClick={handleAsk} disabled={!question.trim() || loading}>
-              {loading ? (
-                <Loader2 className="size-4 animate-spin" />
-              ) : (
-                <MessageSquare className="size-4" />
-              )}
-              Ask
-            </Button>
-          </div>
+  const handleClear = () => {
+    setMessages([]);
+    setQuestion('');
+  };
 
-          {(answer || loading) && (
-            <div className="space-y-3">
-              <div className="prose prose-sm max-w-none text-sm p-4 rounded-lg bg-muted/50 whitespace-pre-wrap">
-                {answer || (
-                  <span className="text-muted-foreground flex items-center gap-2">
-                    <Loader2 className="size-3 animate-spin" />
-                    Thinking...
-                  </span>
-                )}
-              </div>
-              {sources.length > 0 && (
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground mb-2">Sources:</p>
-                  <div className="flex flex-wrap gap-2">
-                    {sources.map((s, i) => (
-                      <a
-                        key={i}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs text-primary hover:underline px-2 py-1 rounded-md bg-primary/5 border"
-                      >
-                        {s.title}
-                      </a>
-                    ))}
-                  </div>
-                </div>
-              )}
+  return (
+    <Card className="overflow-hidden">
+      <CardHeader className="border-b bg-card/80 backdrop-blur-sm py-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="flex size-7 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+              <TreePine className="size-3.5" />
             </div>
+            <div>
+              <CardTitle className="text-sm">Ask About {project.name}</CardTitle>
+              <CardDescription className="text-xs">
+                Scoped to this project&apos;s knowledge sources
+              </CardDescription>
+            </div>
+          </div>
+          {messages.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="gap-1.5 text-xs"
+              onClick={handleClear}
+            >
+              <Plus className="size-3.5" />
+              New Chat
+            </Button>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </div>
+      </CardHeader>
+
+      <CardContent className="p-0">
+        {messages.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-16 px-4">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 mb-4">
+              <TreePine className="size-7 text-primary" />
+            </div>
+            <h3 className="text-base font-medium mb-1">
+              Ask about {project.name}
+            </h3>
+            <p className="text-sm text-muted-foreground text-center max-w-sm mb-6">
+              Questions are answered using only this project&apos;s assigned knowledge sources.
+            </p>
+            <form onSubmit={handleAsk} className="w-full max-w-lg">
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                  <Input
+                    value={question}
+                    onChange={(e) => setQuestion(e.target.value)}
+                    placeholder={`e.g. "What does ${project.name} do?"`}
+                    className="pl-10 h-11 text-sm"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="lg"
+                  disabled={!question.trim()}
+                  className="h-11 px-4"
+                >
+                  <Send className="size-4" />
+                  Ask
+                </Button>
+              </div>
+            </form>
+          </div>
+        ) : (
+          <>
+            <ScrollArea className="h-[450px]">
+              <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
+                {messages.map((msg, i) => (
+                  <ChatMessage key={msg.id || i} message={msg} />
+                ))}
+
+                {isLoading && messages.length > 0 && messages[messages.length - 1].content === '' && (
+                  <div className="flex gap-3">
+                    <div className="flex size-8 shrink-0 items-center justify-center rounded-full bg-primary">
+                      <TreePine className="size-4 text-primary-foreground" />
+                    </div>
+                    <div className="flex items-center gap-2 rounded-2xl rounded-tl-md bg-muted/60 border border-border/50 px-4 py-3">
+                      <div className="flex gap-1">
+                        <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:0ms]" />
+                        <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:150ms]" />
+                        <span className="size-2 rounded-full bg-muted-foreground/40 animate-bounce [animation-delay:300ms]" />
+                      </div>
+                      <span className="text-sm text-muted-foreground ml-1">Thinking...</span>
+                    </div>
+                  </div>
+                )}
+
+                <div ref={scrollEndRef} />
+              </div>
+            </ScrollArea>
+
+            <div className="border-t bg-background/80 backdrop-blur-sm p-4">
+              <form onSubmit={handleAsk} className="max-w-3xl mx-auto">
+                <div className="flex items-center gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
+                    <Input
+                      value={question}
+                      onChange={(e) => setQuestion(e.target.value)}
+                      placeholder="Ask a follow-up question..."
+                      className="pl-10 h-11 rounded-xl"
+                      disabled={isLoading}
+                    />
+                  </div>
+                  <Button
+                    type="submit"
+                    size="lg"
+                    disabled={!question.trim() || isLoading}
+                    className="rounded-xl h-11 px-4"
+                  >
+                    {isLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                  </Button>
+                </div>
+              </form>
+            </div>
+          </>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 
