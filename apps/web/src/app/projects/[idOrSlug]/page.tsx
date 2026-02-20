@@ -26,6 +26,7 @@ import {
   Save,
   MessageSquare,
   Shield,
+  Search,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -700,6 +701,16 @@ function SourcesTab({
   onAddSource: (sourceId: string) => void;
   onRemoveSource: (sourceId: string) => void;
 }) {
+  const [sourceSearch, setSourceSearch] = useState('');
+
+  const filteredAvailable = sourceSearch.trim()
+    ? availableSources.filter(
+        (s) =>
+          s.name.toLowerCase().includes(sourceSearch.toLowerCase()) ||
+          s.type.toLowerCase().includes(sourceSearch.toLowerCase()),
+      )
+    : availableSources;
+
   return (
     <div className="space-y-4">
       {canEdit && (
@@ -719,30 +730,56 @@ function SourcesTab({
               Click to assign a knowledge source to this project.
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-3">
             {availableSources.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">
                 All sources are already assigned to this project.
               </p>
             ) : (
-              <div className="grid gap-2 max-h-60 overflow-y-auto">
-                {availableSources.map((source) => (
-                  <button
-                    key={source.id}
-                    onClick={() => onAddSource(source.id)}
-                    className="flex items-center gap-3 px-3 py-2 rounded-md border hover:bg-muted/50 transition-colors text-left"
-                  >
-                    <Database className="size-4 text-muted-foreground shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium truncate">{source.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {source.type} &middot; {source.documentCount} docs
-                      </p>
-                    </div>
-                    <Plus className="size-4 text-primary shrink-0" />
-                  </button>
-                ))}
-              </div>
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    value={sourceSearch}
+                    onChange={(e) => setSourceSearch(e.target.value)}
+                    placeholder="Search sources..."
+                    className="w-full h-9 pl-9 pr-9 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    autoFocus
+                  />
+                  {sourceSearch && (
+                    <button
+                      onClick={() => setSourceSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+                {filteredAvailable.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No sources match &ldquo;{sourceSearch}&rdquo;
+                  </p>
+                ) : (
+                  <div className="grid gap-2 max-h-60 overflow-y-auto">
+                    {filteredAvailable.map((source) => (
+                      <button
+                        key={source.id}
+                        onClick={() => onAddSource(source.id)}
+                        className="flex items-center gap-3 px-3 py-2 rounded-md border hover:bg-muted/50 transition-colors text-left"
+                      >
+                        <Database className="size-4 text-muted-foreground shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium truncate">{source.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {source.type} &middot; {source.documentCount} docs
+                          </p>
+                        </div>
+                        <Plus className="size-4 text-primary shrink-0" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </>
             )}
           </CardContent>
         </Card>
