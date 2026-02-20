@@ -41,7 +41,7 @@ function generateSdkCode(
     `import { TokamakPilotClient } from '@tokamak-pilot/sdk';`,
     '',
     `const pilot = new TokamakPilotClient({`,
-    `  baseUrl: 'https://pilot.tokamak.network/api/v1',`,
+    `  baseUrl: 'https://api.tokamakforest.com/api/v1',`,
     `  apiKey: 'YOUR_API_KEY',`,
     `});`,
     '',

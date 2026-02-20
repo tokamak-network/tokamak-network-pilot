@@ -8,18 +8,21 @@ import {
   Quote,
   Search,
 } from "lucide-react";
+import AnimateOnScroll from "./AnimateOnScroll";
 
 function StepConnector() {
   return (
-    <div className="flex items-center justify-center py-6 md:py-8">
-      <div className="flex flex-col items-center gap-1">
-        <div className="h-8 w-px bg-gradient-to-b from-emerald/40 to-emerald/10" />
-        <div className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald/20 bg-emerald-bg">
-          <ArrowDown className="h-4 w-4 text-emerald-dark" />
+    <AnimateOnScroll variant="fade-in" duration={0.4}>
+      <div className="flex items-center justify-center py-6 md:py-8">
+        <div className="flex flex-col items-center gap-1">
+          <div className="h-8 w-px bg-gradient-to-b from-emerald/40 to-emerald/10" />
+          <div className="flex h-8 w-8 items-center justify-center rounded-full border border-emerald/20 bg-emerald-bg">
+            <ArrowDown className="h-4 w-4 text-emerald-dark" />
+          </div>
+          <div className="h-8 w-px bg-gradient-to-b from-emerald/10 to-emerald/40" />
         </div>
-        <div className="h-8 w-px bg-gradient-to-b from-emerald/10 to-emerald/40" />
       </div>
-    </div>
+    </AnimateOnScroll>
   );
 }
 
@@ -174,7 +177,7 @@ export default function HowItWorks() {
   return (
     <section id="how-it-works" className="relative bg-surface py-24 md:py-32">
       <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto mb-20 max-w-2xl text-center">
+        <AnimateOnScroll className="mx-auto mb-20 max-w-2xl text-center">
           <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-emerald/20 bg-emerald-bg px-4 py-1.5">
             <span className="text-xs font-semibold text-emerald-dark">
               Three Simple Steps
@@ -186,7 +189,7 @@ export default function HowItWorks() {
           <p className="text-base leading-relaxed text-text-secondary md:text-lg">
             From scattered repos to instant answers. Watch the journey.
           </p>
-        </div>
+        </AnimateOnScroll>
 
         <div className="mx-auto max-w-5xl">
           {steps.map((step, i) => {
@@ -200,7 +203,11 @@ export default function HowItWorks() {
                     isReversed ? "lg:flex-row-reverse" : ""
                   }`}
                 >
-                  <div className="flex flex-1 items-start gap-5">
+                  <AnimateOnScroll
+                    className="flex flex-1 items-start gap-5"
+                    variant={isReversed ? "slide-right" : "slide-left"}
+                    duration={0.7}
+                  >
                     <div className="flex shrink-0 flex-col items-center">
                       <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-emerald-bg">
                         <step.icon className="h-8 w-8 text-emerald-dark" />
@@ -222,11 +229,16 @@ export default function HowItWorks() {
                         {step.description}
                       </p>
                     </div>
-                  </div>
+                  </AnimateOnScroll>
 
-                  <div className="w-full flex-1 lg:max-w-md">
+                  <AnimateOnScroll
+                    className="w-full flex-1 lg:max-w-md"
+                    variant={isReversed ? "slide-left" : "slide-right"}
+                    duration={0.7}
+                    delay={0.15}
+                  >
                     <Mockup />
-                  </div>
+                  </AnimateOnScroll>
                 </div>
 
                 {i < steps.length - 1 && <StepConnector />}

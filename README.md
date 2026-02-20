@@ -137,7 +137,7 @@ The system can ingest knowledge from multiple source types:
 | GET    | `/api/v1/auth/me`           | Get current user profile             | JWT    |
 | GET    | `/api/v1/health`            | Health check                         | —      |
 
-Full interactive docs at `http://localhost:4000/docs` (Swagger).
+Full interactive docs at `http://localhost:4000/docs` (Swagger) or `https://api.tokamakforest.com/docs` (production).
 
 ## SDK Usage
 
@@ -145,8 +145,8 @@ Full interactive docs at `http://localhost:4000/docs` (Swagger).
 import { TokamakPilotClient } from '@tokamak-pilot/sdk';
 
 const pilot = new TokamakPilotClient({
-  baseUrl: 'http://localhost:4000/api/v1',
-  token: 'optional-jwt-token',
+  baseUrl: 'https://api.tokamakforest.com/api/v1',
+  apiKey: 'your-api-key',
 });
 
 // Ask a question
@@ -320,7 +320,7 @@ The MCP server will:
       "command": "npx",
       "args": ["@tokamak-pilot/mcp-server"],
       "env": {
-        "TOKAMAK_PILOT_API_URL": "https://pilot.tokamak.network/api/v1",
+        "TOKAMAK_PILOT_API_URL": "https://api.tokamakforest.com/api/v1",
         "TOKAMAK_PILOT_API_KEY": "your-api-key"
       }
     }

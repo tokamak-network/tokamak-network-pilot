@@ -8,6 +8,7 @@ import {
   Quote,
   Database,
 } from "lucide-react";
+import AnimateOnScroll from "./AnimateOnScroll";
 
 const APP_URL = "https://app.tokamakforest.com/";
 
@@ -213,7 +214,7 @@ export default function Features() {
   return (
     <section id="features" className="relative bg-surface-secondary py-24 md:py-32">
       <div className="relative mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="mx-auto mb-20 max-w-4xl text-center">
+        <AnimateOnScroll className="mx-auto mb-20 max-w-4xl text-center">
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-text-heading md:text-4xl lg:text-5xl">
             Features
           </h2>
@@ -221,7 +222,7 @@ export default function Features() {
             Discover how the Forest makes Tokamak ecosystem knowledge accessible
             to everyone.
           </p>
-        </div>
+        </AnimateOnScroll>
 
         <div className="space-y-28">
           {features.map((feature, i) => {
@@ -235,7 +236,11 @@ export default function Features() {
                   isReversed ? "lg:flex-row-reverse" : ""
                 }`}
               >
-                <div className="flex-1 space-y-6">
+                <AnimateOnScroll
+                  className="flex-1 space-y-6"
+                  variant={isReversed ? "slide-right" : "slide-left"}
+                  duration={0.7}
+                >
                   <div className="inline-flex items-center rounded-full border border-emerald/20 bg-emerald-bg px-4 py-1.5">
                     <span className="text-xs font-semibold text-emerald-dark">
                       {feature.badge}
@@ -256,10 +261,15 @@ export default function Features() {
                     Try it now
                     <ArrowRight className="h-4 w-4" />
                   </a>
-                </div>
-                <div className="w-full flex-1 lg:max-w-xl">
+                </AnimateOnScroll>
+                <AnimateOnScroll
+                  className="w-full flex-1 lg:max-w-xl"
+                  variant={isReversed ? "slide-left" : "slide-right"}
+                  duration={0.7}
+                  delay={0.15}
+                >
                   <Mockup />
-                </div>
+                </AnimateOnScroll>
               </div>
             );
           })}

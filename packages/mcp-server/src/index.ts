@@ -12,7 +12,7 @@ if (!apiKey) {
     'Error: TOKAMAK_PILOT_API_KEY environment variable is required.\n\n' +
       'Set it in your MCP client configuration:\n' +
       '  "env": { "TOKAMAK_PILOT_API_KEY": "tkp_your_key_here" }\n\n' +
-      'You can create an API key at your Tokamak Pilot dashboard.\n',
+      'You can create an API key at your Tokamak Forest dashboard.\n',
   );
   process.exit(1);
 }

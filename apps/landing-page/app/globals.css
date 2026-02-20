@@ -46,6 +46,70 @@ body {
   animation: fade-in-up 0.7s ease-out forwards;
 }
 
+@keyframes hero-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(30px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-animate {
+  opacity: 0;
+  animation: hero-fade-in 0.8s cubic-bezier(0.25, 0.1, 0.25, 1) forwards;
+}
+
+.hero-animate-delay-1 { animation-delay: 0.1s; }
+.hero-animate-delay-2 { animation-delay: 0.25s; }
+.hero-animate-delay-3 { animation-delay: 0.4s; }
+.hero-animate-delay-4 { animation-delay: 0.6s; }
+
+@keyframes subtle-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+.animate-float {
+  animation: subtle-float 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.text-shimmer {
+  background-size: 200% auto;
+  animation: shimmer 4s linear infinite;
+}
+
+@keyframes glow-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.animate-glow-pulse {
+  animation: glow-pulse 3s ease-in-out infinite;
+}
+
+@keyframes hero-glow {
+  0%, 100% {
+    opacity: 0.06;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.12;
+    transform: scale(1.05);
+  }
+}
+
+.hero-glow-animate {
+  animation: hero-glow 5s ease-in-out infinite;
+}
+
 .card {
   background: var(--color-surface);
   border: 1px solid var(--color-border);
@@ -117,6 +181,16 @@ body {
   background: #0f172a;
   border: 1px solid rgba(255, 255, 255, 0.08);
   box-shadow: 0 25px 50px rgba(0, 0, 0, 0.2), 0 12px 24px rgba(0, 0, 0, 0.12);
+}
+
+.mockup-window-enhanced {
+  background: linear-gradient(180deg, #101c2c 0%, #0c1a2a 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 0 0 1px rgba(16, 185, 129, 0.04),
+    0 25px 60px rgba(0, 0, 0, 0.3),
+    0 12px 28px rgba(0, 0, 0, 0.15),
+    0 0 80px rgba(16, 185, 129, 0.03);
 }
 
 .section-dark {

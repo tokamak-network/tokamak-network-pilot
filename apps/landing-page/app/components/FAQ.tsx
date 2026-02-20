@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown } from "lucide-react";
+import { motion } from "framer-motion";
 
 const faqs = [
   {
@@ -36,6 +37,18 @@ const faqs = [
   },
 ];
 
+const containerVariants = {
+  hidden: {},
+  visible: {
+    transition: { staggerChildren: 0.08 },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] as const } },
+};
+
 export default function FAQ() {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
@@ -43,21 +56,34 @@ export default function FAQ() {
     <section id="faq" className="relative bg-surface py-24 md:py-32">
       <div className="bg-grid-light pointer-events-none absolute inset-0 opacity-40" />
       <div className="relative mx-auto max-w-3xl px-6 lg:px-8">
-        <div className="mb-16 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.3 }}
+          transition={{ duration: 0.6, ease: [0.25, 0.1, 0.25, 1] }}
+          className="mb-16 text-center"
+        >
           <h2 className="mb-4 text-3xl font-bold tracking-tight text-text-heading md:text-4xl lg:text-5xl">
             Your Questions, Answered
           </h2>
           <p className="text-base leading-relaxed text-text-secondary md:text-lg">
             Everything you need to know about the Forest.
           </p>
-        </div>
+        </motion.div>
 
-        <div className="space-y-3">
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{ once: true, amount: 0.1 }}
+          variants={containerVariants}
+          className="space-y-3"
+        >
           {faqs.map((faq, i) => {
             const isOpen = openIndex === i;
             return (
-              <div
+              <motion.div
                 key={i}
+                variants={itemVariants}
                 className={`card overflow-hidden rounded-2xl transition-all duration-300 ${
                   isOpen ? "shadow-md shadow-emerald/5" : ""
                 }`}
@@ -86,10 +112,10 @@ export default function FAQ() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

@@ -254,7 +254,7 @@ export default function HomePage() {
               </Link>
 
               <a
-                href="http://localhost:4000/docs"
+                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/docs`}
                 target="_blank"
                 rel="noopener noreferrer"
               >

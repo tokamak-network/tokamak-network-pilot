@@ -10,7 +10,7 @@ import type {
 } from '@tokamak-pilot/shared';
 
 export interface TokamakPilotClientOptions {
-  /** Base URL of the Tokamak Pilot API (e.g. https://pilot.tokamak.network/api/v1) */
+  /** Base URL of the Tokamak Forest API (e.g. https://api.tokamakforest.com/api/v1) */
   baseUrl: string;
   /** API key for authenticating with the public API */
   apiKey: string;
@@ -36,7 +36,7 @@ export interface TokamakPilotClientOptions {
  * @example
  * ```ts
  * const pilot = new TokamakPilotClient({
- *   baseUrl: 'https://pilot.tokamak.network/api/v1',
+ *   baseUrl: 'https://api.tokamakforest.com/api/v1',
  *   apiKey: 'tkp_a1b2c3d4e5f6...',
  * });
  *
