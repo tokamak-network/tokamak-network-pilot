@@ -29,6 +29,7 @@ import {
   Search,
   Send,
   TreePine,
+  Megaphone,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -242,6 +243,16 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleToggleLandingPage = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { showOnLandingPage: !project.showOnLandingPage });
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-3.5rem)]">
@@ -309,17 +320,36 @@ export default function ProjectDetailPage() {
                   Private
                 </Badge>
               )}
+              {project.showOnLandingPage && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+                  <Megaphone className="size-2.5 mr-0.5" />
+                  Landing Page
+                </Badge>
+              )}
             </div>
           </div>
         </div>
-        {project.isPublic && (
-          <Link href={`/projects/${project.slug}/public`}>
-            <Button variant="outline" size="sm">
-              <ExternalLink className="size-4" />
-              Public Page
+        <div className="flex items-center gap-2">
+          {isLead && project.isPublic && (
+            <Button
+              variant={project.showOnLandingPage ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={handleToggleLandingPage}
+              title={project.showOnLandingPage ? 'Remove from landing page' : 'Feature on landing page'}
+            >
+              <Megaphone className="size-4" />
+              {project.showOnLandingPage ? 'On Landing Page' : 'Show on Landing Page'}
             </Button>
-          </Link>
-        )}
+          )}
+          {project.isPublic && (
+            <Link href={`/projects/${project.slug}/public`}>
+              <Button variant="outline" size="sm">
+                <ExternalLink className="size-4" />
+                Public Page
+              </Button>
+            </Link>
+          )}
+        </div>
       </div>
 
       {project.description && (

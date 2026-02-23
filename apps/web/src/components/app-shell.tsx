@@ -15,10 +15,19 @@ import { Button } from '@/components/ui/button';
 /** Public routes that don't require authentication */
 const PUBLIC_PATHS = ['/login', '/docs'];
 
+/** Route patterns that don't require authentication (checked via regex) */
+const PUBLIC_PATTERNS = [
+  /^\/projects\/[^/]+\/public(\/|$)/,
+];
+
 function isProtectedPath(pathname: string): boolean {
-  return !PUBLIC_PATHS.some(
-    (path) => pathname === path || pathname.startsWith(`${path}/`),
-  );
+  if (PUBLIC_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`))) {
+    return false;
+  }
+  if (PUBLIC_PATTERNS.some((pattern) => pattern.test(pathname))) {
+    return false;
+  }
+  return true;
 }
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -88,6 +97,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, [authChecking, pathname, protectedPath, router, user]);
 
   if (pathname === '/login') {
+    return <>{children}</>;
+  }
+
+  if (!protectedPath && !user) {
     return <>{children}</>;
   }
 

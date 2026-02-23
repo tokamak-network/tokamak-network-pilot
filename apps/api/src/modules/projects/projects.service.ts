@@ -137,6 +137,7 @@ export class ProjectsService {
       logoUrl: dto.logoUrl,
       links: dto.links || [],
       isPublic: dto.isPublic ?? true,
+      showOnLandingPage: dto.showOnLandingPage ?? false,
     });
 
     const saved = await this.projectRepo.save(project);
@@ -175,6 +176,7 @@ export class ProjectsService {
     if (dto.logoUrl !== undefined) project.logoUrl = dto.logoUrl;
     if (dto.links !== undefined) project.links = dto.links;
     if (dto.isPublic !== undefined) project.isPublic = dto.isPublic;
+    if (dto.showOnLandingPage !== undefined) project.showOnLandingPage = dto.showOnLandingPage;
     if (dto.summary !== undefined) {
       project.summary = dto.summary;
       project.summaryUpdatedAt = new Date();
@@ -532,6 +534,36 @@ ${sampleContent}`,
         documentCount: ps.source.documentCount,
       })),
     };
+  }
+
+  // ─── Landing Page Projects ──────────────────────────────
+
+  async findFeatured() {
+    const projects = await this.projectRepo.find({
+      where: { isPublic: true, showOnLandingPage: true },
+      order: { createdAt: 'DESC' },
+    });
+
+    const enriched = await Promise.all(
+      projects.map(async (p) => {
+        const [memberCount, sourceCount] = await Promise.all([
+          this.memberRepo.count({ where: { projectId: p.id } }),
+          this.projectSourceRepo.count({ where: { projectId: p.id } }),
+        ]);
+        return {
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          description: p.description,
+          logoUrl: p.logoUrl,
+          summary: p.summary,
+          memberCount,
+          sourceCount,
+        };
+      }),
+    );
+
+    return { projects: enriched, total: enriched.length };
   }
 
   // ─── Project Dashboard Stats ──────────────────────────────

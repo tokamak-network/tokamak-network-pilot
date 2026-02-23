@@ -40,6 +40,9 @@ export class Project {
   @Column({ type: 'boolean', default: true })
   isPublic!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  showOnLandingPage!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

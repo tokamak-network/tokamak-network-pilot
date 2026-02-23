@@ -19,9 +19,10 @@ async function bootstrap() {
     ],
   });
 
-  // CORS
+  // CORS — allow both the web app and the landing page
+  const corsOrigin = config.get<string>('CORS_ORIGIN', 'http://localhost:3000');
   app.enableCors({
-    origin: config.get<string>('CORS_ORIGIN', 'http://localhost:3000'),
+    origin: corsOrigin.split(',').map((o) => o.trim()),
     credentials: true,
   });
 

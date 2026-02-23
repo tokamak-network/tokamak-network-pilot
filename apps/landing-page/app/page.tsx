@@ -5,6 +5,7 @@ import Features from "./components/Features";
 import Integrations from "./components/Integrations";
 import HowItWorks from "./components/HowItWorks";
 import Stats from "./components/Stats";
+import FeaturedProjects from "./components/FeaturedProjects";
 import Testimonials from "./components/Testimonials";
 import FAQ from "./components/FAQ";
 import CTA from "./components/CTA";
@@ -20,6 +21,7 @@ export default function Home() {
       <Integrations />
       <HowItWorks />
       <Stats />
+      <FeaturedProjects />
       {/* <Testimonials /> */}
       <FAQ />
       <CTA />

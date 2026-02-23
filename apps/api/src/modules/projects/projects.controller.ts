@@ -57,6 +57,12 @@ export class ProjectsController {
     return this.projectsService.getDashboard(project.id);
   }
 
+  @Get('featured/landing-page')
+  @ApiOperation({ summary: 'Get projects featured on the landing page (public, no auth)' })
+  async findFeatured() {
+    return this.projectsService.findFeatured();
+  }
+
   @Get(':slug/public')
   @ApiOperation({ summary: 'Get public project overview page' })
   @ApiParam({ name: 'slug', description: 'Project slug' })

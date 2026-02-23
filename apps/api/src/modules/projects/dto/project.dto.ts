@@ -73,6 +73,14 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether the project is featured on the landing page',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  showOnLandingPage?: boolean;
 }
 
 export class UpdateProjectDto {
@@ -123,6 +131,13 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsBoolean()
   isPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether the project is featured on the landing page',
+  })
+  @IsOptional()
+  @IsBoolean()
+  showOnLandingPage?: boolean;
 }
 
 export class AddProjectMemberDto {

@@ -765,6 +765,7 @@ export interface ProjectResponse {
   summary?: string;
   summaryUpdatedAt?: string;
   isPublic: boolean;
+  showOnLandingPage: boolean;
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -862,6 +863,7 @@ export async function updateProject(
     links?: ProjectLinkResponse[];
     summary?: string;
     isPublic?: boolean;
+    showOnLandingPage?: boolean;
   },
 ) {
   return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {
