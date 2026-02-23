@@ -24,6 +24,7 @@ import { ExportModule } from './modules/export/export.module';
 import { WidgetModule } from './modules/widget/widget.module';
 import { ChangelogModule } from './modules/changelog/changelog.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
+import { SnippetsModule } from './modules/snippets/snippets.module';
 
 @Module({
   imports: [
@@ -101,6 +102,9 @@ import { FeedbackModule } from './modules/feedback/feedback.module';
 
     // ── Phase 6: Quality, Feedback & Analytics ──
     FeedbackModule,
+
+    // ── Developer Tools ──
+    SnippetsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

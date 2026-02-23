@@ -411,6 +411,49 @@ export interface SuggestedQuestionsResponse {
   suggestions: SuggestedQuestion[];
 }
 
+// ---- Snippet Types ----
+
+export interface SnippetInfo {
+  id: string;
+  title: string;
+  description?: string;
+  code: string;
+  language: string;
+  category?: string;
+  tags: string[];
+  projectSlug?: string;
+  isGenerated: boolean;
+  copyCount: number;
+  author?: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSnippetRequest {
+  title: string;
+  code: string;
+  language: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  projectSlug?: string;
+}
+
+export interface GenerateSnippetRequest {
+  prompt: string;
+  language?: string;
+  projectSlug?: string;
+}
+
+export interface GenerateSnippetResponse extends SnippetInfo {
+  provider: string;
+  model: string;
+}
+
 // ---- Changelog Types ----
 
 export type ChangeType =

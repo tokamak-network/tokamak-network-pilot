@@ -23,6 +23,7 @@ import {
   AddProjectMemberDto,
   UpdateProjectMemberDto,
   AddProjectSourceDto,
+  CreateProjectFromSourceDto,
 } from './dto/project.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -80,6 +81,22 @@ export class ProjectsController {
   @ApiBody({ type: CreateProjectDto })
   async create(@Body() dto: CreateProjectDto, @Request() req: any) {
     return this.projectsService.create(dto, req.user.id);
+  }
+
+  @Post('from-source')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Create a project from a GitHub repo source',
+    description:
+      'Automatically derives the project name from the repo, generates an AI description, and assigns the source.',
+  })
+  @ApiBody({ type: CreateProjectFromSourceDto })
+  async createFromSource(
+    @Body() dto: CreateProjectFromSourceDto,
+    @Request() req: any,
+  ) {
+    return this.projectsService.createFromSource(dto, req.user.id);
   }
 
   @Put(':id')

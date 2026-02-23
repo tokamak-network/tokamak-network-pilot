@@ -176,3 +176,12 @@ export class AddProjectSourceDto {
   @IsNotEmpty()
   sourceId!: string;
 }
+
+export class CreateProjectFromSourceDto {
+  @ApiProperty({
+    description: 'ID of the source (GitHub repo) to create a project from',
+  })
+  @IsUUID()
+  @IsNotEmpty()
+  sourceId!: string;
+}

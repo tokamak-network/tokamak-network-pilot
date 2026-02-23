@@ -10,6 +10,7 @@ import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { AuthModule } from '../auth/auth.module';
 import { LlmModule } from '../llm/llm.module';
+import { GitHubModule } from '../github/github.module';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { LlmModule } from '../llm/llm.module';
     ]),
     AuthModule,
     LlmModule,
+    GitHubModule,
   ],
   controllers: [ProjectsController],
   providers: [ProjectsService],

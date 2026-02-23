@@ -892,6 +892,14 @@ export async function createProject(data: {
   });
 }
 
+/** Create a project from a GitHub repo source (auto-generates name & AI description) */
+export async function createProjectFromSource(sourceId: string) {
+  return apiFetch<ProjectDetailResponse>('/projects/from-source', {
+    method: 'POST',
+    body: JSON.stringify({ sourceId }),
+  });
+}
+
 /** Update a project */
 export async function updateProject(
   id: string,
@@ -996,4 +1004,109 @@ export async function transferProjectOwnership(
       body: JSON.stringify({ newOwnerId }),
     },
   );
+}
+
+// ───────────────────── Snippets API ─────────────────────
+
+export interface SnippetResponse {
+  id: string;
+  title: string;
+  description?: string;
+  code: string;
+  language: string;
+  category?: string;
+  tags: string[];
+  projectSlug?: string;
+  isGenerated: boolean;
+  copyCount: number;
+  author?: { id: string; email: string; name?: string };
+  createdAt: string;
+  updatedAt: string;
+  provider?: string;
+  model?: string;
+}
+
+export interface SnippetFilters {
+  language?: string;
+  category?: string;
+  projectSlug?: string;
+  search?: string;
+  page?: number;
+  limit?: number;
+}
+
+/** List snippets with optional filters */
+export async function fetchSnippets(filters?: SnippetFilters) {
+  const params = new URLSearchParams();
+  if (filters?.language) params.set('language', filters.language);
+  if (filters?.category) params.set('category', filters.category);
+  if (filters?.projectSlug) params.set('projectSlug', filters.projectSlug);
+  if (filters?.search) params.set('search', filters.search);
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  const qs = params.toString();
+  return apiFetch<{
+    data: SnippetResponse[];
+    total: number;
+    page: number;
+    limit: number;
+    hasMore: boolean;
+  }>(`/snippets${qs ? `?${qs}` : ''}`);
+}
+
+/** Get a single snippet */
+export async function fetchSnippet(id: string) {
+  return apiFetch<SnippetResponse>(`/snippets/${id}`);
+}
+
+/** Create a snippet */
+export async function createSnippet(data: {
+  title: string;
+  code: string;
+  language: string;
+  description?: string;
+  category?: string;
+  tags?: string[];
+  projectSlug?: string;
+}) {
+  return apiFetch<SnippetResponse>('/snippets', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** AI-generate a snippet from a natural language prompt */
+export async function generateSnippet(data: {
+  prompt: string;
+  language?: string;
+  projectSlug?: string;
+}) {
+  return apiFetch<SnippetResponse>('/snippets/generate', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
+/** Track a snippet copy event */
+export async function trackSnippetCopy(id: string) {
+  return apiFetch<{ copyCount: number }>(`/snippets/${id}/copy`, {
+    method: 'POST',
+  });
+}
+
+/** Delete a snippet */
+export async function deleteSnippet(id: string) {
+  return apiFetch<{ message: string }>(`/snippets/${id}`, {
+    method: 'DELETE',
+  });
+}
+
+/** Get available snippet languages */
+export async function fetchSnippetLanguages() {
+  return apiFetch<Array<{ language: string; count: number }>>('/snippets/languages');
+}
+
+/** Get available snippet categories */
+export async function fetchSnippetCategories() {
+  return apiFetch<Array<{ category: string; count: number }>>('/snippets/categories');
 }

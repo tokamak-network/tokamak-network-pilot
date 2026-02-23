@@ -20,7 +20,9 @@ import {
   AddProjectMemberDto,
   UpdateProjectMemberDto,
   AddProjectSourceDto,
+  CreateProjectFromSourceDto,
 } from './dto/project.dto';
+import { GitHubService } from '../github/github.service';
 
 @Injectable()
 export class ProjectsService {
@@ -40,6 +42,7 @@ export class ProjectsService {
     @InjectRepository(Document)
     private readonly documentRepo: Repository<Document>,
     private readonly llm: LlmService,
+    private readonly github: GitHubService,
   ) {}
 
   // ─── Project CRUD ─────────────────────────────────────────
@@ -153,6 +156,116 @@ export class ProjectsService {
     this.logger.log(`Project "${saved.name}" created (id=${saved.id}) by user ${userId}`);
 
     return this.findOne(saved.id);
+  }
+
+  async createFromSource(dto: CreateProjectFromSourceDto, userId: string) {
+    const source = await this.sourceRepo.findOneBy({ id: dto.sourceId });
+    if (!source) throw new NotFoundException(`Source ${dto.sourceId} not found`);
+
+    if (source.type !== 'github_repo') {
+      throw new ConflictException('Only GitHub repository sources are supported for quick project creation');
+    }
+
+    const config = source.config as { owner?: string; repo?: string; description?: string; language?: string; stars?: number };
+    const owner = config.owner;
+    const repo = config.repo;
+
+    if (!owner || !repo) {
+      throw new NotFoundException('Source is missing owner/repo configuration');
+    }
+
+    let repoDescription = config.description || null;
+    let repoLanguage = config.language || null;
+    let readmeContent = '';
+
+    try {
+      const meta = await this.github.getRepoMeta(owner, repo);
+      repoDescription = meta.description;
+      repoLanguage = meta.language;
+    } catch {
+      this.logger.warn(`Could not fetch fresh metadata for ${owner}/${repo}, using stored config`);
+    }
+
+    try {
+      const readmeDocs = await this.github.fetchRepoReadme(owner, repo);
+      if (readmeDocs.length > 0) {
+        readmeContent = readmeDocs[0].content.slice(0, 3000);
+      }
+    } catch {
+      this.logger.debug(`Could not fetch README for ${owner}/${repo}`);
+    }
+
+    const projectName = this.formatRepoName(repo);
+
+    let description: string;
+    try {
+      const completion = await this.llm.chatCompletion({
+        messages: [
+          {
+            role: 'system',
+            content: `You are writing a concise project description (2-3 sentences) for a software project. Based on the repository information provided, write a clear, informative description that explains what the project does, its purpose, and key technologies. Do NOT use markdown formatting. Keep it under 200 characters if possible, maximum 300 characters.`,
+          },
+          {
+            role: 'user',
+            content: [
+              `Repository: ${owner}/${repo}`,
+              repoDescription ? `GitHub Description: ${repoDescription}` : '',
+              repoLanguage ? `Primary Language: ${repoLanguage}` : '',
+              readmeContent ? `README (excerpt):\n${readmeContent}` : '',
+            ].filter(Boolean).join('\n'),
+          },
+        ],
+        temperature: 0.3,
+        maxTokens: 200,
+      });
+      description = completion.content.trim();
+    } catch {
+      description = repoDescription || `Project created from ${owner}/${repo}`;
+      this.logger.warn(`AI description generation failed for ${owner}/${repo}, using fallback`);
+    }
+
+    const slug = this.generateSlug(repo);
+    let finalSlug = slug;
+    const existing = await this.projectRepo.findOneBy({ slug });
+    if (existing) {
+      finalSlug = `${slug}-${Date.now().toString(36)}`;
+    }
+
+    const project = this.projectRepo.create({
+      name: projectName,
+      slug: finalSlug,
+      description,
+      links: [{ label: 'GitHub', url: `https://github.com/${owner}/${repo}` }],
+      isPublic: true,
+      showOnLandingPage: false,
+    });
+
+    const saved = await this.projectRepo.save(project);
+
+    const member = this.memberRepo.create({
+      projectId: saved.id,
+      userId,
+      role: 'lead',
+    });
+    await this.memberRepo.save(member);
+
+    const ps = this.projectSourceRepo.create({
+      projectId: saved.id,
+      sourceId: dto.sourceId,
+    });
+    await this.projectSourceRepo.save(ps);
+
+    this.logger.log(
+      `Project "${saved.name}" created from source "${source.name}" (id=${saved.id}) by user ${userId}`,
+    );
+
+    return this.findOne(saved.id);
+  }
+
+  private formatRepoName(repo: string): string {
+    return repo
+      .replace(/[-_]+/g, ' ')
+      .replace(/\b\w/g, (c) => c.toUpperCase());
   }
 
   async update(id: string, dto: UpdateProjectDto, userId: string) {

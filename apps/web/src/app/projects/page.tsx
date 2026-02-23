@@ -16,13 +16,19 @@ import {
   ChevronRight,
   Search,
   X,
+  GitBranch,
+  Sparkles,
+  Star,
 } from 'lucide-react';
 import {
   fetchProjects,
   createProject,
+  createProjectFromSource,
   deleteProject,
   fetchMyProjectRole,
+  fetchSources,
   type ProjectResponse,
+  type SourceResponse,
 } from '@/lib/api';
 import { projectsAtom } from '@/store';
 import { userAtom } from '@/store/auth';
@@ -43,9 +49,14 @@ export default function ProjectsPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
+  const [showRepoPicker, setShowRepoPicker] = useState(false);
   const [newName, setNewName] = useState('');
   const [newDesc, setNewDesc] = useState('');
   const [creating, setCreating] = useState(false);
+  const [creatingFromRepo, setCreatingFromRepo] = useState<string | null>(null);
+  const [repoSources, setRepoSources] = useState<SourceResponse[]>([]);
+  const [repoSearch, setRepoSearch] = useState('');
+  const [loadingRepos, setLoadingRepos] = useState(false);
   const [userRoles, setUserRoles] = useState<Record<string, string | null>>({});
 
   const loadProjects = useCallback(async () => {
@@ -110,6 +121,44 @@ export default function ProjectsPage() {
     }
   };
 
+  const handleOpenRepoPicker = async () => {
+    setShowRepoPicker(true);
+    setShowCreate(false);
+    setLoadingRepos(true);
+    try {
+      const data = await fetchSources();
+      const repos = data.sources.filter((s) => s.type === 'github_repo');
+      setRepoSources(repos);
+    } catch {
+      setRepoSources([]);
+    } finally {
+      setLoadingRepos(false);
+    }
+  };
+
+  const handleCreateFromRepo = async (sourceId: string) => {
+    setCreatingFromRepo(sourceId);
+    try {
+      const project = await createProjectFromSource(sourceId);
+      setProjects((prev) => [project, ...prev]);
+      setShowRepoPicker(false);
+      setRepoSearch('');
+      router.push(`/projects/${project.slug}`);
+    } catch (err: any) {
+      alert(err.message || 'Failed to create project from repo');
+    } finally {
+      setCreatingFromRepo(null);
+    }
+  };
+
+  const filteredRepos = repoSearch.trim()
+    ? repoSources.filter(
+        (s) =>
+          s.name.toLowerCase().includes(repoSearch.toLowerCase()) ||
+          (s.description ?? '').toLowerCase().includes(repoSearch.toLowerCase()),
+      )
+    : repoSources;
+
   const filtered = search.trim()
     ? projects.filter(
         (p) =>
@@ -137,10 +186,19 @@ export default function ProjectsPage() {
           </p>
         </div>
         {user && (
-          <Button onClick={() => setShowCreate(!showCreate)}>
-            <Plus className="size-4" />
-            New Project
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              onClick={handleOpenRepoPicker}
+            >
+              <GitBranch className="size-4" />
+              Create from Repo
+            </Button>
+            <Button onClick={() => { setShowCreate(!showCreate); setShowRepoPicker(false); }}>
+              <Plus className="size-4" />
+              New Project
+            </Button>
+          </div>
         )}
       </div>
 
@@ -199,6 +257,106 @@ export default function ProjectsPage() {
                 Create Project
               </Button>
             </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Repo picker */}
+      {showRepoPicker && (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-sm flex items-center gap-2">
+                  <Sparkles className="size-4 text-primary" />
+                  Create Project from Repository
+                </CardTitle>
+                <CardDescription className="mt-1">
+                  Select a repo — name and AI-generated description will be set automatically.
+                </CardDescription>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => { setShowRepoPicker(false); setRepoSearch(''); }}
+              >
+                <X className="size-4" />
+              </Button>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-3 pt-0">
+            {loadingRepos ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="size-5 animate-spin text-muted-foreground" />
+                <span className="ml-2 text-sm text-muted-foreground">Loading repositories...</span>
+              </div>
+            ) : repoSources.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                No GitHub repository sources found. Add repos in the Sources page first.
+              </p>
+            ) : (
+              <>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground pointer-events-none" />
+                  <input
+                    value={repoSearch}
+                    onChange={(e) => setRepoSearch(e.target.value)}
+                    placeholder="Search repositories..."
+                    className="w-full h-9 pl-9 pr-9 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    autoFocus
+                  />
+                  {repoSearch && (
+                    <button
+                      onClick={() => setRepoSearch('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  )}
+                </div>
+                {filteredRepos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    No repositories match &ldquo;{repoSearch}&rdquo;
+                  </p>
+                ) : (
+                  <div className="grid gap-2 max-h-72 overflow-y-auto">
+                    {filteredRepos.map((source) => {
+                      const isCreating = creatingFromRepo === source.id;
+                      return (
+                        <button
+                          key={source.id}
+                          onClick={() => handleCreateFromRepo(source.id)}
+                          disabled={creatingFromRepo !== null}
+                          className="flex items-center gap-3 px-3 py-2.5 rounded-md border hover:bg-muted/50 hover:border-primary/30 transition-colors text-left disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                          <GitBranch className="size-4 text-muted-foreground shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{source.name}</p>
+                            <p className="text-xs text-muted-foreground truncate">
+                              {source.description || source.type}
+                              {source.stars != null && source.stars > 0 && (
+                                <span className="inline-flex items-center gap-0.5 ml-2">
+                                  <Star className="size-3" />
+                                  {source.stars}
+                                </span>
+                              )}
+                              {source.language && (
+                                <span className="ml-2">{source.language}</span>
+                              )}
+                            </p>
+                          </div>
+                          {isCreating ? (
+                            <Loader2 className="size-4 animate-spin text-primary shrink-0" />
+                          ) : (
+                            <Plus className="size-4 text-primary shrink-0" />
+                          )}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
           </CardContent>
         </Card>
       )}

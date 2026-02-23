@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Query, UseGuards, Res } from '@nestjs/common';
+import { Controller, Post, Body, Get, Query, UseGuards, Res, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBody, ApiQuery, ApiBearerAuth } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { RagService } from './rag.service';
@@ -6,13 +6,13 @@ import { AskQuestionDto } from './dto/ask-question.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('ask')
-@ApiBearerAuth()
-@UseGuards(JwtAuthGuard)
 @Controller('ask')
 export class RagController {
   constructor(private readonly ragService: RagService) {}
 
   @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Ask a question about Tokamak Network',
     description:
@@ -24,6 +24,8 @@ export class RagController {
   }
 
   @Post('stream')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Ask a question with streaming response',
     description:
@@ -53,7 +55,43 @@ export class RagController {
     res.end();
   }
 
+  @Post('public')
+  @ApiOperation({
+    summary: 'Ask a project-scoped question (no auth required)',
+    description:
+      'Public streaming RAG endpoint scoped to a specific project. Requires projectId. Returns SSE events.',
+  })
+  @ApiBody({ type: AskQuestionDto })
+  async askPublicStream(@Body() dto: AskQuestionDto, @Res() res: Response) {
+    if (!dto.projectId) {
+      throw new BadRequestException('projectId is required for public queries');
+    }
+
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
+
+    try {
+      for await (const event of this.ragService.askStream(dto)) {
+        if (event.type === 'metadata') {
+          res.write(`event: metadata\ndata: ${JSON.stringify(event)}\n\n`);
+        } else if (event.type === 'chunk') {
+          res.write(`event: chunk\ndata: ${JSON.stringify({ text: event.text })}\n\n`);
+        } else if (event.type === 'done') {
+          res.write(`event: done\ndata: {}\n\n`);
+        }
+      }
+    } catch (err: any) {
+      res.write(`event: error\ndata: ${JSON.stringify({ message: err.message })}\n\n`);
+    }
+    res.end();
+  }
+
   @Get('search')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({
     summary: 'Semantic search across indexed knowledge',
     description:

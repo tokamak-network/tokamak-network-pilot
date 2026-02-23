@@ -126,6 +126,15 @@ The system can ingest knowledge from multiple source types:
 | POST   | `/api/v1/export/prompt`     | Format content as AI-ready prompt     | —      |
 | GET    | `/api/v1/openapi.json`      | Download OpenAPI spec (JSON)          | —      |
 | GET    | `/api/v1/openapi.yaml`      | Download OpenAPI spec (YAML)          | —      |
+| GET    | `/api/v1/snippets`          | List code snippets                    | —      |
+| GET    | `/api/v1/snippets/:id`      | Get a snippet                         | —      |
+| POST   | `/api/v1/snippets`          | Create a snippet                      | JWT    |
+| POST   | `/api/v1/snippets/generate` | AI-generate a snippet from prompt     | JWT    |
+| POST   | `/api/v1/snippets/:id/copy` | Track snippet copy event              | —      |
+| PUT    | `/api/v1/snippets/:id`      | Update a snippet                      | JWT    |
+| DELETE | `/api/v1/snippets/:id`      | Delete a snippet                      | JWT    |
+| GET    | `/api/v1/snippets/languages`| List available languages              | —      |
+| GET    | `/api/v1/snippets/categories`| List available categories            | —      |
 | POST   | `/api/v1/feedback`          | Submit feedback (thumbs up/down)      | JWT    |
 | GET    | `/api/v1/feedback/message/:id` | Get your feedback for a message    | JWT    |
 | GET    | `/api/v1/feedback/stats`    | Get feedback statistics               | JWT    |
@@ -268,6 +277,17 @@ const { sources: knowledgeSources } = await pilot.listSources();
 - [ ] **Search analytics** — Log popular queries, zero-result queries, and trending topics
 - [ ] **Content freshness alerts** — Auto-detect when indexed content is outdated (repo updated but not re-synced)
 - [ ] **Query caching** — Cache frequent queries for faster responses and lower LLM costs
+
+---
+
+### Phase 7 — Developer Tools
+
+> Give developers the code they need, fast.
+
+- [x] **Code Snippets Library** — Searchable, filterable collection of ready-to-use code examples with syntax highlighting, copy tracking, and language/category filters
+- [x] **AI Snippet Generation** — Describe what you need in plain English and the AI generates working code using real Tokamak APIs from the indexed knowledge base
+- [ ] **Interactive Code Playground** — Run TypeScript/JavaScript snippets in-browser with Tokamak SDK pre-loaded
+- [ ] **CLI Tool** — `npx @tokamak-pilot/cli ask "How do I deploy?"` — query the knowledge base from the terminal
 
 ---
 
