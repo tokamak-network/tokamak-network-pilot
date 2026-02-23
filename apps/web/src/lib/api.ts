@@ -257,6 +257,46 @@ export function askInConversationStream(
   );
 }
 
+// ───────────────────── Feedback API ─────────────────────
+
+export interface FeedbackResponse {
+  id: string;
+  messageId: string;
+  userId: string;
+  rating: 'up' | 'down';
+  comment?: string;
+  createdAt: string;
+}
+
+export interface SuggestedQuestion {
+  question: string;
+  source: 'popular' | 'curated';
+}
+
+/** Submit feedback (thumbs up/down) on an assistant message */
+export async function submitFeedback(
+  messageId: string,
+  rating: 'up' | 'down',
+  comment?: string,
+) {
+  return apiFetch<FeedbackResponse>('/feedback', {
+    method: 'POST',
+    body: JSON.stringify({ messageId, rating, comment }),
+  });
+}
+
+/** Get your existing feedback for a specific message */
+export async function getFeedback(messageId: string) {
+  return apiFetch<FeedbackResponse | null>(`/feedback/message/${messageId}`);
+}
+
+/** Get suggested questions (popular + curated) */
+export async function fetchSuggestedQuestions(limit = 6) {
+  return apiFetch<{ suggestions: SuggestedQuestion[] }>(
+    `/feedback/suggested-questions?limit=${limit}`,
+  );
+}
+
 /**
  * Semantic search across the knowledge base.
  */

@@ -126,6 +126,10 @@ The system can ingest knowledge from multiple source types:
 | POST   | `/api/v1/export/prompt`     | Format content as AI-ready prompt     | —      |
 | GET    | `/api/v1/openapi.json`      | Download OpenAPI spec (JSON)          | —      |
 | GET    | `/api/v1/openapi.yaml`      | Download OpenAPI spec (YAML)          | —      |
+| POST   | `/api/v1/feedback`          | Submit feedback (thumbs up/down)      | JWT    |
+| GET    | `/api/v1/feedback/message/:id` | Get your feedback for a message    | JWT    |
+| GET    | `/api/v1/feedback/stats`    | Get feedback statistics               | JWT    |
+| GET    | `/api/v1/feedback/suggested-questions` | Get suggested questions      | —      |
 | GET    | `/api/v1/changelog`         | Get API changelog / release notes     | —      |
 | GET    | `/api/v1/changelog/latest`  | Get latest changelog entry            | —      |
 | GET    | `/api/v1/changelog/:version`| Get changelog for specific version    | —      |
@@ -258,11 +262,11 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 > Improve answer quality and understand usage patterns.
 
-- [ ] **Answer feedback** — Thumbs up/down on AI answers with optional comment; store for quality tracking
+- [x] **Answer feedback** — Thumbs up/down on AI answers with optional comment; store for quality tracking
+- [x] **Suggested questions** — Show popular or recommended questions on the home page
 - [ ] **Answer quality metrics** — Track confidence scores, feedback ratios, and unanswered questions over time
 - [ ] **Search analytics** — Log popular queries, zero-result queries, and trending topics
 - [ ] **Content freshness alerts** — Auto-detect when indexed content is outdated (repo updated but not re-synced)
-- [ ] **Suggested questions** — Show popular or recommended questions on the home page
 - [ ] **Query caching** — Cache frequent queries for faster responses and lower LLM costs
 
 ---
@@ -273,7 +277,7 @@ const { sources: knowledgeSources } = await pilot.listSources();
 
 - [ ] **CI/CD pipeline** — GitHub Actions for lint, test, build, and deploy
 - [ ] **SDK publishing to npm** — Automated npm publish for `@tokamak-pilot/sdk`
-- [ ] **Streaming responses** — Stream RAG answers token-by-token via SSE for faster perceived response
+- [x] **Streaming responses** — Stream RAG answers token-by-token via SSE for faster perceived response
 - [ ] **Kubernetes / Docker deployment** — Production-ready Helm chart or Docker Compose with health checks, resource limits
 - [ ] **Monitoring & alerting** — Prometheus metrics, Grafana dashboards, PagerDuty/Slack alerts
 - [ ] **Backup & disaster recovery** — Automated PostgreSQL + Qdrant backups

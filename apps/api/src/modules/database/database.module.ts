@@ -13,6 +13,7 @@ import { Message } from '../../entities/message.entity';
 import { Project } from '../../entities/project.entity';
 import { ProjectMember } from '../../entities/project-member.entity';
 import { ProjectSource } from '../../entities/project-source.entity';
+import { Feedback } from '../../entities/feedback.entity';
 
 @Module({
   imports: [
@@ -30,7 +31,7 @@ import { ProjectSource } from '../../entities/project-source.entity';
         return {
           type: 'postgres' as const,
           url: dbUrl,
-          entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource],
+          entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource, Feedback],
           synchronize: dbSync !== undefined ? dbSync === 'true' : !isProduction,
           logging: !isProduction,
           ssl: isProduction ? { rejectUnauthorized: false } : false,

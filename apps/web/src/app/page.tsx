@@ -1,8 +1,8 @@
 'use client';
 
 import { useAtom } from 'jotai';
-import { useEffect, useRef, useCallback } from 'react';
-import { Search, Send, TreePine, Database, FileText, Loader2, LayoutDashboard, Plus } from 'lucide-react';
+import { useEffect, useRef, useCallback, useState } from 'react';
+import { Search, Send, TreePine, Database, FileText, Loader2, LayoutDashboard, Plus, MessageCircleQuestion } from 'lucide-react';
 import Link from 'next/link';
 import {
   queryAtom,
@@ -16,8 +16,9 @@ import {
   quickAskStream,
   askInConversationStream,
   fetchConversations,
+  fetchSuggestedQuestions,
 } from '@/lib/api';
-import type { StreamMetadata } from '@/lib/api';
+import type { StreamMetadata, SuggestedQuestion } from '@/lib/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -37,6 +38,7 @@ export default function HomePage() {
   const [conversation, setConversation] = useAtom(conversationAtom);
   const [activeConversationId, setActiveConversationId] = useAtom(activeConversationIdAtom);
   const [, setConversationsList] = useAtom(conversationsListAtom);
+  const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom when new messages arrive
@@ -44,10 +46,13 @@ export default function HomePage() {
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [conversation, isLoading]);
 
-  // Refresh conversations list on mount
+  // Refresh conversations list and suggested questions on mount
   useEffect(() => {
     fetchConversations()
       .then((res) => setConversationsList(res.data))
+      .catch(() => {});
+    fetchSuggestedQuestions(6)
+      .then((res) => setSuggestions(res.suggestions))
       .catch(() => {});
   }, [setConversationsList]);
 
@@ -56,6 +61,17 @@ export default function HomePage() {
       .then((res) => setConversationsList(res.data))
       .catch(() => {});
   }, [setConversationsList]);
+
+  const handleSuggestionClick = useCallback(
+    (question: string) => {
+      setQuery(question);
+      setTimeout(() => {
+        const form = document.querySelector('form');
+        form?.requestSubmit();
+      }, 0);
+    },
+    [setQuery],
+  );
 
   const handleNewChat = useCallback(() => {
     setActiveConversationId(null);
@@ -202,6 +218,29 @@ export default function HomePage() {
                 </Button>
               </div>
             </form>
+
+            {/* Suggested Questions */}
+            {suggestions.length > 0 && (
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center justify-center gap-1.5">
+                  <MessageCircleQuestion className="size-3.5 text-muted-foreground/60" />
+                  <span className="text-xs font-medium text-muted-foreground/60 uppercase tracking-wider">
+                    Try asking
+                  </span>
+                </div>
+                <div className="flex flex-wrap justify-center gap-2">
+                  {suggestions.map((s, i) => (
+                    <button
+                      key={i}
+                      onClick={() => handleSuggestionClick(s.question)}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-border/50 bg-card px-3.5 py-2 text-sm text-muted-foreground hover:bg-primary/5 hover:text-foreground hover:border-primary/30 transition-all duration-150 shadow-sm hover:shadow"
+                    >
+                      {s.question}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Quick Link Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">

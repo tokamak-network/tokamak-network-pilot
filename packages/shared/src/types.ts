@@ -367,6 +367,50 @@ export interface ProjectPublicInfo {
   }>;
 }
 
+// ---- Feedback Types ----
+
+export type FeedbackRating = 'up' | 'down';
+
+export interface FeedbackInfo {
+  id: string;
+  messageId: string;
+  userId: string;
+  rating: FeedbackRating;
+  comment?: string;
+  createdAt: string;
+}
+
+export interface SubmitFeedbackRequest {
+  messageId: string;
+  rating: FeedbackRating;
+  comment?: string;
+}
+
+export interface FeedbackStats {
+  total: number;
+  upCount: number;
+  downCount: number;
+  satisfactionRate: number | null;
+  recentNegative: Array<{
+    id: string;
+    messageId: string;
+    comment?: string;
+    messagePreview?: string;
+    createdAt: string;
+  }>;
+}
+
+export type SuggestedQuestionSource = 'popular' | 'curated';
+
+export interface SuggestedQuestion {
+  question: string;
+  source: SuggestedQuestionSource;
+}
+
+export interface SuggestedQuestionsResponse {
+  suggestions: SuggestedQuestion[];
+}
+
 // ---- Changelog Types ----
 
 export type ChangeType =

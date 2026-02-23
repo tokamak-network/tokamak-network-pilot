@@ -3,9 +3,10 @@
 import { useMemo, useState, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { TreePine, User, ExternalLink, FileText, Copy, Check, Sparkles } from 'lucide-react';
+import { TreePine, User, ExternalLink, FileText, Copy, Check, Sparkles, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { cn } from '@/lib/utils';
+import { submitFeedback } from '@/lib/api';
 import type { ConversationMessage } from '@/store/ask';
 
 interface ChatMessageProps {
@@ -101,6 +102,63 @@ function formatAsAiPrompt(
   );
 
   return lines.join('\n');
+}
+
+function FeedbackButtons({ messageId }: { messageId?: string }) {
+  const [rating, setRating] = useState<'up' | 'down' | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleFeedback = useCallback(
+    async (value: 'up' | 'down') => {
+      if (!messageId || isSubmitting) return;
+      const newRating = rating === value ? null : value;
+      setIsSubmitting(true);
+      try {
+        if (newRating) {
+          await submitFeedback(messageId, newRating);
+        }
+        setRating(newRating);
+      } catch {
+        // silently ignore — feedback is non-critical
+      } finally {
+        setIsSubmitting(false);
+      }
+    },
+    [messageId, rating, isSubmitting],
+  );
+
+  if (!messageId) return null;
+
+  return (
+    <div className="flex items-center gap-1">
+      <button
+        onClick={() => handleFeedback('up')}
+        disabled={isSubmitting}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors',
+          rating === 'up'
+            ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+            : 'border-border/40 bg-card text-muted-foreground hover:bg-muted/80 hover:text-foreground',
+        )}
+        title="Helpful answer"
+      >
+        <ThumbsUp className="size-3" />
+      </button>
+      <button
+        onClick={() => handleFeedback('down')}
+        disabled={isSubmitting}
+        className={cn(
+          'inline-flex items-center gap-1 rounded-md border px-2 py-1 text-[11px] transition-colors',
+          rating === 'down'
+            ? 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+            : 'border-border/40 bg-card text-muted-foreground hover:bg-muted/80 hover:text-foreground',
+        )}
+        title="Not helpful"
+      >
+        <ThumbsDown className="size-3" />
+      </button>
+    </div>
+  );
 }
 
 function CopyAsPromptButton({
@@ -395,9 +453,10 @@ export function ChatMessage({ message }: ChatMessageProps) {
           </div>
         )}
 
-        {/* Copy as AI prompt */}
-        {!isUser && (
+        {/* Feedback + Copy as AI prompt */}
+        {!isUser && message.content && (
           <div className="mt-1.5 flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <FeedbackButtons messageId={message.id} />
             <CopyAsPromptButton
               content={message.content}
               sources={message.sources}

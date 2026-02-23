@@ -23,6 +23,7 @@ import { LlmsTxtModule } from './modules/llms-txt/llms-txt.module';
 import { ExportModule } from './modules/export/export.module';
 import { WidgetModule } from './modules/widget/widget.module';
 import { ChangelogModule } from './modules/changelog/changelog.module';
+import { FeedbackModule } from './modules/feedback/feedback.module';
 
 @Module({
   imports: [
@@ -97,6 +98,9 @@ import { ChangelogModule } from './modules/changelog/changelog.module';
 
     // ── Phase 4: Enhanced Docs & Developer Experience ──
     ChangelogModule,
+
+    // ── Phase 6: Quality, Feedback & Analytics ──
+    FeedbackModule,
   ],
   controllers: [AppController],
   providers: [AppService],
