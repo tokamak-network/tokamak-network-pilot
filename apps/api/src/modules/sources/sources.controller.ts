@@ -12,6 +12,7 @@ import {
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { SourcesService } from './sources.service';
 import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
+import { CrawlWebsiteDto } from './dto/crawl-website.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('sources')
@@ -20,6 +21,17 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 @Controller('sources')
 export class SourcesController {
   constructor(private readonly sourcesService: SourcesService) {}
+
+  @Post('crawl')
+  @ApiOperation({
+    summary: 'Crawl a website and add it as a knowledge source',
+    description:
+      'Submits a URL for crawling. Creates a website source and enqueues a background job to fetch pages, extract text, and index into the RAG pipeline. Returns the new source and job ID.',
+  })
+  @ApiBody({ type: CrawlWebsiteDto })
+  async crawlWebsite(@Body() dto: CrawlWebsiteDto) {
+    return this.sourcesService.crawlWebsite(dto);
+  }
 
   @Get()
   @ApiOperation({ summary: 'List all registered knowledge sources' })

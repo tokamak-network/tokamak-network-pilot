@@ -41,6 +41,7 @@ tokamak-network-pilot/
   - [Developer Guide](docs/DEVELOPER_GUIDE.md) — Auth, Public API vs internal, architecture
   - [Examples](docs/EXAMPLES.md) — SDK and cURL examples (ask, stream, search, sources, content)
   - [Public API Reference](docs/API_REFERENCE_PUBLIC.md) — Endpoints and scopes
+  - [Website crawl](docs/WEBSITE_CRAWL.md) — Add website URLs as knowledge sources (crawl + ingest)
   - [MCP Server](docs/MCP.md) — Use from Cursor / Claude Desktop
 - **[packages/sdk/README.md](packages/sdk/README.md)** — TypeScript SDK install, config, and methods
 - **[examples/](examples/)** — Runnable Node scripts (health, ask, stream, search, sources/content). Run with `TOKAMAK_PILOT_API_URL` and `TOKAMAK_PILOT_API_KEY` set.
@@ -98,6 +99,7 @@ The system can ingest knowledge from multiple source types:
 | ---------------- | ---------------------------------------- | ---------- |
 | GitHub Repos     | Code, docs, issues, PRs from repos       | Done       |
 | GitHub Org       | All repos in a GitHub organization        | Done       |
+| **Website crawl**| Crawl a URL (single or multi-page, same-origin) | Done   |
 | Documentation    | External documentation URLs               | Planned    |
 | File Uploads     | PDF, Markdown, TXT, DOCX, CSV file uploads | Done       |
 | Custom / Webhook | Custom API-based sources                  | Planned    |
@@ -108,9 +110,10 @@ The system can ingest knowledge from multiple source types:
 | ------ | --------------------------- | ------------------------------------ | ------ |
 | POST   | `/api/v1/ask`               | Ask a question (RAG pipeline)        | —      |
 | GET    | `/api/v1/ask/search`        | Semantic search                      | —      |
-| GET    | `/api/v1/sources`           | List knowledge sources               | —      |
-| POST   | `/api/v1/sources`           | Add a knowledge source               | —      |
-| POST   | `/api/v1/sources/:id/sync`  | Trigger re-indexing                  | —      |
+| GET    | `/api/v1/sources`           | List knowledge sources               | JWT    |
+| POST   | `/api/v1/sources`           | Add a knowledge source               | JWT    |
+| POST   | `/api/v1/sources/crawl`     | Crawl a website URL and add as source | JWT  |
+| POST   | `/api/v1/sources/:id/sync`  | Trigger re-indexing                  | JWT    |
 | GET    | `/api/v1/content`           | List curated content entries         | —      |
 | POST   | `/api/v1/content`           | Create content entry                 | JWT    |
 | PUT    | `/api/v1/content/:id`       | Update content entry                 | JWT    |

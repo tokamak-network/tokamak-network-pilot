@@ -13,6 +13,7 @@ export type SourceType =
   | 'github_org'
   | 'documentation'
   | 'file_upload'
+  | 'website'
   | 'notion'
   | 'custom';
 

@@ -2,15 +2,9 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Octokit } from '@octokit/rest';
 import { throttling } from '@octokit/plugin-throttling';
+import type { RawDocument } from '../ingestion/ingestion.types';
 
-/** A raw document fetched from GitHub before chunking. */
-export interface RawDocument {
-  title: string;
-  content: string;
-  contentType: string;
-  url: string;
-  metadata: Record<string, unknown>;
-}
+export type { RawDocument };
 
 /** Repo metadata from the GitHub API. */
 export interface RepoMeta {

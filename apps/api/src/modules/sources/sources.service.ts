@@ -10,6 +10,7 @@ import { LlmService } from '../llm/llm.service';
 import { INGESTION_QUEUE } from '../ingestion/ingestion.processor';
 import type { IngestionJobData } from '../ingestion/ingestion.processor';
 import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
+import type { CrawlWebsiteDto } from './dto/crawl-website.dto';
 
 @Injectable()
 export class SourcesService {
@@ -315,6 +316,48 @@ ${sampleContent}`,
 
     this.logger.log(`Source "${saved.name}" created (id=${saved.id}), ingestion job enqueued`);
     return saved;
+  }
+
+  /**
+   * Create a website source from a URL and enqueue crawl + ingestion.
+   * Convenience endpoint for "crawl this URL" without manually setting type/config.
+   */
+  async crawlWebsite(dto: CrawlWebsiteDto) {
+    const name =
+      dto.name ?? new URL(dto.url).hostname.replace(/^www\./, '');
+    const crawlOptions: Record<string, unknown> = {};
+    if (dto.maxPages != null) crawlOptions.maxPages = dto.maxPages;
+    if (dto.maxDepth != null) crawlOptions.maxDepth = dto.maxDepth;
+    if (dto.timeout != null) crawlOptions.timeout = dto.timeout;
+    if (dto.delayBetweenRequests != null)
+      crawlOptions.delayBetweenRequests = dto.delayBetweenRequests;
+
+    const source = this.sourceRepo.create({
+      name,
+      type: 'website' as SourceType,
+      config: {
+        url: dto.url,
+        crawlOptions: Object.keys(crawlOptions).length > 0 ? crawlOptions : undefined,
+      },
+      status: 'syncing',
+    });
+
+    const saved = await this.sourceRepo.save(source);
+
+    const job = await this.ingestionQueue.add('ingest', {
+      sourceId: saved.id,
+      action: 'ingest',
+    });
+
+    this.logger.log(
+      `Website source "${saved.name}" created (id=${saved.id}), crawl+ingest job ${job.id} enqueued`,
+    );
+
+    return {
+      source: saved,
+      jobId: job.id,
+      message: `Crawl and ingestion queued for ${dto.url}. Source status will update when the job completes.`,
+    };
   }
 
   async update(id: string, dto: UpdateSourceDto) {
