@@ -35,6 +35,16 @@ tokamak-network-pilot/
 | Monorepo      | pnpm workspaces + Turborepo             |
 | SDK           | `@tokamak-pilot/sdk` (TypeScript)       |
 
+## Documentation & Examples
+
+- **[docs/](docs/)** — Developer documentation:
+  - [Developer Guide](docs/DEVELOPER_GUIDE.md) — Auth, Public API vs internal, architecture
+  - [Examples](docs/EXAMPLES.md) — SDK and cURL examples (ask, stream, search, sources, content)
+  - [Public API Reference](docs/API_REFERENCE_PUBLIC.md) — Endpoints and scopes
+  - [MCP Server](docs/MCP.md) — Use from Cursor / Claude Desktop
+- **[packages/sdk/README.md](packages/sdk/README.md)** — TypeScript SDK install, config, and methods
+- **[examples/](examples/)** — Runnable Node scripts (health, ask, stream, search, sources/content). Run with `TOKAMAK_PILOT_API_URL` and `TOKAMAK_PILOT_API_KEY` set.
+
 ## Quick Start
 
 ### Prerequisites
