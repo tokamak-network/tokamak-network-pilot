@@ -12,16 +12,16 @@ export class CreateSourceDto {
 
   @ApiProperty({
     description: 'Type of the knowledge source',
-    enum: ['github_repo', 'github_org', 'documentation', 'file_upload', 'notion', 'custom'],
+    enum: ['github_repo', 'github_org', 'documentation', 'file_upload', 'website', 'notion', 'custom'],
     example: 'github_repo',
   })
   @IsString()
-  @IsIn(['github_repo', 'github_org', 'documentation', 'file_upload', 'notion', 'custom'])
+  @IsIn(['github_repo', 'github_org', 'documentation', 'file_upload', 'website', 'notion', 'custom'])
   type!: string;
 
   @ApiProperty({
     description:
-      'Configuration object. For github_repo: { owner, repo }. For github_org: { org }.',
+      'Configuration object. For github_repo: { owner, repo }. For github_org: { org }. For website: { url, crawlOptions? }.',
     example: { owner: 'tokamak-network', repo: 'tokamak-network-pilot' },
   })
   @IsObject()

@@ -79,6 +79,7 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
   github_org: Github,
   documentation: Globe,
   file_upload: Upload,
+  website: Globe,
   notion: BookOpen,
   custom: Database,
 };

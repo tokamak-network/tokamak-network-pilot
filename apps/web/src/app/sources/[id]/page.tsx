@@ -48,6 +48,7 @@ const typeIcons: Record<string, React.ElementType> = {
   github_org: Github,
   documentation: Globe,
   file_upload: Upload,
+  website: Globe,
   notion: BookOpen,
   custom: Database,
 };
@@ -60,6 +61,7 @@ const contentTypeIcons: Record<string, React.ElementType> = {
   code: Code2,
   wiki: BookOpen,
   comment: FileText,
+  html: Globe,
   other: Database,
 };
 

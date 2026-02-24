@@ -56,6 +56,7 @@ const sourceTypeIcons: Record<string, React.ElementType> = {
   github_org: Github,
   documentation: Globe,
   file_upload: Upload,
+  website: Globe,
   notion: BookOpen,
   custom: Database,
 };
@@ -75,6 +76,7 @@ const contentTypeIcons: Record<string, React.ElementType> = {
   pull_request: GitPullRequest,
   wiki: BookOpen,
   metadata: BarChart3,
+  html: Globe,
   other: Database,
 };
 

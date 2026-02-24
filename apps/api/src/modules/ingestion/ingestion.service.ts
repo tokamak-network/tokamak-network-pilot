@@ -3,7 +3,9 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Source } from '../../entities/source.entity';
 import { Document, ContentType } from '../../entities/document.entity';
-import { GitHubService, RawDocument } from '../github/github.service';
+import type { RawDocument } from './ingestion.types';
+import { GitHubService } from '../github/github.service';
+import { CrawlerService } from '../crawler/crawler.service';
 import { ChunkerService } from './chunker.service';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { VectorService } from '../vector/vector.service';
@@ -20,6 +22,7 @@ export class IngestionService {
     @InjectRepository(Document)
     private readonly documentRepo: Repository<Document>,
     private readonly github: GitHubService,
+    private readonly crawler: CrawlerService,
     private readonly chunker: ChunkerService,
     private readonly embedding: EmbeddingService,
     private readonly vector: VectorService,
@@ -220,6 +223,23 @@ export class IngestionService {
           }
         }
         return { rawDocs: allDocs, breakdown, repoMeta: null };
+      }
+
+      case 'website': {
+        const { url, crawlOptions } = source.config as {
+          url: string;
+          crawlOptions?: import('../crawler/crawler.types').CrawlOptions;
+        };
+        if (!url) {
+          this.logger.warn('Website source missing config.url');
+          return { rawDocs: [], breakdown: {}, repoMeta: null };
+        }
+        const { documents } = await this.crawler.crawlWebsite(url, crawlOptions ?? {});
+        const breakdown: Record<string, number> = {};
+        for (const d of documents) {
+          breakdown[d.contentType] = (breakdown[d.contentType] || 0) + 1;
+        }
+        return { rawDocs: documents, breakdown, repoMeta: null };
       }
 
       default:
