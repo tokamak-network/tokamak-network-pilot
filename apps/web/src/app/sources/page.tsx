@@ -38,6 +38,7 @@ import {
   type IngestionStatusResponse,
   type IngestionRepoStatus,
 } from '@/lib/api';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -122,6 +123,7 @@ type AddSourceTab = 'github' | 'upload';
 export default function SourcesPage() {
   const [, setSources] = useAtom(sourcesAtom);
   const [loading, setLoading] = useAtom(sourcesLoadingAtom);
+  const { toast } = useToast();
   const [status, setStatus] = useState<IngestionStatusResponse | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addTab, setAddTab] = useState<AddSourceTab>('github');
@@ -182,7 +184,7 @@ export default function SourcesPage() {
     try {
       const match = newRepoUrl.match(/(?:github\.com\/)?([^\/\s]+)\/([^\/\s]+)/);
       if (!match) {
-        alert('Please enter a valid GitHub repo URL or owner/repo format');
+        toast('Please enter a valid GitHub repo URL or owner/repo format');
         setAdding(false);
         return;
       }
@@ -198,7 +200,7 @@ export default function SourcesPage() {
       setShowAddForm(false);
       loadStatus();
     } catch (err: any) {
-      alert(`Failed to add source: ${err.message}`);
+      toast(`Failed to add source: ${err.message}`);
     } finally {
       setAdding(false);
     }

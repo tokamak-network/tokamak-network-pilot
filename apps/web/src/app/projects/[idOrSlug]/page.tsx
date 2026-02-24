@@ -57,6 +57,8 @@ import {
   type ProjectInvitationResponse,
 } from '@/lib/api';
 import { userAtom } from '@/store/auth';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -92,6 +94,8 @@ export default function ProjectDetailPage() {
   const router = useRouter();
   const idOrSlug = params.idOrSlug as string;
   const [user] = useAtom(userAtom);
+  const confirm = useConfirm();
+  const { toast } = useToast();
 
   const [dashboard, setDashboard] = useState<ProjectDashboardResponse | null>(null);
   const [allSources, setAllSources] = useState<SourceResponse[]>([]);
@@ -170,7 +174,7 @@ export default function ProjectDetailPage() {
       await addProjectSource(project.id, sourceId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -180,7 +184,7 @@ export default function ProjectDetailPage() {
       await removeProjectSource(project.id, sourceId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -194,7 +198,7 @@ export default function ProjectDetailPage() {
       setShowAddMember(false);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     } finally {
       setAddingMember(false);
     }
@@ -209,18 +213,24 @@ export default function ProjectDetailPage() {
       await updateProjectMember(project.id, userId, role);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
   const handleRemoveMember = async (userId: string) => {
     if (!project) return;
-    if (!confirm('Remove this member from the project?')) return;
+    const confirmed = await confirm({
+      title: 'Remove member',
+      description: 'Are you sure you want to remove this member from the project?',
+      confirmLabel: 'Remove',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await removeProjectMember(project.id, userId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -231,7 +241,7 @@ export default function ProjectDetailPage() {
       await generateProjectSummary(project.id);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     } finally {
       setGeneratingSummary(false);
     }
@@ -245,7 +255,7 @@ export default function ProjectDetailPage() {
       setEditingSummary(false);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     } finally {
       setSavingSummary(false);
     }
@@ -253,12 +263,18 @@ export default function ProjectDetailPage() {
 
   const handleTransferOwnership = async (targetUserId: string) => {
     if (!project) return;
-    if (!confirm('Transfer ownership of this project? You will become a contributor.')) return;
+    const confirmed = await confirm({
+      title: 'Transfer ownership',
+      description: 'Transfer ownership of this project? You will become a contributor.',
+      confirmLabel: 'Transfer',
+      variant: 'warning',
+    });
+    if (!confirmed) return;
     try {
       await transferProjectOwnership(project.id, targetUserId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -268,7 +284,7 @@ export default function ProjectDetailPage() {
       await updateProject(project.id, { showOnLandingPage: !project.showOnLandingPage });
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -282,7 +298,7 @@ export default function ProjectDetailPage() {
       setShowInviteForm(false);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     } finally {
       setSendingInvite(false);
     }
@@ -290,12 +306,18 @@ export default function ProjectDetailPage() {
 
   const handleCancelInvitation = async (invitationId: string) => {
     if (!project) return;
-    if (!confirm('Cancel this invitation?')) return;
+    const confirmed = await confirm({
+      title: 'Cancel invitation',
+      description: 'Are you sure you want to cancel this invitation?',
+      confirmLabel: 'Cancel invitation',
+      variant: 'warning',
+    });
+    if (!confirmed) return;
     try {
       await cancelProjectInvitation(project.id, invitationId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 
@@ -305,7 +327,7 @@ export default function ProjectDetailPage() {
       await resendProjectInvitation(project.id, invitationId);
       await loadData();
     } catch (err: any) {
-      alert(err.message);
+      toast(err.message);
     }
   };
 

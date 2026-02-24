@@ -25,6 +25,8 @@ import {
   deleteContent,
   type ContentEntryResponse,
 } from '@/lib/api';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -99,6 +101,8 @@ function ExportButton({ entryId, title }: { entryId: string; title: string }) {
 
 export default function ContentPage() {
   const [user] = useAtom(userAtom);
+  const confirmDialog = useConfirm();
+  const { toast } = useToast();
   const [entries, setEntries] = useState<ContentEntryResponse[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -188,12 +192,18 @@ export default function ContentPage() {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this entry?')) return;
+    const confirmed = await confirmDialog({
+      title: 'Delete entry',
+      description: 'Are you sure you want to delete this content entry? This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await deleteContent(id);
       loadEntries();
     } catch (err: any) {
-      alert(err.message || 'Failed to delete');
+      toast(err.message || 'Failed to delete');
     }
   };
 

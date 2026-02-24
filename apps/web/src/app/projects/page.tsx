@@ -32,6 +32,8 @@ import {
 } from '@/lib/api';
 import { projectsAtom } from '@/store';
 import { userAtom } from '@/store/auth';
+import { useConfirm } from '@/components/ui/confirm-dialog';
+import { useToast } from '@/components/ui/toast';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -46,6 +48,8 @@ export default function ProjectsPage() {
   const router = useRouter();
   const [projects, setProjects] = useAtom(projectsAtom);
   const [user] = useAtom(userAtom);
+  const confirmDialog = useConfirm();
+  const { toast } = useToast();
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showCreate, setShowCreate] = useState(false);
@@ -103,7 +107,7 @@ export default function ProjectsPage() {
       setNewDesc('');
       router.push(`/projects/${project.slug}`);
     } catch (err: any) {
-      alert(err.message || 'Failed to create project');
+      toast(err.message || 'Failed to create project');
     } finally {
       setCreating(false);
     }
@@ -112,12 +116,18 @@ export default function ProjectsPage() {
   const handleDelete = async (id: string, name: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (!confirm(`Delete project "${name}"? This cannot be undone.`)) return;
+    const confirmed = await confirmDialog({
+      title: `Delete "${name}"`,
+      description: 'This project and all its data will be permanently deleted. This cannot be undone.',
+      confirmLabel: 'Delete',
+      variant: 'danger',
+    });
+    if (!confirmed) return;
     try {
       await deleteProject(id);
       setProjects((prev) => prev.filter((p) => p.id !== id));
     } catch (err: any) {
-      alert(err.message || 'Failed to delete project');
+      toast(err.message || 'Failed to delete project');
     }
   };
 
@@ -145,7 +155,7 @@ export default function ProjectsPage() {
       setRepoSearch('');
       router.push(`/projects/${project.slug}`);
     } catch (err: any) {
-      alert(err.message || 'Failed to create project from repo');
+      toast(err.message || 'Failed to create project from repo');
     } finally {
       setCreatingFromRepo(null);
     }
