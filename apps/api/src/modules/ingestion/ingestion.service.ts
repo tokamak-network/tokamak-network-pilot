@@ -106,6 +106,11 @@ export class IngestionService {
         // Generate embeddings
         const embeddings = await this.embedding.embedBatch(texts);
 
+        // Build Qdrant-specific metadata for recency and filtering
+        const ingestedAtUnix = Math.floor(Date.now() / 1000);
+        const isArchived = !!(repoMeta?.isArchived);
+        const sourceStatus = 'active';
+
         // Upsert to Qdrant
         const pointIds = await this.vector.upsert(
           batch.map((chunk, j) => ({
@@ -117,6 +122,9 @@ export class IngestionService {
               contentType: chunk.metadata['contentType'] as string,
               url: chunk.metadata['url'] as string,
               chunkIndex: chunk.chunkIndex,
+              ingestedAt: ingestedAtUnix,
+              isArchived,
+              sourceStatus,
             },
           })),
         );
@@ -285,6 +293,8 @@ export class IngestionService {
 
         const embeddings = await this.embedding.embedBatch(texts);
 
+        const ingestedAtUnix = Math.floor(Date.now() / 1000);
+
         const pointIds = await this.vector.upsert(
           batch.map((chunk, j) => ({
             vector: embeddings[j],
@@ -295,6 +305,9 @@ export class IngestionService {
               contentType: chunk.metadata['contentType'] as string,
               url: chunk.metadata['url'] as string,
               chunkIndex: chunk.chunkIndex,
+              ingestedAt: ingestedAtUnix,
+              isArchived: false,
+              sourceStatus: 'active',
             },
           })),
         );
