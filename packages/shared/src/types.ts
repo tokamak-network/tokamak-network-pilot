@@ -348,6 +348,47 @@ export interface AddProjectSourceRequest {
   sourceId: string;
 }
 
+// ---- Invitation Types ----
+
+export type InvitationStatus = 'pending' | 'accepted' | 'declined' | 'expired';
+
+export interface InviteProjectMemberRequest {
+  email: string;
+  role?: ProjectRole;
+}
+
+export interface ProjectInvitationInfo {
+  id: string;
+  email: string;
+  role: ProjectRole;
+  status: InvitationStatus;
+  expiresAt: string;
+  createdAt: string;
+  invitedBy: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+}
+
+export interface ProjectInvitationDetail extends ProjectInvitationInfo {
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    logoUrl?: string;
+  };
+}
+
+export interface AcceptInvitationResponse {
+  message: string;
+  projectId: string;
+  projectSlug: string;
+  projectName: string;
+  role?: ProjectRole;
+}
+
 export interface ProjectPublicInfo {
   id: string;
   name: string;

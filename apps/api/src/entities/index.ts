@@ -17,3 +17,5 @@ export { Project } from './project.entity';
 export { ProjectMember } from './project-member.entity';
 export type { ProjectRole } from './project-member.entity';
 export { ProjectSource } from './project-source.entity';
+export { ProjectInvitation } from './project-invitation.entity';
+export type { InvitationStatus } from './project-invitation.entity';

@@ -30,6 +30,9 @@ import {
   Send,
   TreePine,
   Megaphone,
+  Mail,
+  RefreshCw,
+  Clock,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -44,9 +47,14 @@ import {
   fetchSources,
   fetchMyProjectRole,
   transferProjectOwnership,
+  inviteProjectMember,
+  fetchProjectInvitations,
+  cancelProjectInvitation,
+  resendProjectInvitation,
   type ProjectDetailResponse,
   type ProjectDashboardResponse,
   type SourceResponse,
+  type ProjectInvitationResponse,
 } from '@/lib/api';
 import { userAtom } from '@/store/auth';
 import { Button } from '@/components/ui/button';
@@ -102,6 +110,11 @@ export default function ProjectDetailPage() {
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat'>('overview');
+  const [invitations, setInvitations] = useState<ProjectInvitationResponse[]>([]);
+  const [showInviteForm, setShowInviteForm] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
+  const [inviteRole, setInviteRole] = useState<'lead' | 'contributor' | 'viewer'>('contributor');
+  const [sendingInvite, setSendingInvite] = useState(false);
 
   const loadData = useCallback(async () => {
     try {
@@ -117,6 +130,12 @@ export default function ProjectDetailPage() {
             setMyRole(role);
           } catch {
             setMyRole(null);
+          }
+          try {
+            const invs = await fetchProjectInvitations(dashData.value.project.id);
+            setInvitations(invs);
+          } catch {
+            setInvitations([]);
           }
         }
       } else {
@@ -247,6 +266,43 @@ export default function ProjectDetailPage() {
     if (!project) return;
     try {
       await updateProject(project.id, { showOnLandingPage: !project.showOnLandingPage });
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleSendInvitation = async () => {
+    if (!project || !inviteEmail.trim()) return;
+    setSendingInvite(true);
+    try {
+      await inviteProjectMember(project.id, inviteEmail.trim(), inviteRole);
+      setInviteEmail('');
+      setInviteRole('contributor');
+      setShowInviteForm(false);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setSendingInvite(false);
+    }
+  };
+
+  const handleCancelInvitation = async (invitationId: string) => {
+    if (!project) return;
+    if (!confirm('Cancel this invitation?')) return;
+    try {
+      await cancelProjectInvitation(project.id, invitationId);
+      await loadData();
+    } catch (err: any) {
+      alert(err.message);
+    }
+  };
+
+  const handleResendInvitation = async (invitationId: string) => {
+    if (!project) return;
+    try {
+      await resendProjectInvitation(project.id, invitationId);
       await loadData();
     } catch (err: any) {
       alert(err.message);
@@ -450,6 +506,17 @@ export default function ProjectDetailPage() {
           onUpdateMemberRole={handleUpdateMemberRole}
           onRemoveMember={handleRemoveMember}
           onTransferOwnership={handleTransferOwnership}
+          invitations={invitations}
+          showInviteForm={showInviteForm}
+          inviteEmail={inviteEmail}
+          inviteRole={inviteRole}
+          sendingInvite={sendingInvite}
+          onToggleInviteForm={() => setShowInviteForm(!showInviteForm)}
+          onInviteEmailChange={setInviteEmail}
+          onInviteRoleChange={setInviteRole}
+          onSendInvitation={handleSendInvitation}
+          onCancelInvitation={handleCancelInvitation}
+          onResendInvitation={handleResendInvitation}
         />
       )}
 
@@ -887,6 +954,17 @@ function TeamTab({
   onUpdateMemberRole,
   onRemoveMember,
   onTransferOwnership,
+  invitations,
+  showInviteForm,
+  inviteEmail,
+  inviteRole,
+  sendingInvite,
+  onToggleInviteForm,
+  onInviteEmailChange,
+  onInviteRoleChange,
+  onSendInvitation,
+  onCancelInvitation,
+  onResendInvitation,
 }: {
   project: ProjectDetailResponse;
   user: any;
@@ -902,21 +980,110 @@ function TeamTab({
   onUpdateMemberRole: (userId: string, role: 'lead' | 'contributor' | 'viewer') => void;
   onRemoveMember: (userId: string) => void;
   onTransferOwnership: (userId: string) => void;
+  invitations: ProjectInvitationResponse[];
+  showInviteForm: boolean;
+  inviteEmail: string;
+  inviteRole: 'lead' | 'contributor' | 'viewer';
+  sendingInvite: boolean;
+  onToggleInviteForm: () => void;
+  onInviteEmailChange: (v: string) => void;
+  onInviteRoleChange: (v: 'lead' | 'contributor' | 'viewer') => void;
+  onSendInvitation: () => void;
+  onCancelInvitation: (id: string) => void;
+  onResendInvitation: (id: string) => void;
 }) {
+  const pendingInvitations = invitations.filter((inv) => inv.status === 'pending');
+
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {isLead && (
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-2">
+          <Button variant="outline" size="sm" onClick={onToggleInviteForm}>
+            <Mail className="size-4" />
+            Invite via Email
+          </Button>
           <Button variant="outline" size="sm" onClick={onToggleAddMember}>
             <UserPlus className="size-4" />
-            Add Member
+            Add Existing Member
           </Button>
         </div>
       )}
 
+      {/* Invite via Email Form */}
+      {showInviteForm && (
+        <Card className="border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <Mail className="size-4" />
+              Invite via Email
+            </CardTitle>
+            <CardDescription>
+              Send an invitation email. Works even if they don't have an account yet.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex gap-3">
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-1 block">Email</label>
+                <input
+                  value={inviteEmail}
+                  onChange={(e) => onInviteEmailChange(e.target.value)}
+                  placeholder="alice@example.com"
+                  type="email"
+                  className="w-full h-9 px-3 text-sm rounded-md border bg-background placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                  onKeyDown={(e) => e.key === 'Enter' && onSendInvitation()}
+                  autoFocus
+                />
+              </div>
+              <div className="w-36">
+                <label className="text-sm font-medium mb-1 block">Role</label>
+                <select
+                  value={inviteRole}
+                  onChange={(e) =>
+                    onInviteRoleChange(e.target.value as 'lead' | 'contributor' | 'viewer')
+                  }
+                  className="w-full h-9 px-2 text-sm rounded-md border bg-background focus:outline-none focus:ring-1 focus:ring-ring"
+                >
+                  <option value="lead">Lead</option>
+                  <option value="contributor">Contributor</option>
+                  <option value="viewer">Viewer</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={onToggleInviteForm}>
+                Cancel
+              </Button>
+              <Button
+                size="sm"
+                onClick={onSendInvitation}
+                disabled={!inviteEmail.trim() || sendingInvite}
+              >
+                {sendingInvite ? (
+                  <Loader2 className="size-4 animate-spin" />
+                ) : (
+                  <Send className="size-4" />
+                )}
+                Send Invitation
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Add Existing Member Form (direct add — for users already signed in) */}
       {showAddMember && (
         <Card className="border-primary/20">
-          <CardContent className="p-4 space-y-3">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <UserPlus className="size-4" />
+              Add Existing Member
+            </CardTitle>
+            <CardDescription>
+              Directly add someone who already has an account.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
             <div className="flex gap-3">
               <div className="flex-1">
                 <label className="text-sm font-medium mb-1 block">Email</label>
@@ -964,9 +1131,67 @@ function TeamTab({
         </Card>
       )}
 
-      {project.members.length > 0 ? (
+      {/* Pending Invitations */}
+      {pendingInvitations.length > 0 && (
         <div className="space-y-2">
-          {project.members.map((member) => (
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Clock className="size-3.5" />
+            Pending Invitations ({pendingInvitations.length})
+          </h3>
+          {pendingInvitations.map((inv) => (
+            <div
+              key={inv.id}
+              className="flex items-center gap-3 px-4 py-3 rounded-lg border border-dashed border-primary/30 bg-primary/[0.02]"
+            >
+              <div className="size-8 rounded-full bg-primary/10 flex items-center justify-center text-xs font-medium text-primary">
+                <Mail className="size-3.5" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium">{inv.email}</p>
+                <p className="text-xs text-muted-foreground">
+                  Invited by {inv.invitedBy.name || inv.invitedBy.email}
+                  {' · '}
+                  Expires {new Date(inv.expiresAt).toLocaleDateString()}
+                </p>
+              </div>
+              <span
+                className={`text-xs px-2 py-1 rounded-full border font-medium ${roleColors[inv.role] || ''}`}
+              >
+                {inv.role}
+              </span>
+              {isLead && (
+                <>
+                  <button
+                    onClick={() => onResendInvitation(inv.id)}
+                    className="p-1 rounded hover:bg-primary/10 hover:text-primary transition-colors"
+                    title="Resend invitation email"
+                  >
+                    <RefreshCw className="size-4" />
+                  </button>
+                  <button
+                    onClick={() => onCancelInvitation(inv.id)}
+                    className="p-1 rounded hover:bg-destructive/10 hover:text-destructive transition-colors"
+                    title="Cancel invitation"
+                  >
+                    <X className="size-4" />
+                  </button>
+                </>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Current Members */}
+      <div className="space-y-2">
+        {project.members.length > 0 && (
+          <h3 className="text-sm font-medium text-muted-foreground flex items-center gap-1.5">
+            <Users className="size-3.5" />
+            Members ({project.members.length})
+          </h3>
+        )}
+        {project.members.length > 0 ? (
+          project.members.map((member) => (
             <div
               key={member.id}
               className="flex items-center gap-3 px-4 py-3 rounded-lg border"
@@ -1022,18 +1247,18 @@ function TeamTab({
                 </button>
               )}
             </div>
-          ))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="py-8 text-center">
-            <Users className="size-8 text-muted-foreground mx-auto mb-2" />
-            <p className="text-sm text-muted-foreground">
-              No team members yet. Invite people to collaborate.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+          ))
+        ) : (
+          <Card>
+            <CardContent className="py-8 text-center">
+              <Users className="size-8 text-muted-foreground mx-auto mb-2" />
+              <p className="text-sm text-muted-foreground">
+                No team members yet. Invite people to collaborate.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }

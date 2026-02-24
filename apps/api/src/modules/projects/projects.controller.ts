@@ -24,6 +24,7 @@ import {
   UpdateProjectMemberDto,
   AddProjectSourceDto,
   CreateProjectFromSourceDto,
+  InviteProjectMemberDto,
 } from './dto/project.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
@@ -201,6 +202,78 @@ export class ProjectsController {
     @Request() req: any,
   ) {
     return this.projectsService.removeMember(id, userId, req.user.sub);
+  }
+
+  // ─── Invitations ─────────────────────────────────────────
+
+  @Post(':id/invitations')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Invite a user to the project via email (requires lead role)',
+    description:
+      'Sends an invitation email to the specified address. Works even if the user does not have an account yet.',
+  })
+  @ApiBody({ type: InviteProjectMemberDto })
+  async inviteMember(
+    @Param('id') id: string,
+    @Body() dto: InviteProjectMemberDto,
+    @Request() req: any,
+  ) {
+    return this.projectsService.inviteMember(id, dto, req.user.sub);
+  }
+
+  @Get(':id/invitations')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'List all invitations for a project' })
+  async listInvitations(@Param('id') id: string) {
+    return this.projectsService.listInvitations(id);
+  }
+
+  @Get('invitations/by-token/:token')
+  @ApiOperation({
+    summary: 'Get invitation details by token (public)',
+    description: 'Returns invitation details without requiring authentication, so the accept page can show project info.',
+  })
+  async getInvitationByToken(@Param('token') token: string) {
+    return this.projectsService.getInvitationByToken(token);
+  }
+
+  @Post('invitations/:token/accept')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Accept an invitation',
+    description:
+      'Accepts the invitation and adds the current user to the project. User must be authenticated.',
+  })
+  async acceptInvitation(@Param('token') token: string, @Request() req: any) {
+    return this.projectsService.acceptInvitation(token, req.user.sub);
+  }
+
+  @Delete(':id/invitations/:invitationId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Cancel a pending invitation (requires lead role)' })
+  async cancelInvitation(
+    @Param('id') id: string,
+    @Param('invitationId') invitationId: string,
+    @Request() req: any,
+  ) {
+    return this.projectsService.cancelInvitation(id, invitationId, req.user.sub);
+  }
+
+  @Post(':id/invitations/:invitationId/resend')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({ summary: 'Resend an invitation email (requires lead role)' })
+  async resendInvitation(
+    @Param('id') id: string,
+    @Param('invitationId') invitationId: string,
+    @Request() req: any,
+  ) {
+    return this.projectsService.resendInvitation(id, invitationId, req.user.sub);
   }
 
   // ─── AI Summary ───────────────────────────────────────────

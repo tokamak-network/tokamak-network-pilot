@@ -185,3 +185,22 @@ export class CreateProjectFromSourceDto {
   @IsNotEmpty()
   sourceId!: string;
 }
+
+export class InviteProjectMemberDto {
+  @ApiProperty({
+    description: 'Email of the person to invite',
+    example: 'alice@tokamak.network',
+  })
+  @IsEmail()
+  @IsNotEmpty()
+  email!: string;
+
+  @ApiPropertyOptional({
+    description: 'Role to assign when they accept',
+    enum: ['lead', 'contributor', 'viewer'],
+    default: 'contributor',
+  })
+  @IsOptional()
+  @IsIn(['lead', 'contributor', 'viewer'])
+  role?: 'lead' | 'contributor' | 'viewer';
+}

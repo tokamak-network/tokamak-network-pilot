@@ -978,6 +978,110 @@ export async function removeProjectMember(projectId: string, userId: string) {
   );
 }
 
+// ───────────────────── Project Invitations API ─────────────────────
+
+export interface ProjectInvitationResponse {
+  id: string;
+  email: string;
+  role: 'lead' | 'contributor' | 'viewer';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+  invitedBy: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+}
+
+export interface InvitationDetailResponse {
+  id: string;
+  email: string;
+  role: 'lead' | 'contributor' | 'viewer';
+  status: 'pending' | 'accepted' | 'declined' | 'expired';
+  expiresAt: string;
+  createdAt: string;
+  project: {
+    id: string;
+    name: string;
+    slug: string;
+    description?: string;
+    logoUrl?: string;
+  };
+  invitedBy: {
+    id: string;
+    email: string;
+    name?: string;
+  };
+}
+
+export interface AcceptInvitationResponse {
+  message: string;
+  projectId: string;
+  projectSlug: string;
+  projectName: string;
+  role?: string;
+}
+
+/** Invite a user to a project via email */
+export async function inviteProjectMember(
+  projectId: string,
+  email: string,
+  role?: 'lead' | 'contributor' | 'viewer',
+) {
+  return apiFetch<ProjectInvitationResponse>(
+    `/projects/${projectId}/invitations`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ email, role }),
+    },
+  );
+}
+
+/** List all invitations for a project */
+export async function fetchProjectInvitations(projectId: string) {
+  return apiFetch<ProjectInvitationResponse[]>(
+    `/projects/${projectId}/invitations`,
+  );
+}
+
+/** Get invitation details by token (no auth required) */
+export async function fetchInvitationByToken(token: string) {
+  return apiFetch<InvitationDetailResponse>(
+    `/projects/invitations/by-token/${token}`,
+  );
+}
+
+/** Accept an invitation (requires auth) */
+export async function acceptInvitation(token: string) {
+  return apiFetch<AcceptInvitationResponse>(
+    `/projects/invitations/${token}/accept`,
+    { method: 'POST' },
+  );
+}
+
+/** Cancel a pending invitation */
+export async function cancelProjectInvitation(
+  projectId: string,
+  invitationId: string,
+) {
+  return apiFetch<{ message: string }>(
+    `/projects/${projectId}/invitations/${invitationId}`,
+    { method: 'DELETE' },
+  );
+}
+
+/** Resend an invitation email */
+export async function resendProjectInvitation(
+  projectId: string,
+  invitationId: string,
+) {
+  return apiFetch<ProjectInvitationResponse & { message: string }>(
+    `/projects/${projectId}/invitations/${invitationId}/resend`,
+    { method: 'POST' },
+  );
+}
+
 /** Generate an AI summary for a project */
 export async function generateProjectSummary(projectId: string) {
   return apiFetch<ProjectSummaryResponse>(`/projects/${projectId}/summary`, {

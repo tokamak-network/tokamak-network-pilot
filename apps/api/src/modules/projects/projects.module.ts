@@ -3,6 +3,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { Project } from '../../entities/project.entity';
 import { ProjectMember } from '../../entities/project-member.entity';
 import { ProjectSource } from '../../entities/project-source.entity';
+import { ProjectInvitation } from '../../entities/project-invitation.entity';
 import { Source } from '../../entities/source.entity';
 import { User } from '../../entities/user.entity';
 import { Document } from '../../entities/document.entity';
@@ -18,6 +19,7 @@ import { GitHubModule } from '../github/github.module';
       Project,
       ProjectMember,
       ProjectSource,
+      ProjectInvitation,
       Source,
       User,
       Document,

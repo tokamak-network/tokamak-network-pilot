@@ -4,16 +4,20 @@ import {
   NotFoundException,
   ConflictException,
   ForbiddenException,
+  BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { randomBytes } from 'crypto';
 import { Project } from '../../entities/project.entity';
 import { ProjectMember, ProjectRole } from '../../entities/project-member.entity';
 import { ProjectSource } from '../../entities/project-source.entity';
+import { ProjectInvitation } from '../../entities/project-invitation.entity';
 import { Source } from '../../entities/source.entity';
 import { User } from '../../entities/user.entity';
 import { Document } from '../../entities/document.entity';
 import { LlmService } from '../llm/llm.service';
+import { EmailService } from '../auth/email.service';
 import {
   CreateProjectDto,
   UpdateProjectDto,
@@ -21,6 +25,7 @@ import {
   UpdateProjectMemberDto,
   AddProjectSourceDto,
   CreateProjectFromSourceDto,
+  InviteProjectMemberDto,
 } from './dto/project.dto';
 import { GitHubService } from '../github/github.service';
 
@@ -35,6 +40,8 @@ export class ProjectsService {
     private readonly memberRepo: Repository<ProjectMember>,
     @InjectRepository(ProjectSource)
     private readonly projectSourceRepo: Repository<ProjectSource>,
+    @InjectRepository(ProjectInvitation)
+    private readonly invitationRepo: Repository<ProjectInvitation>,
     @InjectRepository(Source)
     private readonly sourceRepo: Repository<Source>,
     @InjectRepository(User)
@@ -43,6 +50,7 @@ export class ProjectsService {
     private readonly documentRepo: Repository<Document>,
     private readonly llm: LlmService,
     private readonly github: GitHubService,
+    private readonly emailService: EmailService,
   ) {}
 
   // ─── Project CRUD ─────────────────────────────────────────
@@ -769,6 +777,261 @@ ${sampleContent}`,
         name: newOwnerMember.user.name,
         role: newOwnerMember.role,
       },
+    };
+  }
+
+  // ─── Invitations ─────────────────────────────────────────
+
+  async inviteMember(projectId: string, dto: InviteProjectMemberDto, requesterId: string) {
+    const project = await this.projectRepo.findOneBy({ id: projectId });
+    if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    await this.requireRole(projectId, requesterId, ['lead']);
+
+    const inviter = await this.userRepo.findOneBy({ id: requesterId });
+    if (!inviter) throw new NotFoundException('Inviter not found');
+
+    const existingUser = await this.userRepo.findOneBy({ email: dto.email });
+    if (existingUser) {
+      const existingMember = await this.memberRepo.findOneBy({
+        projectId,
+        userId: existingUser.id,
+      });
+      if (existingMember) {
+        throw new ConflictException('This user is already a member of this project');
+      }
+    }
+
+    const existingInvitation = await this.invitationRepo.findOne({
+      where: { projectId, email: dto.email, status: 'pending' },
+    });
+    if (existingInvitation) {
+      throw new ConflictException('An invitation is already pending for this email');
+    }
+
+    const token = randomBytes(32).toString('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
+
+    const invitation = this.invitationRepo.create({
+      projectId,
+      email: dto.email,
+      role: dto.role || 'contributor',
+      token,
+      status: 'pending',
+      invitedById: requesterId,
+      expiresAt,
+    });
+    await this.invitationRepo.save(invitation);
+
+    await this.emailService.sendProjectInvitation({
+      email: dto.email,
+      projectName: project.name,
+      inviterName: inviter.name || inviter.email,
+      role: invitation.role,
+      token,
+      expiresAt,
+    });
+
+    this.logger.log(
+      `Invitation sent to ${dto.email} for project "${project.name}" by ${inviter.email}`,
+    );
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt,
+      createdAt: invitation.createdAt,
+      invitedBy: {
+        id: inviter.id,
+        email: inviter.email,
+        name: inviter.name,
+      },
+    };
+  }
+
+  async listInvitations(projectId: string) {
+    const project = await this.projectRepo.findOneBy({ id: projectId });
+    if (!project) throw new NotFoundException(`Project ${projectId} not found`);
+
+    const invitations = await this.invitationRepo.find({
+      where: { projectId },
+      relations: ['invitedBy'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return invitations.map((inv) => ({
+      id: inv.id,
+      email: inv.email,
+      role: inv.role,
+      status: inv.status,
+      expiresAt: inv.expiresAt,
+      createdAt: inv.createdAt,
+      invitedBy: {
+        id: inv.invitedBy.id,
+        email: inv.invitedBy.email,
+        name: inv.invitedBy.name,
+      },
+    }));
+  }
+
+  async acceptInvitation(token: string, userId: string) {
+    const invitation = await this.invitationRepo.findOne({
+      where: { token },
+      relations: ['project'],
+    });
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.status !== 'pending') {
+      throw new BadRequestException(`This invitation has already been ${invitation.status}`);
+    }
+
+    if (new Date() > invitation.expiresAt) {
+      invitation.status = 'expired';
+      await this.invitationRepo.save(invitation);
+      throw new BadRequestException('This invitation has expired');
+    }
+
+    const user = await this.userRepo.findOneBy({ id: userId });
+    if (!user) throw new NotFoundException('User not found');
+
+    const existingMember = await this.memberRepo.findOneBy({
+      projectId: invitation.projectId,
+      userId,
+    });
+    if (existingMember) {
+      invitation.status = 'accepted';
+      await this.invitationRepo.save(invitation);
+      return {
+        message: 'You are already a member of this project',
+        projectId: invitation.projectId,
+        projectSlug: invitation.project.slug,
+        projectName: invitation.project.name,
+      };
+    }
+
+    const member = this.memberRepo.create({
+      projectId: invitation.projectId,
+      userId,
+      role: invitation.role,
+    });
+    await this.memberRepo.save(member);
+
+    invitation.status = 'accepted';
+    await this.invitationRepo.save(invitation);
+
+    this.logger.log(
+      `User "${user.email}" accepted invitation to project "${invitation.project.name}" as ${invitation.role}`,
+    );
+
+    return {
+      message: `You have joined "${invitation.project.name}" as a ${invitation.role}`,
+      projectId: invitation.projectId,
+      projectSlug: invitation.project.slug,
+      projectName: invitation.project.name,
+      role: invitation.role,
+    };
+  }
+
+  async getInvitationByToken(token: string) {
+    const invitation = await this.invitationRepo.findOne({
+      where: { token },
+      relations: ['project', 'invitedBy'],
+    });
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt,
+      createdAt: invitation.createdAt,
+      project: {
+        id: invitation.project.id,
+        name: invitation.project.name,
+        slug: invitation.project.slug,
+        description: invitation.project.description,
+        logoUrl: invitation.project.logoUrl,
+      },
+      invitedBy: {
+        id: invitation.invitedBy.id,
+        email: invitation.invitedBy.email,
+        name: invitation.invitedBy.name,
+      },
+    };
+  }
+
+  async cancelInvitation(projectId: string, invitationId: string, requesterId: string) {
+    await this.requireRole(projectId, requesterId, ['lead']);
+
+    const invitation = await this.invitationRepo.findOneBy({
+      id: invitationId,
+      projectId,
+    });
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.status !== 'pending') {
+      throw new BadRequestException(`Cannot cancel an invitation that is already ${invitation.status}`);
+    }
+
+    await this.invitationRepo.remove(invitation);
+
+    this.logger.log(
+      `Invitation ${invitationId} cancelled for project ${projectId} by user ${requesterId}`,
+    );
+
+    return { message: 'Invitation cancelled' };
+  }
+
+  async resendInvitation(projectId: string, invitationId: string, requesterId: string) {
+    await this.requireRole(projectId, requesterId, ['lead']);
+
+    const invitation = await this.invitationRepo.findOne({
+      where: { id: invitationId, projectId },
+      relations: ['project'],
+    });
+    if (!invitation) {
+      throw new NotFoundException('Invitation not found');
+    }
+
+    if (invitation.status !== 'pending') {
+      throw new BadRequestException(`Cannot resend an invitation that is ${invitation.status}`);
+    }
+
+    const inviter = await this.userRepo.findOneBy({ id: requesterId });
+    if (!inviter) throw new NotFoundException('User not found');
+
+    invitation.expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await this.invitationRepo.save(invitation);
+
+    await this.emailService.sendProjectInvitation({
+      email: invitation.email,
+      projectName: invitation.project.name,
+      inviterName: inviter.name || inviter.email,
+      role: invitation.role,
+      token: invitation.token,
+      expiresAt: invitation.expiresAt,
+    });
+
+    this.logger.log(
+      `Invitation resent to ${invitation.email} for project "${invitation.project.name}"`,
+    );
+
+    return {
+      id: invitation.id,
+      email: invitation.email,
+      role: invitation.role,
+      status: invitation.status,
+      expiresAt: invitation.expiresAt,
+      message: 'Invitation resent successfully',
     };
   }
 
