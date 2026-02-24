@@ -17,6 +17,7 @@ export const API_KEY_SCOPES = [
   'search',
   'sources:read',
   'content:read',
+  'projects:read',
 ] as const;
 
 export type ApiKeyScope = (typeof API_KEY_SCOPES)[number];
@@ -46,7 +47,7 @@ export class ApiKey {
   keyPrefix!: string;
 
   /** Permitted scopes */
-  @Column({ type: 'simple-array', default: 'ask,search,sources:read,content:read' })
+  @Column({ type: 'simple-array', default: 'ask,search,sources:read,content:read,projects:read' })
   scopes!: ApiKeyScope[];
 
   /** Tier — defaults to premium for @tokamak.network users */

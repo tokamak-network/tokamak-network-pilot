@@ -17,6 +17,8 @@ export type {
   SourceStatus,
   ContentEntry,
   PaginatedResponse,
+  ProjectInfo,
+  ProjectDetail,
   ApiError,
   ApiKeyScope,
 } from '@tokamak-pilot/shared';

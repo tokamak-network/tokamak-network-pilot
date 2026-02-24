@@ -74,6 +74,67 @@ export class ProjectsService {
     return { projects: enriched, total: enriched.length };
   }
 
+  /**
+   * List projects for the public API with optional pagination and filters.
+   * Only returns projects where isPublic is true.
+   */
+  async findAllPublic(options?: {
+    page?: number;
+    limit?: number;
+    slug?: string;
+    search?: string;
+  }) {
+    const page = Math.max(1, options?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, options?.limit ?? 20));
+    const skip = (page - 1) * limit;
+
+    const qb = this.projectRepo
+      .createQueryBuilder('project')
+      .where('project.isPublic = :isPublic', { isPublic: true })
+      .orderBy('project.createdAt', 'DESC');
+
+    if (options?.slug) {
+      qb.andWhere('project.slug = :slug', { slug: options.slug });
+    }
+    if (options?.search?.trim()) {
+      const term = `%${options.search.trim()}%`;
+      qb.andWhere(
+        '(project.name ILIKE :term OR project.slug ILIKE :term OR project.description ILIKE :term)',
+        { term },
+      );
+    }
+
+    const [projects, total] = await qb.skip(skip).take(limit).getManyAndCount();
+
+    const enriched = await Promise.all(
+      projects.map(async (p) => {
+        const [memberCount, sourceCount] = await Promise.all([
+          this.memberRepo.count({ where: { projectId: p.id } }),
+          this.projectSourceRepo.count({ where: { projectId: p.id } }),
+        ]);
+        return { ...p, memberCount, sourceCount };
+      }),
+    );
+
+    return {
+      data: enriched,
+      total,
+      page,
+      limit,
+      hasMore: skip + enriched.length < total,
+    };
+  }
+
+  /** Resolve project ID from slug or id (for project-scoped ask/search). */
+  async resolveProjectId(idOrSlug: string): Promise<string | null> {
+    try {
+      const project = await this.findOne(idOrSlug);
+      return project.id;
+    } catch {
+      return null;
+    }
+  }
+
   async findOne(idOrSlug: string) {
     const isUuid =
       /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(

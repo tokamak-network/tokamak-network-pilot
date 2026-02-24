@@ -17,6 +17,7 @@ import {
   ApiQuery,
   ApiBody,
   ApiResponse,
+  ApiParam,
 } from '@nestjs/swagger';
 import { Request, Response } from 'express';
 import { ApiKeyGuard } from '../api-keys/guards/api-key.guard';
@@ -26,6 +27,7 @@ import { Scopes } from '../api-keys/decorators/scopes.decorator';
 import { RagService } from '../rag/rag.service';
 import { SourcesService } from '../sources/sources.service';
 import { ContentService } from '../content/content.service';
+import { ProjectsService } from '../projects/projects.service';
 import { AskQuestionDto } from '../rag/dto/ask-question.dto';
 import { UsageLoggingInterceptor } from './usage-logging.interceptor';
 
@@ -39,6 +41,7 @@ export class PublicApiController {
     private readonly ragService: RagService,
     private readonly sourcesService: SourcesService,
     private readonly contentService: ContentService,
+    private readonly projectsService: ProjectsService,
     private readonly apiKeysService: ApiKeysService,
   ) {}
 
@@ -132,12 +135,66 @@ export class PublicApiController {
   })
   @ApiQuery({ name: 'q', required: true, description: 'Search query' })
   @ApiQuery({ name: 'limit', required: false, description: 'Max results', example: 10 })
+  @ApiQuery({ name: 'projectId', required: false, description: 'Scope search to a project by ID' })
+  @ApiQuery({ name: 'projectSlug', required: false, description: 'Scope search to a project by slug' })
   @ApiResponse({ status: 200, description: 'Search results returned' })
   async search(
     @Query('q') query: string,
     @Query('limit') limit?: number,
+    @Query('projectId') projectId?: string,
+    @Query('projectSlug') projectSlug?: string,
   ) {
-    return this.ragService.search(query, limit ? Number(limit) : undefined);
+    let resolvedProjectId = projectId ?? undefined;
+    if (projectSlug && !resolvedProjectId) {
+      resolvedProjectId =
+        (await this.projectsService.resolveProjectId(projectSlug)) ?? undefined;
+    }
+    return this.ragService.search(
+      query,
+      limit ? Number(limit) : undefined,
+      resolvedProjectId,
+    );
+  }
+
+  // ─── Projects ────────────────────────────────────────
+
+  @Get('projects')
+  @Scopes('projects:read')
+  @ApiOperation({
+    summary: 'List public projects',
+    description:
+      'List projects that are marked public, with optional pagination and filters. Requires the `projects:read` scope.',
+  })
+  @ApiQuery({ name: 'page', required: false, type: Number, description: 'Page (1-based)' })
+  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Items per page (max 100)' })
+  @ApiQuery({ name: 'slug', required: false, description: 'Filter by exact slug' })
+  @ApiQuery({ name: 'search', required: false, description: 'Search in name, slug, description' })
+  @ApiResponse({ status: 200, description: 'Paginated list of projects' })
+  async listProjects(
+    @Query('page') page?: number,
+    @Query('limit') limit?: number,
+    @Query('slug') slug?: string,
+    @Query('search') search?: string,
+  ) {
+    return this.projectsService.findAllPublic({
+      page: page ? Number(page) : undefined,
+      limit: limit ? Number(limit) : undefined,
+      slug,
+      search,
+    });
+  }
+
+  @Get('projects/:idOrSlug')
+  @Scopes('projects:read')
+  @ApiOperation({
+    summary: 'Get a project by ID or slug',
+    description: 'Returns project details by UUID or slug. Requires the `projects:read` scope.',
+  })
+  @ApiParam({ name: 'idOrSlug', description: 'Project UUID or slug' })
+  @ApiResponse({ status: 200, description: 'Project details' })
+  @ApiResponse({ status: 404, description: 'Project not found' })
+  async getProject(@Param('idOrSlug') idOrSlug: string) {
+    return this.projectsService.findOne(idOrSlug);
   }
 
   // ─── Sources ──────────────────────────────────────────────

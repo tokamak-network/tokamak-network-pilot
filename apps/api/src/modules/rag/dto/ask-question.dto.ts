@@ -27,6 +27,13 @@ export class AskQuestionDto {
   projectId?: string;
 
   @ApiPropertyOptional({
+    description: 'Scope the question to a specific project by slug (alternative to projectId).',
+  })
+  @IsOptional()
+  @IsString()
+  projectSlug?: string;
+
+  @ApiPropertyOptional({
     description: 'Conversation history for follow-up questions',
   })
   @IsOptional()

@@ -64,6 +64,8 @@ Each method requires the API key to have the right scope:
 | `getSource()` | `sources:read` |
 | `listContent()` | `content:read` |
 | `getContent()` | `content:read` |
+| `listProjects()` | `projects:read` |
+| `getProject()` | `projects:read` |
 | `health()` | *(none)* |
 
 ---
@@ -72,12 +74,12 @@ Each method requires the API key to have the right scope:
 
 ### RAG
 
-- **`ask(question, filters?)`** — Ask a question; returns full `AskResponse` (`answer`, `question`, `sources`, `confidence`). Optional `filters` is a string array (e.g. repo names).
-- **`askStream(question, callbacks, filters?)`** — Same question/filters, but streams the answer via SSE. Callbacks: `onMetadata`, `onChunk`, `onDone`, `onError`. Returns a promise that resolves when the stream ends.
+- **`ask(question, filters?, scope?)`** — Ask a question; returns full `AskResponse`. Optional `filters` is a string array. Optional `scope`: `{ projectId?, projectSlug? }` to scope the question to a project.
+- **`askStream(question, callbacks, filters?, scope?)`** — Same as ask, but streams the answer via SSE. Callbacks: `onMetadata`, `onChunk`, `onDone`, `onError`. Optional `scope`: `{ projectId?, projectSlug? }`.
 
 ### Search
 
-- **`search(query, limit?)`** — Semantic search. Default `limit` is 10. Returns `SearchResponse` (`query`, `results`, `total`).
+- **`search(query, limit?, scope?)`** — Semantic search. Default `limit` is 10. Optional `scope`: `{ projectId?, projectSlug? }` to scope to a project. Returns `SearchResponse` (`query`, `results`, `total`).
 
 ### Sources
 
@@ -88,6 +90,11 @@ Each method requires the API key to have the right scope:
 
 - **`listContent(filters?)`** — Optional `filters`: `{ project?: string, category?: string }`. Returns `PaginatedResponse<ContentEntry>` (`data`, `total`, `page`, `limit`, `hasMore`).
 - **`getContent(id)`** — Returns a single `ContentEntry`.
+
+### Projects
+
+- **`listProjects(options?)`** — Optional `options`: `{ page?, limit?, slug?, search? }`. Returns `PaginatedResponse<ProjectInfo>` (`data`, `total`, `page`, `limit`, `hasMore`).
+- **`getProject(idOrSlug)`** — Returns a single `ProjectDetail` by ID or slug.
 
 ### Health
 

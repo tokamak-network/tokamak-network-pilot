@@ -7,6 +7,8 @@ import type {
   Source,
   ContentEntry,
   PaginatedResponse,
+  ProjectInfo,
+  ProjectDetail,
 } from '@tokamak-pilot/shared';
 
 export interface TokamakPilotClientOptions {
@@ -31,6 +33,8 @@ export interface TokamakPilotClientOptions {
  * | `getSource()`   | `sources:read`    |
  * | `listContent()` | `content:read`    |
  * | `getContent()`  | `content:read`    |
+ * | `listProjects()`| `projects:read`  |
+ * | `getProject()`  | `projects:read`  |
  * | `health()`      | *(none)*          |
  *
  * @example
@@ -70,9 +74,22 @@ export class TokamakPilotClient {
 
   // ---- RAG ----
 
-  /** Ask a question and receive an AI-generated answer with cited sources. Requires scope: `ask`. */
-  async ask(question: string, filters?: string[]): Promise<AskResponse> {
-    const body: AskRequest = { question, filters };
+  /**
+   * Ask a question and receive an AI-generated answer with cited sources.
+   * Optionally scope to a project via projectId or projectSlug.
+   * Requires scope: `ask`.
+   */
+  async ask(
+    question: string,
+    filters?: string[],
+    scope?: { projectId?: string; projectSlug?: string },
+  ): Promise<AskResponse> {
+    const body: AskRequest = {
+      question,
+      filters,
+      projectId: scope?.projectId,
+      projectSlug: scope?.projectSlug,
+    };
     return this.post<AskResponse>('/public/ask', body);
   }
 
@@ -104,8 +121,14 @@ export class TokamakPilotClient {
     question: string,
     callbacks: AskStreamCallbacks,
     filters?: string[],
+    scope?: { projectId?: string; projectSlug?: string },
   ): Promise<void> {
-    const body: AskRequest = { question, filters };
+    const body: AskRequest = {
+      question,
+      filters,
+      projectId: scope?.projectId,
+      projectSlug: scope?.projectSlug,
+    };
 
     const res = await fetch(`${this.baseUrl}/public/ask/stream`, {
       method: 'POST',
@@ -162,11 +185,51 @@ export class TokamakPilotClient {
     }
   }
 
-  /** Perform a semantic search across the knowledge base. Requires scope: `search`. */
-  async search(query: string, limit = 10): Promise<SearchResponse> {
-    return this.get<SearchResponse>(
-      `/public/search?q=${encodeURIComponent(query)}&limit=${limit}`,
+  /**
+   * Perform a semantic search across the knowledge base.
+   * Optionally scope to a project via projectId or projectSlug.
+   * Requires scope: `search`.
+   */
+  async search(
+    query: string,
+    limit = 10,
+    scope?: { projectId?: string; projectSlug?: string },
+  ): Promise<SearchResponse> {
+    const params = new URLSearchParams({
+      q: query,
+      limit: String(limit),
+    });
+    if (scope?.projectId) params.set('projectId', scope.projectId);
+    if (scope?.projectSlug) params.set('projectSlug', scope.projectSlug);
+    return this.get<SearchResponse>(`/public/search?${params.toString()}`);
+  }
+
+  // ---- Projects ----
+
+  /**
+   * List public projects with optional pagination and filters.
+   * Requires scope: `projects:read`.
+   */
+  async listProjects(options?: {
+    page?: number;
+    limit?: number;
+    slug?: string;
+    search?: string;
+  }): Promise<PaginatedResponse<ProjectInfo>> {
+    const params = new URLSearchParams();
+    if (options?.page != null) params.set('page', String(options.page));
+    if (options?.limit != null) params.set('limit', String(options.limit));
+    if (options?.slug) params.set('slug', options.slug);
+    if (options?.search) params.set('search', options.search);
+    const qs = params.toString();
+    return this.get<PaginatedResponse<ProjectInfo>>(
+      `/public/projects${qs ? `?${qs}` : ''}`,
     );
+  }
+
+  /** Get a project by ID or slug. Requires scope: `projects:read`. */
+  async getProject(idOrSlug: string): Promise<ProjectDetail> {
+    return this.get<ProjectDetail>(`/public/projects/${encodeURIComponent(idOrSlug)}`);
   }
 
   // ---- Sources ----

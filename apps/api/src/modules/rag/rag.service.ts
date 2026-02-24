@@ -47,13 +47,14 @@ export class RagService {
    *  6. Return answer with citations
    */
   async ask(dto: AskQuestionDto) {
+    const projectId = await this.resolveProjectIdFromDto(dto);
     this.logger.log(
-      `Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${dto.projectId ? ` [project=${dto.projectId}]` : ''}`,
+      `Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${projectId ? ` [project=${projectId}]` : ''}`,
     );
 
     const questionVector = await this.embedding.embedText(dto.question);
 
-    const filter = await this.buildSearchFilter(dto.projectId);
+    const filter = await this.buildSearchFilter(projectId);
     const rawResults = await this.vector.search(questionVector, TOP_K, filter);
 
     if (rawResults.length === 0) {
@@ -104,13 +105,14 @@ export class RagService {
     void,
     undefined
   > {
+    const projectId = await this.resolveProjectIdFromDto(dto);
     this.logger.log(
-      `[stream] Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${dto.projectId ? ` [project=${dto.projectId}]` : ''}`,
+      `[stream] Question received: "${dto.question}" [provider=${this.llm.getProvider()}]${projectId ? ` [project=${projectId}]` : ''}`,
     );
 
     const questionVector = await this.embedding.embedText(dto.question);
 
-    const filter = await this.buildSearchFilter(dto.projectId);
+    const filter = await this.buildSearchFilter(projectId);
     const rawResults = await this.vector.search(questionVector, TOP_K, filter);
 
     if (rawResults.length === 0) {
@@ -182,6 +184,18 @@ export class RagService {
   }
 
   // ───────────────────── Filtering ─────────────────────
+
+  /**
+   * Resolve projectId from dto (projectId or projectSlug).
+   */
+  private async resolveProjectIdFromDto(dto: AskQuestionDto): Promise<string | undefined> {
+    if (dto.projectId) return dto.projectId;
+    if (dto.projectSlug) {
+      const id = await this.projects.resolveProjectId(dto.projectSlug);
+      return id ?? undefined;
+    }
+    return undefined;
+  }
 
   /**
    * Build Qdrant filter that:

@@ -32,6 +32,10 @@ export interface AskRequest {
   filters?: string[];
   conversationId?: string;
   conversationHistory?: ConversationMessage[];
+  /** Scope the question to a project by ID. */
+  projectId?: string;
+  /** Scope the question to a project by slug. */
+  projectSlug?: string;
 }
 
 export interface AskResponse {

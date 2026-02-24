@@ -5,9 +5,16 @@ import { ApiKeysModule } from '../api-keys/api-keys.module';
 import { RagModule } from '../rag/rag.module';
 import { SourcesModule } from '../sources/sources.module';
 import { ContentModule } from '../content/content.module';
+import { ProjectsModule } from '../projects/projects.module';
 
 @Module({
-  imports: [ApiKeysModule, RagModule, SourcesModule, ContentModule],
+  imports: [
+    ApiKeysModule,
+    RagModule,
+    SourcesModule,
+    ContentModule,
+    ProjectsModule,
+  ],
   controllers: [PublicApiController],
   providers: [UsageLoggingInterceptor],
 })
