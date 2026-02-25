@@ -283,4 +283,82 @@ describe('RoadmapService', () => {
       }),
     );
   });
+
+  it('lists public feedback rows ordered by top votes', async () => {
+    projectRepo.findOne.mockResolvedValue(project);
+
+    const rows = [
+      {
+        id: 'fb-1',
+        projectId: project.id,
+        category: 'feature',
+        status: 'new',
+        title: 'Need quickstart',
+        content: 'Add a quickstart guide',
+        painLevel: 4,
+        submitterEmail: 'secret@example.com',
+        sourceType: 'public_form',
+        votes: 8,
+        metadata: { ip: '1.2.3.4' },
+        createdAt: new Date('2026-02-20T00:00:00.000Z'),
+        updatedAt: new Date('2026-02-20T00:00:00.000Z'),
+      },
+    ];
+
+    const qb = {
+      where: jest.fn().mockReturnThis(),
+      andWhere: jest.fn().mockReturnThis(),
+      orderBy: jest.fn().mockReturnThis(),
+      addOrderBy: jest.fn().mockReturnThis(),
+      take: jest.fn().mockReturnThis(),
+      getMany: jest.fn().mockResolvedValue(rows),
+    };
+    projectFeedbackRepo.createQueryBuilder.mockReturnValue(qb);
+
+    const res = await service.listPublicFeedback(project.slug, { sort: 'top', limit: 5 });
+
+    expect(res.data).toHaveLength(1);
+    expect(res.data[0].id).toBe('fb-1');
+    expect((res.data[0] as any).submitterEmail).toBeUndefined();
+    expect(qb.orderBy).toHaveBeenCalledWith('feedback.votes', 'DESC');
+  });
+
+  it('prevents duplicate public votes from the same tracker', async () => {
+    projectRepo.findOne.mockResolvedValue(project);
+
+    const row: any = {
+      id: 'fb-1',
+      projectId: project.id,
+      category: 'feature',
+      status: 'new',
+      title: 'Need quickstart',
+      content: 'Add a quickstart guide',
+      painLevel: 4,
+      sourceType: 'public_form',
+      votes: 8,
+      metadata: {},
+      createdAt: new Date('2026-02-20T00:00:00.000Z'),
+      updatedAt: new Date('2026-02-20T00:00:00.000Z'),
+    };
+
+    projectFeedbackRepo.findOne.mockResolvedValue(row);
+    projectFeedbackRepo.save.mockImplementation(async (input: any) => ({
+      ...input,
+      updatedAt: new Date('2026-02-25T00:00:00.000Z'),
+    }));
+
+    const first = await service.votePublicFeedback(project.slug, row.id, {
+      ip: '1.2.3.4',
+      userAgent: 'Mozilla/Test',
+    });
+
+    expect(first.feedback.votes).toBe(9);
+
+    await expect(
+      service.votePublicFeedback(project.slug, row.id, {
+        ip: '1.2.3.4',
+        userAgent: 'Mozilla/Test',
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+  });
 });

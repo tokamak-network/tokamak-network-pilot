@@ -9,11 +9,10 @@ import { RoadmapTaskPrompt } from '../../entities/roadmap-task-prompt.entity';
 import { LlmModule } from '../llm/llm.module';
 import { RoadmapController } from './roadmap.controller';
 import { RoadmapService } from './roadmap.service';
-import {
-  ROADMAP_INTELLIGENCE_QUEUE,
-  RoadmapProcessor,
-} from './roadmap.processor';
+import { RoadmapProcessor } from './roadmap.processor';
+import { ROADMAP_INTELLIGENCE_QUEUE } from './roadmap.queue';
 import { PublicFeedbackThrottlerGuard } from './guards/public-feedback-throttler.guard';
+import { PublicFeedbackVoteThrottlerGuard } from './guards/public-feedback-vote-throttler.guard';
 
 @Module({
   imports: [
@@ -28,7 +27,12 @@ import { PublicFeedbackThrottlerGuard } from './guards/public-feedback-throttler
     LlmModule,
   ],
   controllers: [RoadmapController],
-  providers: [RoadmapService, RoadmapProcessor, PublicFeedbackThrottlerGuard],
+  providers: [
+    RoadmapService,
+    RoadmapProcessor,
+    PublicFeedbackThrottlerGuard,
+    PublicFeedbackVoteThrottlerGuard,
+  ],
   exports: [RoadmapService],
 })
 export class RoadmapModule {}

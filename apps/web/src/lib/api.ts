@@ -1184,6 +1184,23 @@ export interface ProjectFeedbackInboxEntry {
   updatedAt: string;
 }
 
+export interface PublicProjectFeedbackEntry {
+  id: string;
+  projectId: string;
+  category: ProjectFeedbackCategory;
+  status: ProjectFeedbackStatus;
+  title?: string;
+  content: string;
+  painLevel?: number;
+  persona?: string;
+  submitterName?: string;
+  sourceType: string;
+  sourceUrl?: string;
+  votes: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export type RoadmapPriority = 'low' | 'medium' | 'high' | 'critical';
 export type RoadmapEffort = 'xs' | 's' | 'm' | 'l' | 'xl';
 export type RoadmapStatus =
@@ -1256,6 +1273,42 @@ export async function submitProjectPublicFeedback(
     {
       method: 'POST',
       body: JSON.stringify(data),
+    },
+  );
+}
+
+/** List public feedback entries for a project (no auth required). */
+export async function fetchProjectPublicFeedback(
+  projectSlug: string,
+  params?: {
+    category?: ProjectFeedbackCategory;
+    sort?: 'top' | 'latest';
+    limit?: number;
+  },
+) {
+  const search = new URLSearchParams();
+  if (params?.category) search.set('category', params.category);
+  if (params?.sort) search.set('sort', params.sort);
+  if (params?.limit) search.set('limit', String(params.limit));
+  const qs = search.toString();
+
+  return apiFetch<{
+    data: PublicProjectFeedbackEntry[];
+    total: number;
+    limit: number;
+    sort: 'top' | 'latest';
+  }>(`/projects/${projectSlug}/public-feedback${qs ? `?${qs}` : ''}`);
+}
+
+/** Upvote a public feedback entry (no auth required). */
+export async function voteProjectPublicFeedback(
+  projectSlug: string,
+  feedbackId: string,
+) {
+  return apiFetch<{ message: string; feedback: PublicProjectFeedbackEntry }>(
+    `/projects/${projectSlug}/public-feedback/${feedbackId}/vote`,
+    {
+      method: 'POST',
     },
   );
 }

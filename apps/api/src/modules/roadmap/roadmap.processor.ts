@@ -2,15 +2,10 @@ import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { RoadmapService } from './roadmap.service';
-
-export const ROADMAP_INTELLIGENCE_QUEUE = 'roadmap-intelligence';
-
-export interface RoadmapDraftJobData {
-  action: 'draft-roadmap';
-  projectId: string;
-  maxItems?: number;
-  triggeredByUserId?: string;
-}
+import {
+  ROADMAP_INTELLIGENCE_QUEUE,
+  RoadmapDraftJobData,
+} from './roadmap.queue';
 
 @Processor(ROADMAP_INTELLIGENCE_QUEUE)
 export class RoadmapProcessor extends WorkerHost {

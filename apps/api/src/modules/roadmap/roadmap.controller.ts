@@ -22,7 +22,9 @@ import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoadmapService } from './roadmap.service';
 import { PublicFeedbackThrottlerGuard } from './guards/public-feedback-throttler.guard';
+import { PublicFeedbackVoteThrottlerGuard } from './guards/public-feedback-vote-throttler.guard';
 import {
+  ListPublicProjectFeedbackDto,
   ListProjectFeedbackDto,
   SubmitPublicFeedbackDto,
   UpdateProjectFeedbackDto,
@@ -43,6 +45,23 @@ export class RoadmapController {
 
   // ───────────────────── Phase 1: Public Feedback ─────────────────────
 
+  @Get(':slug/public-feedback')
+  @ApiOperation({
+    summary: 'List public feedback for a project',
+    description:
+      'Returns publicly visible feedback entries for discovery and voting on the project public page.',
+  })
+  @ApiParam({ name: 'slug', description: 'Project slug' })
+  @ApiQuery({ name: 'sort', required: false, enum: ['top', 'latest'] })
+  @ApiQuery({ name: 'category', required: false })
+  @ApiQuery({ name: 'limit', required: false, type: Number })
+  async listPublicFeedback(
+    @Param('slug') slug: string,
+    @Query() query: ListPublicProjectFeedbackDto,
+  ) {
+    return this.roadmapService.listPublicFeedback(slug, query);
+  }
+
   @Post(':slug/public-feedback')
   @ApiOperation({
     summary: 'Submit public feedback for a project',
@@ -58,6 +77,26 @@ export class RoadmapController {
     @Req() req: Request,
   ) {
     return this.roadmapService.submitPublicFeedback(slug, dto, {
+      ip: req.ip || req.socket.remoteAddress,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
+  @Post(':slug/public-feedback/:feedbackId/vote')
+  @ApiOperation({
+    summary: 'Vote for a public feedback item',
+    description:
+      'Allows public users to upvote a feedback entry so maintainers can prioritize roadmap items by demand.',
+  })
+  @UseGuards(PublicFeedbackVoteThrottlerGuard)
+  @ApiParam({ name: 'slug', description: 'Project slug' })
+  @ApiParam({ name: 'feedbackId', description: 'Public feedback ID' })
+  async votePublicFeedback(
+    @Param('slug') slug: string,
+    @Param('feedbackId') feedbackId: string,
+    @Req() req: Request,
+  ) {
+    return this.roadmapService.votePublicFeedback(slug, feedbackId, {
       ip: req.ip || req.socket.remoteAddress,
       userAgent: req.headers['user-agent'],
     });

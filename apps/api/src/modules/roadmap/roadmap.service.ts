@@ -8,6 +8,7 @@ import {
 import { InjectRepository } from '@nestjs/typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
+import { createHash } from 'crypto';
 import { In, Repository } from 'typeorm';
 import { Project } from '../../entities/project.entity';
 import { ProjectMember, ProjectRole } from '../../entities/project-member.entity';
@@ -35,6 +36,7 @@ import {
   UpdateRoadmapItemDto,
 } from './dto/roadmap.dto';
 import {
+  ListPublicProjectFeedbackDto,
   ListProjectFeedbackDto,
   SubmitPublicFeedbackDto,
   UpdateProjectFeedbackDto,
@@ -42,7 +44,7 @@ import {
 import {
   ROADMAP_INTELLIGENCE_QUEUE,
   RoadmapDraftJobData,
-} from './roadmap.processor';
+} from './roadmap.queue';
 
 const UUID_REGEX =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -69,6 +71,8 @@ const ROADMAP_STATUSES: RoadmapStatus[] = [
   'rejected',
 ];
 const FEEDBACK_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
+const MAX_PUBLIC_FEEDBACK_ROWS = 50;
+const MAX_PUBLIC_VOTER_TRACKERS = 3000;
 
 @Injectable()
 export class RoadmapService {
@@ -148,6 +152,101 @@ export class RoadmapService {
     return {
       message: 'Feedback submitted successfully',
       feedback: this.serializeFeedback(saved),
+    };
+  }
+
+  async listPublicFeedback(
+    projectSlug: string,
+    query: ListPublicProjectFeedbackDto,
+  ) {
+    const project = await this.projectRepo.findOne({
+      where: { slug: projectSlug, isPublic: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Public project "${projectSlug}" not found`);
+    }
+
+    const limit = Math.min(
+      MAX_PUBLIC_FEEDBACK_ROWS,
+      Math.max(1, query.limit ?? 10),
+    );
+    const sort = query.sort ?? 'top';
+
+    const qb = this.projectFeedbackRepo
+      .createQueryBuilder('feedback')
+      .where('feedback.projectId = :projectId', { projectId: project.id })
+      .andWhere('feedback.status IN (:...statuses)', {
+        statuses: ['new', 'reviewed', 'planned'],
+      })
+      .take(limit);
+
+    if (query.category) {
+      qb.andWhere('feedback.category = :category', { category: query.category });
+    }
+
+    if (sort === 'latest') {
+      qb.orderBy('feedback.createdAt', 'DESC');
+    } else {
+      qb
+        .orderBy('feedback.votes', 'DESC')
+        .addOrderBy('feedback.painLevel', 'DESC')
+        .addOrderBy('feedback.createdAt', 'DESC');
+    }
+
+    const rows = await qb.getMany();
+
+    return {
+      data: rows.map((row) => this.serializePublicFeedback(row)),
+      total: rows.length,
+      limit,
+      sort,
+    };
+  }
+
+  async votePublicFeedback(
+    projectSlug: string,
+    feedbackId: string,
+    meta?: { ip?: string; userAgent?: string },
+  ) {
+    const project = await this.projectRepo.findOne({
+      where: { slug: projectSlug, isPublic: true },
+    });
+    if (!project) {
+      throw new NotFoundException(`Public project "${projectSlug}" not found`);
+    }
+
+    const feedback = await this.projectFeedbackRepo.findOne({
+      where: {
+        id: feedbackId,
+        projectId: project.id,
+      },
+    });
+    if (!feedback || feedback.status === 'rejected') {
+      throw new NotFoundException(
+        `Public feedback "${feedbackId}" not found for project "${projectSlug}"`,
+      );
+    }
+
+    const tracker = this.createPublicVoteTracker(project.id, meta);
+    const existingTrackers = this.readPublicVoteTrackers(feedback.metadata);
+
+    if (existingTrackers.includes(tracker)) {
+      throw new BadRequestException(
+        'You already voted for this feedback item.',
+      );
+    }
+
+    feedback.votes += 1;
+    feedback.metadata = {
+      ...(feedback.metadata ?? {}),
+      publicVoters: [...existingTrackers, tracker].slice(-MAX_PUBLIC_VOTER_TRACKERS),
+    };
+
+    const saved = await this.projectFeedbackRepo.save(feedback);
+
+    return {
+      message: 'Vote recorded',
+      feedback: this.serializePublicFeedback(saved),
     };
   }
 
@@ -1073,6 +1172,42 @@ export class RoadmapService {
       createdAt: feedback.createdAt.toISOString(),
       updatedAt: feedback.updatedAt.toISOString(),
     };
+  }
+
+  private serializePublicFeedback(feedback: ProjectFeedback) {
+    return {
+      id: feedback.id,
+      projectId: feedback.projectId,
+      category: feedback.category,
+      status: feedback.status,
+      title: feedback.title,
+      content: feedback.content,
+      painLevel: feedback.painLevel,
+      persona: feedback.persona,
+      submitterName: feedback.submitterName,
+      sourceType: feedback.sourceType,
+      sourceUrl: feedback.sourceUrl,
+      votes: feedback.votes,
+      createdAt: feedback.createdAt.toISOString(),
+      updatedAt: feedback.updatedAt.toISOString(),
+    };
+  }
+
+  private createPublicVoteTracker(
+    projectId: string,
+    meta?: { ip?: string; userAgent?: string },
+  ): string {
+    const ip = (meta?.ip || 'unknown').toLowerCase();
+    const userAgent = (meta?.userAgent || 'unknown').slice(0, 120).toLowerCase();
+    return createHash('sha256')
+      .update(`${projectId}:${ip}:${userAgent}`)
+      .digest('hex');
+  }
+
+  private readPublicVoteTrackers(metadata: Record<string, unknown>): string[] {
+    const raw = metadata?.publicVoters;
+    if (!Array.isArray(raw)) return [];
+    return raw.filter((item): item is string => typeof item === 'string');
   }
 
   private serializeRoadmapItem(item: RoadmapItem) {

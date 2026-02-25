@@ -26,10 +26,14 @@ import {
   Check,
   FileText,
   X,
+  ThumbsUp,
 } from 'lucide-react';
 import {
+  fetchProjectPublicFeedback,
   fetchProjectPublic,
   submitProjectPublicFeedback,
+  voteProjectPublicFeedback,
+  type PublicProjectFeedbackEntry,
   type ProjectFeedbackCategory,
   type ProjectPublicResponse,
 } from '@/lib/api';
@@ -80,6 +84,10 @@ const roadmapStatusStyles: Record<string, string> = {
   completed: 'bg-emerald-500/10 text-emerald-700',
   rejected: 'bg-rose-500/10 text-rose-700',
 };
+
+function feedbackVoteKey(projectSlug: string, feedbackId: string) {
+  return `tokamak_feedback_vote:${projectSlug}:${feedbackId}`;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -502,12 +510,41 @@ export default function ProjectPublicPage() {
   const [feedbackEmail, setFeedbackEmail] = useState('');
   const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
   const [feedbackSuccess, setFeedbackSuccess] = useState('');
+  const [publicFeedbackRows, setPublicFeedbackRows] = useState<PublicProjectFeedbackEntry[]>([]);
+  const [publicFeedbackLoading, setPublicFeedbackLoading] = useState(true);
+  const [votingFeedbackId, setVotingFeedbackId] = useState<string | null>(null);
+  const [votedFeedbackIds, setVotedFeedbackIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetchProjectPublic(slug)
-      .then(setProject)
-      .catch(() => setError('Project not found or not public'))
-      .finally(() => setLoading(false));
+    const load = async () => {
+      try {
+        const [publicProject, feedbackList] = await Promise.all([
+          fetchProjectPublic(slug),
+          fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 }),
+        ]);
+        setProject(publicProject);
+        setPublicFeedbackRows(feedbackList.data);
+
+        if (typeof window !== 'undefined') {
+          const votedMap: Record<string, boolean> = {};
+          for (const row of feedbackList.data) {
+            votedMap[row.id] = localStorage.getItem(feedbackVoteKey(slug, row.id)) === '1';
+          }
+          setVotedFeedbackIds(votedMap);
+        }
+      } catch {
+        setError('Project not found or not public');
+      } finally {
+        setLoading(false);
+        setPublicFeedbackLoading(false);
+      }
+    };
+
+    load().catch(() => {
+      setError('Project not found or not public');
+      setLoading(false);
+      setPublicFeedbackLoading(false);
+    });
   }, [slug]);
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -529,10 +566,33 @@ export default function ProjectPublicPage() {
       setFeedbackEmail('');
       setFeedbackPain(3);
       setFeedbackSuccess('Thanks! Your feedback was submitted.');
+      const refreshed = await fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 });
+      setPublicFeedbackRows(refreshed.data);
     } catch {
       setFeedbackSuccess('Could not submit feedback right now. Please try again.');
     } finally {
       setFeedbackSubmitting(false);
+    }
+  };
+
+  const handleVoteFeedback = async (feedbackId: string) => {
+    if (votingFeedbackId || votedFeedbackIds[feedbackId]) return;
+
+    setVotingFeedbackId(feedbackId);
+    setFeedbackSuccess('');
+    try {
+      const res = await voteProjectPublicFeedback(slug, feedbackId);
+      setPublicFeedbackRows((prev) =>
+        prev.map((row) => (row.id === feedbackId ? res.feedback : row)),
+      );
+      setVotedFeedbackIds((prev) => ({ ...prev, [feedbackId]: true }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(feedbackVoteKey(slug, feedbackId), '1');
+      }
+    } catch (err: any) {
+      setFeedbackSuccess(err?.message || 'Could not record vote right now.');
+    } finally {
+      setVotingFeedbackId(null);
     }
   };
 
@@ -721,6 +781,71 @@ export default function ProjectPublicPage() {
         {/* Public Feedback */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Share Public Feedback</h2>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Top Feedback Requests</CardTitle>
+              <CardDescription>
+                Vote for what should be prioritized next.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {publicFeedbackLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading feedback...
+                </div>
+              ) : publicFeedbackRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No public feedback yet. Be the first to submit one.
+                </p>
+              ) : (
+                publicFeedbackRows.map((row) => {
+                  const voted = Boolean(votedFeedbackIds[row.id]);
+                  const isVoting = votingFeedbackId === row.id;
+
+                  return (
+                    <div
+                      key={row.id}
+                      className="rounded-md border p-3 flex items-start justify-between gap-3"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-[10px]">
+                            {row.category}
+                          </Badge>
+                          {typeof row.painLevel === 'number' && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              pain {row.painLevel}
+                            </Badge>
+                          )}
+                        </div>
+                        {row.title && (
+                          <p className="text-sm font-medium">{row.title}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {row.content}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={voted ? 'secondary' : 'outline'}
+                        onClick={() => handleVoteFeedback(row.id)}
+                        disabled={isVoting || voted}
+                        className="shrink-0"
+                      >
+                        {isVoting ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <ThumbsUp className="size-3.5" />
+                        )}
+                        {row.votes}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
           <Card>
             <CardHeader className="pb-3">
               <CardTitle className="text-base">Help shape the roadmap</CardTitle>

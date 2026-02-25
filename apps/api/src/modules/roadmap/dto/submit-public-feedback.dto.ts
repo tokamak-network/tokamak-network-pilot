@@ -129,6 +129,29 @@ export class ListProjectFeedbackDto {
   limit?: number;
 }
 
+export class ListPublicProjectFeedbackDto {
+  @ApiPropertyOptional({ enum: FEEDBACK_CATEGORIES })
+  @IsOptional()
+  @IsIn(FEEDBACK_CATEGORIES)
+  category?: ProjectFeedbackCategory;
+
+  @ApiPropertyOptional({
+    enum: ['top', 'latest'],
+    description: 'Sort mode for public feedback listing',
+    example: 'top',
+  })
+  @IsOptional()
+  @IsIn(['top', 'latest'])
+  sort?: 'top' | 'latest';
+
+  @ApiPropertyOptional({ description: 'Maximum number of rows', minimum: 1, maximum: 50, example: 10 })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(50)
+  limit?: number;
+}
+
 export class UpdateProjectFeedbackDto {
   @ApiPropertyOptional({ enum: ['new', 'reviewed', 'planned', 'rejected'] })
   @IsOptional()
