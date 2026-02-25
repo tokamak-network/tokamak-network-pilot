@@ -7,6 +7,7 @@ import { ProjectInvitation } from '../../entities/project-invitation.entity';
 import { Source } from '../../entities/source.entity';
 import { User } from '../../entities/user.entity';
 import { Document } from '../../entities/document.entity';
+import { RoadmapItem } from '../../entities/roadmap-item.entity';
 import { ProjectsController } from './projects.controller';
 import { ProjectsService } from './projects.service';
 import { AuthModule } from '../auth/auth.module';
@@ -23,6 +24,7 @@ import { GitHubModule } from '../github/github.module';
       Source,
       User,
       Document,
+      RoadmapItem,
     ]),
     AuthModule,
     LlmModule,

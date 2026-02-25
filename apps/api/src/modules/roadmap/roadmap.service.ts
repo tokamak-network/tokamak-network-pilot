@@ -354,7 +354,29 @@ export class RoadmapService {
     const qb = this.roadmapItemRepo
       .createQueryBuilder('item')
       .where('item.projectId = :projectId', { projectId: project.id })
-      .orderBy('item.updatedAt', 'DESC')
+      .orderBy(
+        `CASE item.priority
+          WHEN 'critical' THEN 0
+          WHEN 'high' THEN 1
+          WHEN 'medium' THEN 2
+          WHEN 'low' THEN 3
+          ELSE 4
+        END`,
+        'ASC',
+      )
+      .addOrderBy(
+        `CASE item.status
+          WHEN 'in_progress' THEN 0
+          WHEN 'planned' THEN 1
+          WHEN 'approved' THEN 2
+          WHEN 'proposed' THEN 3
+          WHEN 'completed' THEN 4
+          WHEN 'rejected' THEN 5
+          ELSE 6
+        END`,
+        'ASC',
+      )
+      .addOrderBy('item.updatedAt', 'DESC')
       .skip((page - 1) * limit)
       .take(limit);
 

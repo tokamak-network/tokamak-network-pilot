@@ -288,6 +288,16 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleToggleRoadmapVisibility = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { isRoadmapPublic: !project.isRoadmapPublic });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
   const handleSendInvitation = async () => {
     if (!project || !inviteEmail.trim()) return;
     setSendingInvite(true);
@@ -404,6 +414,12 @@ export default function ProjectDetailPage() {
                   Landing Page
                 </Badge>
               )}
+              {project.isRoadmapPublic && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-sky-500/10 text-sky-700 border-sky-500/20">
+                  <Globe className="size-2.5 mr-0.5" />
+                  Roadmap Public
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -423,6 +439,17 @@ export default function ProjectDetailPage() {
             >
               <Megaphone className="size-4" />
               {project.showOnLandingPage ? 'On Landing Page' : 'Show on Landing Page'}
+            </Button>
+          )}
+          {isLead && project.isPublic && (
+            <Button
+              variant={project.isRoadmapPublic ? 'secondary' : 'outline'}
+              size="sm"
+              onClick={handleToggleRoadmapVisibility}
+              title={project.isRoadmapPublic ? 'Hide roadmap from public page' : 'Show roadmap on public page'}
+            >
+              <Globe className="size-4" />
+              {project.isRoadmapPublic ? 'Roadmap Public' : 'Show Public Roadmap'}
             </Button>
           )}
           {project.isPublic && (

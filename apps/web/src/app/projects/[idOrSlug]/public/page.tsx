@@ -63,6 +63,24 @@ const roleColors: Record<string, string> = {
   viewer: 'bg-muted text-muted-foreground',
 };
 
+const roadmapStatusLabel: Record<string, string> = {
+  proposed: 'Proposed',
+  approved: 'Approved',
+  planned: 'Planned',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  rejected: 'Rejected',
+};
+
+const roadmapStatusStyles: Record<string, string> = {
+  proposed: 'bg-muted text-muted-foreground',
+  approved: 'bg-indigo-500/10 text-indigo-700',
+  planned: 'bg-sky-500/10 text-sky-700',
+  in_progress: 'bg-amber-500/10 text-amber-700',
+  completed: 'bg-emerald-500/10 text-emerald-700',
+  rejected: 'bg-rose-500/10 text-rose-700',
+};
+
 interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -616,6 +634,61 @@ export default function ProjectPublicPage() {
             <div className="prose prose-sm max-w-none text-foreground whitespace-pre-wrap leading-relaxed">
               {project.summary}
             </div>
+          </section>
+        )}
+
+        {/* Public Roadmap */}
+        {project.isRoadmapPublic && (
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">Public Roadmap</h2>
+            {project.roadmap.length === 0 ? (
+              <Card>
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                  Roadmap visibility is enabled, but no roadmap items are published yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {project.roadmap.map((item) => (
+                  <Card key={item.id}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge className={`text-[10px] ${roadmapStatusStyles[item.status] || 'bg-muted text-muted-foreground'}`}>
+                              {roadmapStatusLabel[item.status] || item.status}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Priority: {item.priority}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Effort: {item.effort}
+                            </Badge>
+                            {item.targetQuarter && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {item.targetQuarter}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          Updated {new Date(item.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {item.problem}
+                      </p>
+                      {item.outcome && (
+                        <p className="text-xs text-muted-foreground">
+                          Outcome: {item.outcome}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
           </section>
         )}
 

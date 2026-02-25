@@ -81,6 +81,14 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   showOnLandingPage?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether roadmap items are shown on the public project page',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isRoadmapPublic?: boolean;
 }
 
 export class UpdateProjectDto {
@@ -138,6 +146,13 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsBoolean()
   showOnLandingPage?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Whether roadmap items are shown on the public project page',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isRoadmapPublic?: boolean;
 }
 
 export class AddProjectMemberDto {

@@ -832,6 +832,7 @@ export interface ProjectResponse {
   summaryUpdatedAt?: string;
   isPublic: boolean;
   showOnLandingPage: boolean;
+  isRoadmapPublic: boolean;
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -863,6 +864,18 @@ export interface ProjectPublicResponse {
   logoUrl?: string;
   links: ProjectLinkResponse[];
   summary?: string;
+  isRoadmapPublic: boolean;
+  roadmap: Array<{
+    id: string;
+    title: string;
+    problem: string;
+    outcome?: string;
+    priority: 'low' | 'medium' | 'high' | 'critical';
+    effort: 'xs' | 's' | 'm' | 'l' | 'xl';
+    status: 'proposed' | 'approved' | 'planned' | 'in_progress' | 'completed' | 'rejected';
+    targetQuarter?: string;
+    updatedAt: string;
+  }>;
   members: Array<{
     role: string;
     user: { name?: string; email: string };
@@ -911,6 +924,7 @@ export async function createProject(data: {
   logoUrl?: string;
   links?: ProjectLinkResponse[];
   isPublic?: boolean;
+  isRoadmapPublic?: boolean;
 }) {
   return apiFetch<ProjectDetailResponse>('/projects', {
     method: 'POST',
@@ -938,6 +952,7 @@ export async function updateProject(
     summary?: string;
     isPublic?: boolean;
     showOnLandingPage?: boolean;
+    isRoadmapPublic?: boolean;
   },
 ) {
   return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {
