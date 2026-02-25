@@ -13,6 +13,7 @@ import {
   ROADMAP_INTELLIGENCE_QUEUE,
   RoadmapProcessor,
 } from './roadmap.processor';
+import { PublicFeedbackThrottlerGuard } from './guards/public-feedback-throttler.guard';
 
 @Module({
   imports: [
@@ -27,7 +28,7 @@ import {
     LlmModule,
   ],
   controllers: [RoadmapController],
-  providers: [RoadmapService, RoadmapProcessor],
+  providers: [RoadmapService, RoadmapProcessor, PublicFeedbackThrottlerGuard],
   exports: [RoadmapService],
 })
 export class RoadmapModule {}

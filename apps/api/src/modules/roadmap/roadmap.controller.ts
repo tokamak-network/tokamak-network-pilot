@@ -21,6 +21,7 @@ import {
 import { Request } from 'express';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RoadmapService } from './roadmap.service';
+import { PublicFeedbackThrottlerGuard } from './guards/public-feedback-throttler.guard';
 import {
   ListProjectFeedbackDto,
   SubmitPublicFeedbackDto,
@@ -48,6 +49,7 @@ export class RoadmapController {
     description:
       'Anyone can submit project feedback from the public project page. This feeds the roadmap pipeline.',
   })
+  @UseGuards(PublicFeedbackThrottlerGuard)
   @ApiParam({ name: 'slug', description: 'Project slug' })
   @ApiBody({ type: SubmitPublicFeedbackDto })
   async submitPublicFeedback(

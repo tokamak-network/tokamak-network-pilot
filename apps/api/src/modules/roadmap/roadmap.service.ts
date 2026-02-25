@@ -68,6 +68,7 @@ const ROADMAP_STATUSES: RoadmapStatus[] = [
   'completed',
   'rejected',
 ];
+const FEEDBACK_DEDUPE_WINDOW_MS = 10 * 60 * 1000;
 
 @Injectable()
 export class RoadmapService {
@@ -103,12 +104,18 @@ export class RoadmapService {
       throw new NotFoundException(`Public project "${projectSlug}" not found`);
     }
 
+    const content = dto.content.trim();
+    await this.enforceFeedbackDedupe(project.id, content, {
+      ip: meta?.ip,
+      submitterEmail: dto.submitterEmail?.trim().toLowerCase(),
+    });
+
     const feedback = this.projectFeedbackRepo.create({
       projectId: project.id,
       category: dto.category ?? 'other',
       status: 'new',
       title: dto.title?.trim(),
-      content: dto.content.trim(),
+      content,
       painLevel: dto.painLevel,
       persona: dto.persona?.trim(),
       submitterName: dto.submitterName?.trim(),
@@ -117,7 +124,7 @@ export class RoadmapService {
       sourceUrl: dto.sourceUrl,
       metadata: {
         ip: meta?.ip,
-        userAgent: meta?.userAgent,
+        userAgent: meta?.userAgent?.slice(0, 300),
       },
     });
 
@@ -131,6 +138,8 @@ export class RoadmapService {
         maxItems: 5,
       },
       {
+        jobId: `draft-roadmap:${project.id}`,
+        delay: 5_000,
         removeOnComplete: 100,
         removeOnFail: 200,
       },
@@ -148,7 +157,7 @@ export class RoadmapService {
     filters: ListProjectFeedbackDto,
   ) {
     const project = await this.resolveProject(projectIdOrSlug);
-    await this.requireProjectRole(project.id, userId, [
+    const role = await this.requireProjectRole(project.id, userId, [
       'lead',
       'contributor',
       'viewer',
@@ -173,9 +182,12 @@ export class RoadmapService {
     }
 
     const [rows, total] = await qb.getManyAndCount();
+    const redactSensitive = role === 'viewer';
 
     return {
-      data: rows.map((row) => this.serializeFeedback(row)),
+      data: rows.map((row) =>
+        this.serializeFeedback(row, { redactSensitive }),
+      ),
       total,
       page,
       limit,
@@ -281,10 +293,10 @@ export class RoadmapService {
         continue;
       }
 
-      const linkedFeedbackIds = this.sanitizeFeedbackIds(candidate.feedbackIds);
-      if (linkedFeedbackIds.length > 0) {
-        await this.ensureFeedbackBelongsToProject(project.id, linkedFeedbackIds);
-      }
+      const linkedFeedbackIds = await this.filterFeedbackIdsForProject(
+        project.id,
+        this.sanitizeFeedbackIds(candidate.feedbackIds),
+      );
 
       const item = this.roadmapItemRepo.create({
         projectId: project.id,
@@ -863,7 +875,7 @@ export class RoadmapService {
     projectId: string,
     userId: string,
     roles: ProjectRole[],
-  ) {
+  ): Promise<ProjectRole> {
     const membership = await this.projectMemberRepo.findOne({
       where: { projectId, userId },
       select: ['id', 'role'],
@@ -878,6 +890,8 @@ export class RoadmapService {
         `Requires one of roles: ${roles.join(', ')}`,
       );
     }
+
+    return membership.role;
   }
 
   private sanitizeFeedbackIds(ids?: string[]): string[] {
@@ -900,6 +914,60 @@ export class RoadmapService {
     if (count !== ids.length) {
       throw new BadRequestException(
         'One or more sourceFeedbackIds do not belong to this project',
+      );
+    }
+  }
+
+  private async filterFeedbackIdsForProject(
+    projectId: string,
+    ids: string[],
+  ): Promise<string[]> {
+    if (ids.length === 0) return [];
+
+    const rows = await this.projectFeedbackRepo.find({
+      where: { projectId, id: In(ids) },
+      select: ['id'],
+    });
+    const valid = new Set(rows.map((row) => row.id));
+    const invalid = ids.filter((id) => !valid.has(id));
+
+    if (invalid.length > 0) {
+      this.logger.warn(
+        `Dropping ${invalid.length} invalid feedbackIds for project ${projectId}: ${invalid.join(', ')}`,
+      );
+    }
+
+    return ids.filter((id) => valid.has(id));
+  }
+
+  private async enforceFeedbackDedupe(
+    projectId: string,
+    content: string,
+    opts: { ip?: string; submitterEmail?: string },
+  ) {
+    const since = new Date(Date.now() - FEEDBACK_DEDUPE_WINDOW_MS);
+    const qb = this.projectFeedbackRepo
+      .createQueryBuilder('feedback')
+      .where('feedback.projectId = :projectId', { projectId })
+      .andWhere('feedback.createdAt >= :since', { since })
+      .andWhere('LOWER(TRIM(feedback.content)) = LOWER(TRIM(:content))', {
+        content,
+      });
+
+    if (opts.ip) {
+      qb.andWhere(`feedback.metadata->>'ip' = :ip`, { ip: opts.ip });
+    } else if (opts.submitterEmail) {
+      qb.andWhere('LOWER(feedback.submitterEmail) = :email', {
+        email: opts.submitterEmail.toLowerCase(),
+      });
+    } else {
+      return;
+    }
+
+    const dupCount = await qb.getCount();
+    if (dupCount > 0) {
+      throw new BadRequestException(
+        'Duplicate feedback detected. Please wait before submitting the same feedback again.',
       );
     }
   }
@@ -958,7 +1026,12 @@ export class RoadmapService {
     return value.charAt(0).toUpperCase() + value.slice(1);
   }
 
-  private serializeFeedback(feedback: ProjectFeedback) {
+  private serializeFeedback(
+    feedback: ProjectFeedback,
+    opts?: { redactSensitive?: boolean },
+  ) {
+    const redactSensitive = opts?.redactSensitive ?? false;
+
     return {
       id: feedback.id,
       projectId: feedback.projectId,
@@ -969,12 +1042,12 @@ export class RoadmapService {
       painLevel: feedback.painLevel,
       persona: feedback.persona,
       submitterName: feedback.submitterName,
-      submitterEmail: feedback.submitterEmail,
+      submitterEmail: redactSensitive ? undefined : feedback.submitterEmail,
       sourceType: feedback.sourceType,
       sourceUrl: feedback.sourceUrl,
       votes: feedback.votes,
       moderatorNote: feedback.moderatorNote,
-      metadata: feedback.metadata,
+      metadata: redactSensitive ? {} : feedback.metadata,
       createdAt: feedback.createdAt.toISOString(),
       updatedAt: feedback.updatedAt.toISOString(),
     };
