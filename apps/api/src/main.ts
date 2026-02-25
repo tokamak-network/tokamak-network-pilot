@@ -53,6 +53,10 @@ async function bootstrap() {
     .addTag('auth', 'Authentication & authorization')
     .addTag('api-keys', 'API key management (create, rotate, revoke)')
     .addTag('public', 'Public API for third-party integrations (requires API key)')
+    .addTag(
+      'roadmap',
+      'Feedback -> roadmap -> AI task prompt pipeline for project management',
+    )
     .addTag('export', 'Structured export (JSON, Markdown, AI prompt)')
     .addTag('llms-txt', 'LLM-friendly knowledge files (llms.txt spec)')
     .addTag('widget', 'Embeddable chat widget')

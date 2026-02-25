@@ -16,6 +16,9 @@ import { ProjectSource } from '../../entities/project-source.entity';
 import { Feedback } from '../../entities/feedback.entity';
 import { Snippet } from '../../entities/snippet.entity';
 import { ProjectInvitation } from '../../entities/project-invitation.entity';
+import { ProjectFeedback } from '../../entities/project-feedback.entity';
+import { RoadmapItem } from '../../entities/roadmap-item.entity';
+import { RoadmapTaskPrompt } from '../../entities/roadmap-task-prompt.entity';
 
 @Module({
   imports: [
@@ -33,7 +36,26 @@ import { ProjectInvitation } from '../../entities/project-invitation.entity';
         return {
           type: 'postgres' as const,
           url: dbUrl,
-          entities: [Source, Document, User, OtpCode, ContentEntry, ApiKey, ApiKeyUsageLog, Conversation, Message, Project, ProjectMember, ProjectSource, Feedback, Snippet, ProjectInvitation],
+          entities: [
+            Source,
+            Document,
+            User,
+            OtpCode,
+            ContentEntry,
+            ApiKey,
+            ApiKeyUsageLog,
+            Conversation,
+            Message,
+            Project,
+            ProjectMember,
+            ProjectSource,
+            Feedback,
+            Snippet,
+            ProjectInvitation,
+            ProjectFeedback,
+            RoadmapItem,
+            RoadmapTaskPrompt,
+          ],
           synchronize: dbSync !== undefined ? dbSync === 'true' : !isProduction,
           logging: !isProduction,
           ssl: isProduction ? { rejectUnauthorized: false } : false,

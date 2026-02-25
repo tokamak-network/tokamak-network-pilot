@@ -29,6 +29,8 @@ import {
 } from 'lucide-react';
 import {
   fetchProjectPublic,
+  submitProjectPublicFeedback,
+  type ProjectFeedbackCategory,
   type ProjectPublicResponse,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -474,6 +476,14 @@ export default function ProjectPublicPage() {
   const [project, setProject] = useState<ProjectPublicResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [feedbackCategory, setFeedbackCategory] =
+    useState<ProjectFeedbackCategory>('feature');
+  const [feedbackPain, setFeedbackPain] = useState(3);
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackName, setFeedbackName] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState('');
 
   useEffect(() => {
     fetchProjectPublic(slug)
@@ -481,6 +491,32 @@ export default function ProjectPublicPage() {
       .catch(() => setError('Project not found or not public'))
       .finally(() => setLoading(false));
   }, [slug]);
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackContent.trim() || feedbackSubmitting) return;
+
+    setFeedbackSubmitting(true);
+    setFeedbackSuccess('');
+    try {
+      await submitProjectPublicFeedback(slug, {
+        category: feedbackCategory,
+        painLevel: feedbackPain,
+        content: feedbackContent.trim(),
+        submitterName: feedbackName.trim() || undefined,
+        submitterEmail: feedbackEmail.trim() || undefined,
+      });
+      setFeedbackContent('');
+      setFeedbackName('');
+      setFeedbackEmail('');
+      setFeedbackPain(3);
+      setFeedbackSuccess('Thanks! Your feedback was submitted.');
+    } catch {
+      setFeedbackSuccess('Could not submit feedback right now. Please try again.');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -607,6 +643,92 @@ export default function ProjectPublicPage() {
               </Card>
             ))}
           </div>
+        </section>
+
+        {/* Public Feedback */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Share Public Feedback</h2>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Help shape the roadmap</CardTitle>
+              <CardDescription>
+                Your feedback is triaged into roadmap items and implementation tasks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitFeedback} className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="text-sm space-y-1">
+                    <span className="text-muted-foreground">Category</span>
+                    <select
+                      value={feedbackCategory}
+                      onChange={(e) =>
+                        setFeedbackCategory(e.target.value as ProjectFeedbackCategory)
+                      }
+                      className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    >
+                      <option value="feature">Feature</option>
+                      <option value="bug">Bug</option>
+                      <option value="ux">UX</option>
+                      <option value="performance">Performance</option>
+                      <option value="integration">Integration</option>
+                      <option value="pricing">Pricing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm space-y-1">
+                    <span className="text-muted-foreground">Pain level</span>
+                    <select
+                      value={feedbackPain}
+                      onChange={(e) => setFeedbackPain(Number(e.target.value))}
+                      className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    >
+                      <option value={1}>1 - Low</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3 - Medium</option>
+                      <option value={4}>4</option>
+                      <option value={5}>5 - Critical</option>
+                    </select>
+                  </label>
+                </div>
+
+                <textarea
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  placeholder="What should be improved in this product/project?"
+                  className="w-full min-h-[96px] rounded-md border bg-background px-3 py-2 text-sm"
+                  required
+                />
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Input
+                    value={feedbackName}
+                    onChange={(e) => setFeedbackName(e.target.value)}
+                    placeholder="Name (optional)"
+                  />
+                  <Input
+                    value={feedbackEmail}
+                    onChange={(e) => setFeedbackEmail(e.target.value)}
+                    placeholder="Email (optional)"
+                    type="email"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">{feedbackSuccess}</p>
+                  <Button type="submit" disabled={!feedbackContent.trim() || feedbackSubmitting}>
+                    {feedbackSubmitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    Submit Feedback
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </section>
 
         {/* Knowledge Sources */}

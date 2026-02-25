@@ -25,6 +25,7 @@ import { WidgetModule } from './modules/widget/widget.module';
 import { ChangelogModule } from './modules/changelog/changelog.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { SnippetsModule } from './modules/snippets/snippets.module';
+import { RoadmapModule } from './modules/roadmap/roadmap.module';
 
 @Module({
   imports: [
@@ -102,6 +103,7 @@ import { SnippetsModule } from './modules/snippets/snippets.module';
 
     // ── Phase 6: Quality, Feedback & Analytics ──
     FeedbackModule,
+    RoadmapModule,
 
     // ── Developer Tools ──
     SnippetsModule,

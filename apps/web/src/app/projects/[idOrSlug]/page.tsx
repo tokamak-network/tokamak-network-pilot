@@ -408,6 +408,12 @@ export default function ProjectDetailPage() {
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/projects/${project.slug}/roadmap`}>
+            <Button variant="outline" size="sm">
+              <Sparkles className="size-4" />
+              Roadmap Pipeline
+            </Button>
+          </Link>
           {isLead && project.isPublic && (
             <Button
               variant={project.showOnLandingPage ? 'secondary' : 'outline'}

@@ -19,3 +19,15 @@ export type { ProjectRole } from './project-member.entity';
 export { ProjectSource } from './project-source.entity';
 export { ProjectInvitation } from './project-invitation.entity';
 export type { InvitationStatus } from './project-invitation.entity';
+export { ProjectFeedback } from './project-feedback.entity';
+export type {
+  ProjectFeedbackStatus,
+  ProjectFeedbackCategory,
+} from './project-feedback.entity';
+export { RoadmapItem } from './roadmap-item.entity';
+export type {
+  RoadmapStatus,
+  RoadmapPriority,
+  RoadmapEffort,
+} from './roadmap-item.entity';
+export { RoadmapTaskPrompt } from './roadmap-task-prompt.entity';
