@@ -1,4 +1,11 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  Logger,
+  NotFoundException,
+  ConflictException,
+  BadRequestException,
+} from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
@@ -9,6 +16,7 @@ import { VectorService } from '../vector/vector.service';
 import { LlmService } from '../llm/llm.service';
 import { INGESTION_QUEUE } from '../ingestion/ingestion.processor';
 import type { IngestionJobData } from '../ingestion/ingestion.processor';
+import { normalizeCrawlUrl } from '../crawler/crawler.types';
 import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
 import type { CrawlWebsiteDto } from './dto/crawl-website.dto';
 
@@ -23,6 +31,7 @@ export class SourcesService {
     private readonly documentRepo: Repository<Document>,
     @InjectQueue(INGESTION_QUEUE)
     private readonly ingestionQueue: Queue<IngestionJobData>,
+    private readonly config: ConfigService,
     private readonly vector: VectorService,
     private readonly llm: LlmService,
   ) {}
@@ -320,9 +329,35 @@ ${sampleContent}`,
 
   /**
    * Create a website source from a URL and enqueue crawl + ingestion.
-   * Convenience endpoint for "crawl this URL" without manually setting type/config.
+   * Validates allowlist (CRAWL_ALLOWED_HOSTS), duplicate URL (409 unless force), then creates and enqueues.
    */
   async crawlWebsite(dto: CrawlWebsiteDto) {
+    const allowedHosts = this.config.get<string>('CRAWL_ALLOWED_HOSTS');
+    if (allowedHosts) {
+      const hosts = allowedHosts.split(',').map((h) => h.trim().toLowerCase()).filter(Boolean);
+      const host = new URL(dto.url).hostname.toLowerCase();
+      if (!hosts.includes(host)) {
+        throw new BadRequestException(
+          `Crawling is not allowed for host "${host}". Allowed hosts: ${hosts.join(', ')}`,
+        );
+      }
+    }
+
+    const normalizedUrl = normalizeCrawlUrl(dto.url);
+    const existing = await this.sourceRepo.find({
+      where: { type: 'website' as SourceType },
+    });
+    const duplicate = existing.find((s) => {
+      const url = (s.config as { url?: string })?.url;
+      return url && normalizeCrawlUrl(url) === normalizedUrl;
+    });
+    if (duplicate && !dto.force) {
+      throw new ConflictException({
+        message: `A source for this URL already exists: ${duplicate.name}`,
+        existingSourceId: duplicate.id,
+      });
+    }
+
     const name =
       dto.name ?? new URL(dto.url).hostname.replace(/^www\./, '');
     const crawlOptions: Record<string, unknown> = {};
@@ -331,6 +366,9 @@ ${sampleContent}`,
     if (dto.timeout != null) crawlOptions.timeout = dto.timeout;
     if (dto.delayBetweenRequests != null)
       crawlOptions.delayBetweenRequests = dto.delayBetweenRequests;
+    if (dto.respectRobotsTxt != null) crawlOptions.respectRobotsTxt = dto.respectRobotsTxt;
+    if (dto.excludePathPatterns != null && dto.excludePathPatterns.length > 0)
+      crawlOptions.excludePathPatterns = dto.excludePathPatterns;
 
     const source = this.sourceRepo.create({
       name,

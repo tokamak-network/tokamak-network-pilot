@@ -9,10 +9,21 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiBody,
+  ApiQuery,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { SourcesService } from './sources.service';
 import { CreateSourceDto, UpdateSourceDto } from './dto/create-source.dto';
-import { CrawlWebsiteDto } from './dto/crawl-website.dto';
+import {
+  CrawlWebsiteDto,
+  CrawlWebsiteResponseDto,
+  CrawlWebsiteConflictResponseDto,
+} from './dto/crawl-website.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @ApiTags('sources')
@@ -29,6 +40,9 @@ export class SourcesController {
       'Submits a URL for crawling. Creates a website source and enqueues a background job to fetch pages, extract text, and index into the RAG pipeline. Returns the new source and job ID.',
   })
   @ApiBody({ type: CrawlWebsiteDto })
+  @ApiResponse({ status: 201, description: 'Crawl queued', type: CrawlWebsiteResponseDto })
+  @ApiResponse({ status: 409, description: 'A source for this URL already exists', type: CrawlWebsiteConflictResponseDto })
+  @ApiResponse({ status: 400, description: 'URL host not in CRAWL_ALLOWED_HOSTS or invalid request' })
   async crawlWebsite(@Body() dto: CrawlWebsiteDto) {
     return this.sourcesService.crawlWebsite(dto);
   }

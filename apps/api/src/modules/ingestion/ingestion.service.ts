@@ -234,7 +234,23 @@ export class IngestionService {
           this.logger.warn('Website source missing config.url');
           return { rawDocs: [], breakdown: {}, repoMeta: null };
         }
-        const { documents } = await this.crawler.crawlWebsite(url, crawlOptions ?? {});
+        const onProgress = async (crawled: number, lastUrl: string) => {
+          await this.sourceRepo.update(source.id, {
+            config: {
+              ...(source.config as object),
+              crawlProgress: {
+                crawledPages: crawled,
+                lastCrawledUrl: lastUrl,
+                progressAt: new Date().toISOString(),
+              },
+            } as any,
+          });
+        };
+        const { documents } = await this.crawler.crawlWebsite(
+          url,
+          crawlOptions ?? {},
+          onProgress,
+        );
         const breakdown: Record<string, number> = {};
         for (const d of documents) {
           breakdown[d.contentType] = (breakdown[d.contentType] || 0) + 1;

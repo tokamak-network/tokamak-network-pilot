@@ -1,7 +1,7 @@
 import { Injectable, Logger, BadRequestException } from '@nestjs/common';
 import { PDFParse } from 'pdf-parse';
 import * as mammoth from 'mammoth';
-import type { RawDocument } from '../github/github.service';
+import type { RawDocument } from '../ingestion/ingestion.types';
 import type { ContentType } from '../../entities/document.entity';
 
 /** Supported MIME types and their extensions */

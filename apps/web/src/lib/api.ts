@@ -447,6 +447,32 @@ export async function createSource(data: {
   });
 }
 
+/** Crawl a website URL and add it as a knowledge source (creates website source + enqueues job) */
+export interface CrawlWebsiteRequest {
+  url: string;
+  name?: string;
+  maxPages?: number;
+  maxDepth?: number;
+  timeout?: number;
+  delayBetweenRequests?: number;
+  respectRobotsTxt?: boolean;
+  excludePathPatterns?: string[];
+  force?: boolean;
+}
+
+export interface CrawlWebsiteResponse {
+  source: SourceResponse;
+  jobId: string;
+  message: string;
+}
+
+export async function crawlWebsite(data: CrawlWebsiteRequest): Promise<CrawlWebsiteResponse> {
+  return apiFetch<CrawlWebsiteResponse>('/sources/crawl', {
+    method: 'POST',
+    body: JSON.stringify(data),
+  });
+}
+
 /** Trigger a light source sync (markdown/docs only) */
 export async function syncSource(id: string) {
   return apiFetch<{ message: string; sourceId: string; fetchMode: string }>(

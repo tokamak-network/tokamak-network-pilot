@@ -221,6 +221,7 @@ export default function SourceDetailPage() {
     ['code', 'issue', 'pull_request', 'wiki'].includes(type),
   );
   const isSyncing = source.status === 'syncing';
+  const isWebsite = source.type === 'website';
 
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
@@ -240,7 +241,7 @@ export default function SourceDetailPage() {
               <h1 className="font-serif text-xl font-semibold tracking-tight flex items-center gap-2">
                 {source.name}
                 <div className={`size-2.5 rounded-full ${statusColors[source.status]}`} />
-                {totalChunks > 0 && (
+                {totalChunks > 0 && !isWebsite && (
                   <Badge variant={hasDeepContent ? 'default' : 'secondary'} className="text-[10px] px-1.5 py-0">
                     {hasDeepContent ? 'Full' : 'Docs only'}
                   </Badge>
@@ -255,7 +256,7 @@ export default function SourceDetailPage() {
           </div>
         </div>
         <div className="flex gap-2">
-          {!hasDeepContent && !isSyncing && (
+          {!isWebsite && !hasDeepContent && !isSyncing && (
             <Button variant="outline" onClick={handleDeepSync} disabled={deepSyncing}>
               <Code2 className={`size-4 ${deepSyncing ? 'animate-pulse' : ''}`} />
               {deepSyncing ? 'Deep Syncing...' : 'Deep Sync'}
@@ -263,7 +264,7 @@ export default function SourceDetailPage() {
           )}
           <Button variant="outline" onClick={handleSync} disabled={syncing || isSyncing}>
             <RefreshCw className={`size-4 ${syncing || isSyncing ? 'animate-spin' : ''}`} />
-            {syncing || isSyncing ? 'Syncing...' : 'Re-sync'}
+            {syncing || isSyncing ? (isWebsite ? 'Crawling...' : 'Syncing...') : isWebsite ? 'Re-crawl' : 'Re-sync'}
           </Button>
           <Button onClick={handleGenerateSummary} disabled={summaryLoading}>
             <Sparkles className={`size-4 ${summaryLoading ? 'animate-pulse' : ''}`} />
@@ -280,7 +281,7 @@ export default function SourceDetailPage() {
         </Card>
       )}
 
-      {!hasDeepContent && totalChunks > 0 && !isSyncing && (
+      {!isWebsite && !hasDeepContent && totalChunks > 0 && !isSyncing && (
         <Card className="border-info-border bg-info-bg/50">
           <CardContent className="py-3 px-4 flex items-center justify-between">
             <div className="flex items-center gap-2">

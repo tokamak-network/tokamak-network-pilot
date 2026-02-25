@@ -4,6 +4,8 @@ import {
   IsOptional,
   IsInt,
   IsUrl,
+  IsBoolean,
+  IsArray,
   Min,
   Max,
 } from 'class-validator';
@@ -74,4 +76,62 @@ export class CrawlWebsiteDto {
   @Min(200)
   @Max(5000)
   delayBetweenRequests?: number;
+
+  @ApiPropertyOptional({
+    description: 'Respect robots.txt disallow rules (default false)',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  respectRobotsTxt?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Path prefixes to exclude when discovering links (e.g. /login, /api/)',
+    type: [String],
+    example: ['/login', '/api/'],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  excludePathPatterns?: string[];
+
+  @ApiPropertyOptional({
+    description: 'If true, create a new source even when one for this URL already exists',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  force?: boolean;
+}
+
+/** Response when crawl is queued successfully */
+export class CrawlWebsiteResponseDto {
+  @ApiProperty({ description: 'The created website source' })
+  source!: {
+    id: string;
+    name: string;
+    type: string;
+    status: string;
+    config: Record<string, unknown>;
+    createdAt: string;
+    updatedAt: string;
+  };
+
+  @ApiProperty({ description: 'Bull job ID for the ingestion job' })
+  jobId!: string;
+
+  @ApiProperty({ description: 'Human-readable message' })
+  message!: string;
+}
+
+/** Response when duplicate website source exists (409)' */
+export class CrawlWebsiteConflictResponseDto {
+  @ApiProperty({ example: 409 })
+  statusCode!: number;
+
+  @ApiProperty({ description: 'ID of the existing source for this URL' })
+  existingSourceId!: string;
+
+  @ApiProperty({ description: 'Error message' })
+  message!: string;
 }

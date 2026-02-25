@@ -32,6 +32,7 @@ import {
   fetchSources,
   fetchIngestionStatus,
   createSource,
+  crawlWebsite,
   syncSource,
   syncSourceFull,
   uploadFiles,
@@ -120,7 +121,7 @@ const sortOptions: { value: SortOption; label: string }[] = [
   { value: 'name', label: 'Name (A–Z)' },
 ];
 
-type AddSourceTab = 'github' | 'upload';
+type AddSourceTab = 'github' | 'upload' | 'website';
 
 export default function SourcesPage() {
   const [, setSources] = useAtom(sourcesAtom);
@@ -132,6 +133,12 @@ export default function SourcesPage() {
   const [newRepoUrl, setNewRepoUrl] = useState('');
   const [adding, setAdding] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
+
+  // Website crawl state
+  const [newWebsiteUrl, setNewWebsiteUrl] = useState('');
+  const [newWebsiteName, setNewWebsiteName] = useState('');
+  const [newWebsiteMaxPages, setNewWebsiteMaxPages] = useState(50);
+  const [addingWebsite, setAddingWebsite] = useState(false);
 
   // File upload state
   const [dragActive, setDragActive] = useState(false);
@@ -205,6 +212,29 @@ export default function SourcesPage() {
       toast(`Failed to add source: ${err.message}`);
     } finally {
       setAdding(false);
+    }
+  };
+
+  const handleCrawlWebsite = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newWebsiteUrl.trim()) return;
+    setAddingWebsite(true);
+    try {
+      await crawlWebsite({
+        url: newWebsiteUrl.trim(),
+        name: newWebsiteName.trim() || undefined,
+        maxPages: newWebsiteMaxPages,
+      });
+      setNewWebsiteUrl('');
+      setNewWebsiteName('');
+      setNewWebsiteMaxPages(50);
+      setShowAddForm(false);
+      loadStatus();
+      toast('Crawl queued. The source will appear as "Syncing" until indexing completes.');
+    } catch (err: any) {
+      toast(err?.message || 'Failed to add website');
+    } finally {
+      setAddingWebsite(false);
     }
   };
 
@@ -447,6 +477,17 @@ export default function SourcesPage() {
                   <Upload className="size-3.5" />
                   File Upload
                 </button>
+                <button
+                  onClick={() => setAddTab('website')}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-colors ${
+                    addTab === 'website'
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  <Globe className="size-3.5" />
+                  Website
+                </button>
               </div>
             </div>
           </CardHeader>
@@ -470,6 +511,48 @@ export default function SourcesPage() {
                     {adding ? <Loader2 className="size-4 animate-spin" /> : <Github className="size-4" />}
                     {adding ? 'Adding...' : 'Add Repo'}
                   </Button>
+                </form>
+              </div>
+            ) : addTab === 'website' ? (
+              /* ── Website crawl tab ── */
+              <div className="space-y-3">
+                <p className="text-xs text-muted-foreground">
+                  Enter a website URL to crawl. The system will fetch pages (same-origin), extract text, and index into the knowledge base. Optionally set a display name and max pages.
+                </p>
+                <form onSubmit={handleCrawlWebsite} className="space-y-3">
+                  <div className="flex gap-2">
+                    <Input
+                      type="url"
+                      value={newWebsiteUrl}
+                      onChange={(e) => setNewWebsiteUrl(e.target.value)}
+                      placeholder="https://docs.example.com"
+                      className="flex-1"
+                      disabled={addingWebsite}
+                    />
+                    <Input
+                      value={newWebsiteName}
+                      onChange={(e) => setNewWebsiteName(e.target.value)}
+                      placeholder="Display name (optional)"
+                      className="w-44"
+                      disabled={addingWebsite}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-xs text-muted-foreground whitespace-nowrap">Max pages:</label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={500}
+                      value={newWebsiteMaxPages}
+                      onChange={(e) => setNewWebsiteMaxPages(Number(e.target.value) || 50)}
+                      className="w-24"
+                      disabled={addingWebsite}
+                    />
+                    <Button type="submit" disabled={addingWebsite || !newWebsiteUrl.trim()}>
+                      {addingWebsite ? <Loader2 className="size-4 animate-spin" /> : <Globe className="size-4" />}
+                      {addingWebsite ? 'Queuing...' : 'Crawl & Add'}
+                    </Button>
+                  </div>
                 </form>
               </div>
             ) : (
