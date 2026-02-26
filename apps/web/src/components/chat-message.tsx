@@ -317,14 +317,19 @@ export function ChatMessage({ message }: ChatMessageProps) {
                     <em className="italic text-muted-foreground">{children}</em>
                   ),
                   // Code
-                  code: ({ className, children, ...props }) => {
-                    const isBlock = className?.includes('language-');
+                  code: ({ inline, className, children, ...props }: any) => {
+                    const codeText = String(children ?? '');
+                    const isBlock =
+                      inline === false ||
+                      Boolean(className?.includes('language-')) ||
+                      codeText.includes('\n');
                     if (isBlock) {
+                      const language = className?.replace('language-', '') || 'text';
                       return (
                         <div className="group/code relative my-3 rounded-lg bg-code-block border border-border/40 overflow-hidden">
                           <div className="flex items-center justify-between px-3 py-1.5 bg-code-header border-b border-border/20">
                             <span className="text-[10px] font-mono text-code-muted uppercase tracking-wider">
-                              {className?.replace('language-', '') || 'code'}
+                              {language}
                             </span>
                           </div>
                           <pre className="p-3 overflow-x-auto">
@@ -338,7 +343,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
                               {children}
                             </code>
                           </pre>
-                          <CopyButton text={String(children).replace(/\n$/, '')} />
+                          <CopyButton text={codeText.replace(/\n$/, '')} />
                         </div>
                       );
                     }
