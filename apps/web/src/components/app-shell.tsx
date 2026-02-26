@@ -13,7 +13,7 @@ import { Separator } from '@/components/ui/separator';
 import { Button } from '@/components/ui/button';
 
 /** Public routes that don't require authentication */
-const PUBLIC_PATHS = ['/login', '/docs', '/invitations'];
+const PUBLIC_PATHS = ['/login', '/invitations', '/docs'];
 
 /** Route patterns that don't require authentication (checked via regex) */
 const PUBLIC_PATTERNS = [
