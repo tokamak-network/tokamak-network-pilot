@@ -26,9 +26,15 @@ import {
   Check,
   FileText,
   X,
+  ThumbsUp,
 } from 'lucide-react';
 import {
+  fetchProjectPublicFeedback,
   fetchProjectPublic,
+  submitProjectPublicFeedback,
+  voteProjectPublicFeedback,
+  type PublicProjectFeedbackEntry,
+  type ProjectFeedbackCategory,
   type ProjectPublicResponse,
 } from '@/lib/api';
 import { Button } from '@/components/ui/button';
@@ -60,6 +66,28 @@ const roleColors: Record<string, string> = {
   contributor: 'bg-info-bg text-info',
   viewer: 'bg-muted text-muted-foreground',
 };
+
+const roadmapStatusLabel: Record<string, string> = {
+  proposed: 'Proposed',
+  approved: 'Approved',
+  planned: 'Planned',
+  in_progress: 'In Progress',
+  completed: 'Completed',
+  rejected: 'Rejected',
+};
+
+const roadmapStatusStyles: Record<string, string> = {
+  proposed: 'bg-muted text-muted-foreground',
+  approved: 'bg-indigo-500/10 text-indigo-700',
+  planned: 'bg-sky-500/10 text-sky-700',
+  in_progress: 'bg-amber-500/10 text-amber-700',
+  completed: 'bg-emerald-500/10 text-emerald-700',
+  rejected: 'bg-rose-500/10 text-rose-700',
+};
+
+function feedbackVoteKey(projectSlug: string, feedbackId: string) {
+  return `tokamak_feedback_vote:${projectSlug}:${feedbackId}`;
+}
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -156,20 +184,25 @@ function PublicChatMessage({ message }: { message: ChatMessage }) {
                     );
                   },
                   strong: ({ children }) => <strong className="font-semibold text-foreground">{children}</strong>,
-                  code: ({ className, children, ...props }) => {
-                    const isBlock = className?.includes('language-');
+                  code: ({ inline, className, children, ...props }: any) => {
+                    const codeText = String(children ?? '');
+                    const isBlock =
+                      inline === false ||
+                      Boolean(className?.includes('language-')) ||
+                      codeText.includes('\n');
                     if (isBlock) {
+                      const language = className?.replace('language-', '') || 'text';
                       return (
                         <div className="group/code relative my-3 rounded-lg bg-code-block border border-border/40 overflow-hidden">
                           <div className="flex items-center justify-between px-3 py-1.5 bg-code-header border-b border-border/20">
                             <span className="text-[10px] font-mono text-code-muted uppercase tracking-wider">
-                              {className?.replace('language-', '') || 'code'}
+                              {language}
                             </span>
                           </div>
                           <pre className="p-3 overflow-x-auto">
                             <code className={cn('text-xs font-mono text-code-text leading-relaxed', className)} {...props}>{children}</code>
                           </pre>
-                          <CopyButton text={String(children).replace(/\n$/, '')} />
+                          <CopyButton text={codeText.replace(/\n$/, '')} />
                         </div>
                       );
                     }
@@ -474,13 +507,99 @@ export default function ProjectPublicPage() {
   const [project, setProject] = useState<ProjectPublicResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [feedbackCategory, setFeedbackCategory] =
+    useState<ProjectFeedbackCategory>('feature');
+  const [feedbackPain, setFeedbackPain] = useState(3);
+  const [feedbackContent, setFeedbackContent] = useState('');
+  const [feedbackName, setFeedbackName] = useState('');
+  const [feedbackEmail, setFeedbackEmail] = useState('');
+  const [feedbackSubmitting, setFeedbackSubmitting] = useState(false);
+  const [feedbackSuccess, setFeedbackSuccess] = useState('');
+  const [publicFeedbackRows, setPublicFeedbackRows] = useState<PublicProjectFeedbackEntry[]>([]);
+  const [publicFeedbackLoading, setPublicFeedbackLoading] = useState(true);
+  const [votingFeedbackId, setVotingFeedbackId] = useState<string | null>(null);
+  const [votedFeedbackIds, setVotedFeedbackIds] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    fetchProjectPublic(slug)
-      .then(setProject)
-      .catch(() => setError('Project not found or not public'))
-      .finally(() => setLoading(false));
+    const load = async () => {
+      try {
+        const [publicProject, feedbackList] = await Promise.all([
+          fetchProjectPublic(slug),
+          fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 }),
+        ]);
+        setProject(publicProject);
+        setPublicFeedbackRows(feedbackList.data);
+
+        if (typeof window !== 'undefined') {
+          const votedMap: Record<string, boolean> = {};
+          for (const row of feedbackList.data) {
+            votedMap[row.id] = localStorage.getItem(feedbackVoteKey(slug, row.id)) === '1';
+          }
+          setVotedFeedbackIds(votedMap);
+        }
+      } catch {
+        setError('Project not found or not public');
+      } finally {
+        setLoading(false);
+        setPublicFeedbackLoading(false);
+      }
+    };
+
+    load().catch(() => {
+      setError('Project not found or not public');
+      setLoading(false);
+      setPublicFeedbackLoading(false);
+    });
   }, [slug]);
+
+  const handleSubmitFeedback = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedbackContent.trim() || feedbackSubmitting) return;
+
+    setFeedbackSubmitting(true);
+    setFeedbackSuccess('');
+    try {
+      await submitProjectPublicFeedback(slug, {
+        category: feedbackCategory,
+        painLevel: feedbackPain,
+        content: feedbackContent.trim(),
+        submitterName: feedbackName.trim() || undefined,
+        submitterEmail: feedbackEmail.trim() || undefined,
+      });
+      setFeedbackContent('');
+      setFeedbackName('');
+      setFeedbackEmail('');
+      setFeedbackPain(3);
+      setFeedbackSuccess('Thanks! Your feedback was submitted.');
+      const refreshed = await fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 });
+      setPublicFeedbackRows(refreshed.data);
+    } catch {
+      setFeedbackSuccess('Could not submit feedback right now. Please try again.');
+    } finally {
+      setFeedbackSubmitting(false);
+    }
+  };
+
+  const handleVoteFeedback = async (feedbackId: string) => {
+    if (votingFeedbackId || votedFeedbackIds[feedbackId]) return;
+
+    setVotingFeedbackId(feedbackId);
+    setFeedbackSuccess('');
+    try {
+      const res = await voteProjectPublicFeedback(slug, feedbackId);
+      setPublicFeedbackRows((prev) =>
+        prev.map((row) => (row.id === feedbackId ? res.feedback : row)),
+      );
+      setVotedFeedbackIds((prev) => ({ ...prev, [feedbackId]: true }));
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(feedbackVoteKey(slug, feedbackId), '1');
+      }
+    } catch (err: any) {
+      setFeedbackSuccess(err?.message || 'Could not record vote right now.');
+    } finally {
+      setVotingFeedbackId(null);
+    }
+  };
 
   if (loading) {
     return (
@@ -583,6 +702,61 @@ export default function ProjectPublicPage() {
           </section>
         )}
 
+        {/* Public Roadmap */}
+        {project.isRoadmapPublic && (
+          <section className="space-y-4">
+            <h2 className="text-xl font-semibold">Public Roadmap</h2>
+            {project.roadmap.length === 0 ? (
+              <Card>
+                <CardContent className="p-4 text-sm text-muted-foreground">
+                  Roadmap visibility is enabled, but no roadmap items are published yet.
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {project.roadmap.map((item) => (
+                  <Card key={item.id}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <p className="text-sm font-semibold">{item.title}</p>
+                          <div className="flex items-center gap-2 mt-1 flex-wrap">
+                            <Badge className={`text-[10px] ${roadmapStatusStyles[item.status] || 'bg-muted text-muted-foreground'}`}>
+                              {roadmapStatusLabel[item.status] || item.status}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Priority: {item.priority}
+                            </Badge>
+                            <Badge variant="outline" className="text-[10px]">
+                              Effort: {item.effort}
+                            </Badge>
+                            {item.targetQuarter && (
+                              <Badge variant="outline" className="text-[10px]">
+                                {item.targetQuarter}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <span className="text-[11px] text-muted-foreground">
+                          Updated {new Date(item.updatedAt).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-sm text-muted-foreground whitespace-pre-wrap">
+                        {item.problem}
+                      </p>
+                      {item.outcome && (
+                        <p className="text-xs text-muted-foreground">
+                          Outcome: {item.outcome}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
         {/* Team */}
         <section className="space-y-4">
           <h2 className="text-xl font-semibold">Team</h2>
@@ -607,6 +781,157 @@ export default function ProjectPublicPage() {
               </Card>
             ))}
           </div>
+        </section>
+
+        {/* Public Feedback */}
+        <section className="space-y-4">
+          <h2 className="text-xl font-semibold">Share Public Feedback</h2>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Top Feedback Requests</CardTitle>
+              <CardDescription>
+                Vote for what should be prioritized next.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {publicFeedbackLoading ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Loading feedback...
+                </div>
+              ) : publicFeedbackRows.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                  No public feedback yet. Be the first to submit one.
+                </p>
+              ) : (
+                publicFeedbackRows.map((row) => {
+                  const voted = Boolean(votedFeedbackIds[row.id]);
+                  const isVoting = votingFeedbackId === row.id;
+
+                  return (
+                    <div
+                      key={row.id}
+                      className="rounded-md border p-3 flex items-start justify-between gap-3"
+                    >
+                      <div className="space-y-1 min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <Badge variant="outline" className="text-[10px]">
+                            {row.category}
+                          </Badge>
+                          {typeof row.painLevel === 'number' && (
+                            <Badge variant="secondary" className="text-[10px]">
+                              pain {row.painLevel}
+                            </Badge>
+                          )}
+                        </div>
+                        {row.title && (
+                          <p className="text-sm font-medium">{row.title}</p>
+                        )}
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {row.content}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant={voted ? 'secondary' : 'outline'}
+                        onClick={() => handleVoteFeedback(row.id)}
+                        disabled={isVoting || voted}
+                        className="shrink-0"
+                      >
+                        {isVoting ? (
+                          <Loader2 className="size-3.5 animate-spin" />
+                        ) : (
+                          <ThumbsUp className="size-3.5" />
+                        )}
+                        {row.votes}
+                      </Button>
+                    </div>
+                  );
+                })
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">Help shape the roadmap</CardTitle>
+              <CardDescription>
+                Your feedback is triaged into roadmap items and implementation tasks.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmitFeedback} className="space-y-3">
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <label className="text-sm space-y-1">
+                    <span className="text-muted-foreground">Category</span>
+                    <select
+                      value={feedbackCategory}
+                      onChange={(e) =>
+                        setFeedbackCategory(e.target.value as ProjectFeedbackCategory)
+                      }
+                      className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    >
+                      <option value="feature">Feature</option>
+                      <option value="bug">Bug</option>
+                      <option value="ux">UX</option>
+                      <option value="performance">Performance</option>
+                      <option value="integration">Integration</option>
+                      <option value="pricing">Pricing</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </label>
+
+                  <label className="text-sm space-y-1">
+                    <span className="text-muted-foreground">Pain level</span>
+                    <select
+                      value={feedbackPain}
+                      onChange={(e) => setFeedbackPain(Number(e.target.value))}
+                      className="h-9 w-full rounded-md border bg-background px-2 text-sm"
+                    >
+                      <option value={1}>1 - Low</option>
+                      <option value={2}>2</option>
+                      <option value={3}>3 - Medium</option>
+                      <option value={4}>4</option>
+                      <option value={5}>5 - Critical</option>
+                    </select>
+                  </label>
+                </div>
+
+                <textarea
+                  value={feedbackContent}
+                  onChange={(e) => setFeedbackContent(e.target.value)}
+                  placeholder="What should be improved in this product/project?"
+                  className="w-full min-h-[96px] rounded-md border bg-background px-3 py-2 text-sm"
+                  required
+                />
+
+                <div className="grid sm:grid-cols-2 gap-3">
+                  <Input
+                    value={feedbackName}
+                    onChange={(e) => setFeedbackName(e.target.value)}
+                    placeholder="Name (optional)"
+                  />
+                  <Input
+                    value={feedbackEmail}
+                    onChange={(e) => setFeedbackEmail(e.target.value)}
+                    placeholder="Email (optional)"
+                    type="email"
+                  />
+                </div>
+
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-muted-foreground">{feedbackSuccess}</p>
+                  <Button type="submit" disabled={!feedbackContent.trim() || feedbackSubmitting}>
+                    {feedbackSubmitting ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <Send className="size-4" />
+                    )}
+                    Submit Feedback
+                  </Button>
+                </div>
+              </form>
+            </CardContent>
+          </Card>
         </section>
 
         {/* Knowledge Sources */}

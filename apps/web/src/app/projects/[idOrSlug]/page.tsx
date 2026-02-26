@@ -33,6 +33,7 @@ import {
   Mail,
   RefreshCw,
   Clock,
+  Settings,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -56,6 +57,7 @@ import {
   type SourceResponse,
   type ProjectInvitationResponse,
 } from '@/lib/api';
+import { cn } from '@/lib/utils';
 import { userAtom } from '@/store/auth';
 import { useConfirm } from '@/components/ui/confirm-dialog';
 import { useToast } from '@/components/ui/toast';
@@ -72,6 +74,12 @@ import { Separator } from '@/components/ui/separator';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { ChatMessage } from '@/components/chat-message';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import type { ConversationMessage } from '@/store/ask';
 
 const roleColors: Record<string, string> = {
@@ -113,7 +121,7 @@ export default function ProjectDetailPage() {
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat' | 'settings'>('overview');
   const [invitations, setInvitations] = useState<ProjectInvitationResponse[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -288,6 +296,16 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleToggleRoadmapVisibility = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { isRoadmapPublic: !project.isRoadmapPublic });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
   const handleSendInvitation = async () => {
     if (!project || !inviteEmail.trim()) return;
     setSendingInvite(true);
@@ -359,6 +377,7 @@ export default function ProjectDetailPage() {
     { id: 'sources' as const, label: `Sources (${project.sources.length})`, icon: Database },
     { id: 'team' as const, label: `Team (${project.members.length})`, icon: Users },
     { id: 'chat' as const, label: 'Ask', icon: MessageSquare },
+    { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
   return (
@@ -404,30 +423,47 @@ export default function ProjectDetailPage() {
                   Landing Page
                 </Badge>
               )}
+              {project.isRoadmapPublic && (
+                <Badge variant="secondary" className="text-[10px] px-1.5 py-0 bg-sky-500/10 text-sky-700 border-sky-500/20">
+                  <Globe className="size-2.5 mr-0.5" />
+                  Roadmap Public
+                </Badge>
+              )}
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          {isLead && project.isPublic && (
-            <Button
-              variant={project.showOnLandingPage ? 'secondary' : 'outline'}
-              size="sm"
-              onClick={handleToggleLandingPage}
-              title={project.showOnLandingPage ? 'Remove from landing page' : 'Feature on landing page'}
-            >
-              <Megaphone className="size-4" />
-              {project.showOnLandingPage ? 'On Landing Page' : 'Show on Landing Page'}
-            </Button>
-          )}
-          {project.isPublic && (
-            <Link href={`/projects/${project.slug}/public`}>
-              <Button variant="outline" size="sm">
-                <ExternalLink className="size-4" />
-                Public Page
-              </Button>
-            </Link>
-          )}
-        </div>
+        <TooltipProvider delayDuration={300}>
+          <div className="flex items-center gap-2">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Link href={`/projects/${project.slug}/roadmap`}>
+                  <Button variant="outline" size="sm">
+                    <Sparkles className="size-4" />
+                    Roadmap Pipeline
+                  </Button>
+                </Link>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-[220px]">
+                Manage feedback and roadmap items for this project.
+              </TooltipContent>
+            </Tooltip>
+            {project.isPublic && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Link href={`/projects/${project.slug}/public`}>
+                    <Button variant="outline" size="sm">
+                      <ExternalLink className="size-4" />
+                      Public Page
+                    </Button>
+                  </Link>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-[220px]">
+                  View the public project page as visitors see it.
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        </TooltipProvider>
       </div>
 
       {project.description && (
@@ -545,6 +581,15 @@ export default function ProjectDetailPage() {
       {activeTab === 'chat' && (
         <ChatTab project={project} />
       )}
+
+      {activeTab === 'settings' && (
+        <SettingsTab
+          project={project}
+          isLead={isLead}
+          onToggleLandingPage={handleToggleLandingPage}
+          onToggleRoadmapVisibility={handleToggleRoadmapVisibility}
+        />
+      )}
     </div>
   );
 }
@@ -570,6 +615,117 @@ function KpiCard({
         <p className="text-2xl font-bold tabular-nums">{value.toLocaleString()}</p>
       </CardContent>
     </Card>
+  );
+}
+
+// ─── Toggle (switch) ─────────────────────────────────────────
+
+function Toggle({
+  checked,
+  onClick,
+  disabled,
+  'aria-label': ariaLabel,
+}: {
+  checked: boolean;
+  onClick: () => void;
+  disabled?: boolean;
+  'aria-label'?: string;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={checked}
+      aria-label={ariaLabel}
+      disabled={disabled}
+      onClick={onClick}
+      className={cn(
+        'relative inline-flex h-6 w-11 shrink-0 rounded-full border border-input transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:pointer-events-none disabled:opacity-50',
+        checked ? 'bg-primary' : 'bg-muted',
+      )}
+    >
+      <span
+        className={cn(
+          'pointer-events-none block size-5 rounded-full bg-background shadow-lg ring-0 transition-transform mt-0.5',
+          checked ? 'translate-x-5' : 'translate-x-0.5',
+        )}
+      />
+    </button>
+  );
+}
+
+// ─── Settings Tab ────────────────────────────────────────────
+
+function SettingsTab({
+  project,
+  isLead,
+  onToggleLandingPage,
+  onToggleRoadmapVisibility,
+}: {
+  project: ProjectDetailResponse;
+  isLead: boolean;
+  onToggleLandingPage: () => void;
+  onToggleRoadmapVisibility: () => void;
+}) {
+  const canEditVisibility = isLead && project.isPublic;
+
+  return (
+    <div className="space-y-6">
+      {canEditVisibility && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Globe className="size-4" />
+              Visibility & sharing
+            </CardTitle>
+            <CardDescription>
+              Control how this project appears on the landing page and public project page.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 font-medium">
+                  <Megaphone className="size-4 text-muted-foreground" />
+                  Show on Landing Page
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Feature this project on the Tokamak Forest landing page so it’s discoverable by visitors.
+                </p>
+              </div>
+              <Toggle
+                checked={!!project.showOnLandingPage}
+                onClick={onToggleLandingPage}
+                aria-label="Toggle show on landing page"
+              />
+            </div>
+            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+              <div className="space-y-0.5">
+                <div className="flex items-center gap-2 font-medium">
+                  <Globe className="size-4 text-muted-foreground" />
+                  Show roadmap on public page
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Allow visitors to see the project roadmap (planned and in-progress work) on the public project page.
+                </p>
+              </div>
+              <Toggle
+                checked={!!project.isRoadmapPublic}
+                onClick={onToggleRoadmapVisibility}
+                aria-label="Toggle roadmap visible on public page"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+      {!canEditVisibility && (
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Only project leads can change visibility settings. This project is {project.isPublic ? 'public' : 'private'}.
+          </CardContent>
+        </Card>
+      )}
+    </div>
   );
 }
 

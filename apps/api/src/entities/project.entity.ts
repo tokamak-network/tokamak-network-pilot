@@ -43,6 +43,9 @@ export class Project {
   @Column({ type: 'boolean', default: false })
   showOnLandingPage!: boolean;
 
+  @Column({ type: 'boolean', default: false })
+  isRoadmapPublic!: boolean;
+
   @CreateDateColumn()
   createdAt!: Date;
 

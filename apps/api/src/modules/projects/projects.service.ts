@@ -7,12 +7,13 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { randomBytes } from 'crypto';
 import { Project } from '../../entities/project.entity';
 import { ProjectMember, ProjectRole } from '../../entities/project-member.entity';
 import { ProjectSource } from '../../entities/project-source.entity';
 import { ProjectInvitation } from '../../entities/project-invitation.entity';
+import { RoadmapItem } from '../../entities/roadmap-item.entity';
 import { Source } from '../../entities/source.entity';
 import { User } from '../../entities/user.entity';
 import { Document } from '../../entities/document.entity';
@@ -48,6 +49,8 @@ export class ProjectsService {
     private readonly userRepo: Repository<User>,
     @InjectRepository(Document)
     private readonly documentRepo: Repository<Document>,
+    @InjectRepository(RoadmapItem)
+    private readonly roadmapItemRepo: Repository<RoadmapItem>,
     private readonly llm: LlmService,
     private readonly github: GitHubService,
     private readonly emailService: EmailService,
@@ -210,6 +213,7 @@ export class ProjectsService {
       links: dto.links || [],
       isPublic: dto.isPublic ?? true,
       showOnLandingPage: dto.showOnLandingPage ?? false,
+      isRoadmapPublic: dto.isRoadmapPublic ?? false,
     });
 
     const saved = await this.projectRepo.save(project);
@@ -307,6 +311,7 @@ export class ProjectsService {
       links: [{ label: 'GitHub', url: `https://github.com/${owner}/${repo}` }],
       isPublic: true,
       showOnLandingPage: false,
+      isRoadmapPublic: false,
     });
 
     const saved = await this.projectRepo.save(project);
@@ -359,6 +364,7 @@ export class ProjectsService {
     if (dto.links !== undefined) project.links = dto.links;
     if (dto.isPublic !== undefined) project.isPublic = dto.isPublic;
     if (dto.showOnLandingPage !== undefined) project.showOnLandingPage = dto.showOnLandingPage;
+    if (dto.isRoadmapPublic !== undefined) project.isRoadmapPublic = dto.isRoadmapPublic;
     if (dto.summary !== undefined) {
       project.summary = dto.summary;
       project.summaryUpdatedAt = new Date();
@@ -686,7 +692,7 @@ ${sampleContent}`,
       throw new NotFoundException(`Project "${slug}" not found`);
     }
 
-    const [members, projectSources] = await Promise.all([
+    const [members, projectSources, roadmapItems] = await Promise.all([
       this.memberRepo.find({
         where: { projectId: project.id },
         relations: ['user'],
@@ -696,7 +702,36 @@ ${sampleContent}`,
         where: { projectId: project.id },
         relations: ['source'],
       }),
+      project.isRoadmapPublic
+        ? this.roadmapItemRepo.find({
+            where: {
+              projectId: project.id,
+              status: In(['proposed', 'approved', 'planned', 'in_progress', 'completed']),
+            },
+          })
+        : Promise.resolve([]),
     ]);
+
+    const statusRank = {
+      in_progress: 0,
+      planned: 1,
+      approved: 2,
+      proposed: 3,
+      completed: 4,
+      rejected: 5,
+    } as const;
+    const priorityRank = { critical: 0, high: 1, medium: 2, low: 3 } as const;
+
+    const sortedRoadmap = roadmapItems
+      .slice()
+      .sort((a, b) => {
+        const statusDelta = statusRank[a.status] - statusRank[b.status];
+        if (statusDelta !== 0) return statusDelta;
+        const priorityDelta = priorityRank[a.priority] - priorityRank[b.priority];
+        if (priorityDelta !== 0) return priorityDelta;
+        return b.updatedAt.getTime() - a.updatedAt.getTime();
+      })
+      .slice(0, 20);
 
     return {
       id: project.id,
@@ -706,6 +741,20 @@ ${sampleContent}`,
       logoUrl: project.logoUrl,
       links: project.links,
       summary: project.summary,
+      isRoadmapPublic: project.isRoadmapPublic,
+      roadmap: project.isRoadmapPublic
+        ? sortedRoadmap.map((item) => ({
+            id: item.id,
+            title: item.title,
+            problem: item.problem,
+            outcome: item.outcome,
+            priority: item.priority,
+            effort: item.effort,
+            status: item.status,
+            targetQuarter: item.targetQuarter,
+            updatedAt: item.updatedAt.toISOString(),
+          }))
+        : [],
       members: members.map((m) => ({
         role: m.role,
         user: { name: m.user.name, email: m.user.email },

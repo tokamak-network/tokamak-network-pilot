@@ -152,6 +152,16 @@ The system can ingest knowledge from multiple source types:
 | GET    | `/api/v1/feedback/message/:id` | Get your feedback for a message    | JWT    |
 | GET    | `/api/v1/feedback/stats`    | Get feedback statistics               | JWT    |
 | GET    | `/api/v1/feedback/suggested-questions` | Get suggested questions      | —      |
+| POST   | `/api/v1/projects/:slug/public-feedback` | Submit public project feedback | — |
+| GET    | `/api/v1/projects/:idOrSlug/feedback` | List project feedback inbox | JWT |
+| PUT    | `/api/v1/projects/:idOrSlug/feedback/:feedbackId` | Update feedback status/note | JWT |
+| POST   | `/api/v1/projects/:idOrSlug/roadmap/ai-draft` | Queue AI feedback→roadmap draft | JWT |
+| GET    | `/api/v1/projects/:idOrSlug/roadmap/pipeline` | Pipeline status counts | JWT |
+| GET    | `/api/v1/projects/:idOrSlug/roadmap` | List roadmap items | JWT |
+| POST   | `/api/v1/projects/:idOrSlug/roadmap` | Create roadmap item | JWT |
+| PUT    | `/api/v1/projects/:idOrSlug/roadmap/:itemId` | Update roadmap item | JWT |
+| POST   | `/api/v1/projects/:idOrSlug/roadmap/:itemId/task-prompts` | Generate AI task prompt | JWT |
+| GET    | `/api/v1/projects/:idOrSlug/roadmap/:itemId/task-prompts` | List generated prompts | JWT |
 | GET    | `/api/v1/changelog`         | Get API changelog / release notes     | —      |
 | GET    | `/api/v1/changelog/latest`  | Get latest changelog entry            | —      |
 | GET    | `/api/v1/changelog/:version`| Get changelog for specific version    | —      |
@@ -316,6 +326,19 @@ const { sources: knowledgeSources } = await pilot.listSources();
 - [ ] **Backup & disaster recovery** — Automated PostgreSQL + Qdrant backups
 - [ ] **Multi-environment config** — Staging, production environment management
 - [ ] **E2E tests** — Playwright tests for the web app, API integration tests
+
+---
+
+### Phase 9 — Feedback → Roadmap → AI Tasks
+
+> Turn user feedback into a structured product execution pipeline.
+
+- [x] **Public project feedback inbox** — Anyone can submit public feedback on project pages (`/projects/:slug/public-feedback`)
+- [x] **Feedback triage workflow** — Maintainers can review and classify project feedback (`new`, `reviewed`, `planned`, `rejected`)
+- [x] **AI roadmap draft pipeline** — Background job converts feedback into proposed roadmap items
+- [x] **Roadmap item management** — Create/update roadmap items with status, priority, effort, and linked feedback
+- [x] **AI task prompt generation** — Convert roadmap items into implementation-ready AI prompts + task checklists
+- [x] **Web workspace** — New project roadmap page to manage the full pipeline end-to-end
 
 ---
 
