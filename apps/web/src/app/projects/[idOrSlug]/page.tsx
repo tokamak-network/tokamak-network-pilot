@@ -286,6 +286,22 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleTogglePublic = async () => {
+    if (!project) return;
+    try {
+      const makingPrivate = project.isPublic;
+      const updates: Record<string, boolean> = { isPublic: !project.isPublic };
+      if (makingPrivate) {
+        updates.showOnLandingPage = false;
+        updates.isRoadmapPublic = false;
+      }
+      await updateProject(project.id, updates);
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
   const handleToggleLandingPage = async () => {
     if (!project) return;
     try {
@@ -586,6 +602,7 @@ export default function ProjectDetailPage() {
         <SettingsTab
           project={project}
           isLead={isLead}
+          onTogglePublic={handleTogglePublic}
           onToggleLandingPage={handleToggleLandingPage}
           onToggleRoadmapVisibility={handleToggleRoadmapVisibility}
         />
@@ -659,72 +676,107 @@ function Toggle({
 function SettingsTab({
   project,
   isLead,
+  onTogglePublic,
   onToggleLandingPage,
   onToggleRoadmapVisibility,
 }: {
   project: ProjectDetailResponse;
   isLead: boolean;
+  onTogglePublic: () => void;
   onToggleLandingPage: () => void;
   onToggleRoadmapVisibility: () => void;
 }) {
-  const canEditVisibility = isLead && project.isPublic;
+  if (!isLead) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Only project leads can change settings.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {canEditVisibility && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Globe className="size-4" />
-              Visibility & sharing
-            </CardTitle>
-            <CardDescription>
-              Control how this project appears on the landing page and public project page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 font-medium">
-                  <Megaphone className="size-4 text-muted-foreground" />
-                  Show on Landing Page
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Feature this project on the Tokamak Forest landing page so it’s discoverable by visitors.
-                </p>
-              </div>
-              <Toggle
-                checked={!!project.showOnLandingPage}
-                onClick={onToggleLandingPage}
-                aria-label="Toggle show on landing page"
-              />
-            </div>
-            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 font-medium">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="size-4" />
+            Visibility & sharing
+          </CardTitle>
+          <CardDescription>
+            Control who can see this project and how it appears publicly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                {project.isPublic ? (
                   <Globe className="size-4 text-muted-foreground" />
-                  Show roadmap on public page
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Allow visitors to see the project roadmap (planned and in-progress work) on the public project page.
-                </p>
+                ) : (
+                  <Lock className="size-4 text-muted-foreground" />
+                )}
+                Public project
               </div>
-              <Toggle
-                checked={!!project.isRoadmapPublic}
-                onClick={onToggleRoadmapVisibility}
-                aria-label="Toggle roadmap visible on public page"
-              />
+              <p className="text-sm text-muted-foreground">
+                {project.isPublic
+                  ? 'This project is visible to anyone with the link. Turn off to make it private.'
+                  : 'This project is private. Only team members can access it. Turn on to make it publicly visible.'}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-      {!canEditVisibility && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Only project leads can change visibility settings. This project is {project.isPublic ? 'public' : 'private'}.
-          </CardContent>
-        </Card>
-      )}
+            <Toggle
+              checked={!!project.isPublic}
+              onClick={onTogglePublic}
+              aria-label="Toggle project public visibility"
+            />
+          </div>
+
+          <div className={cn(
+            'flex items-start justify-between gap-4 rounded-lg border p-4 transition-opacity',
+            !project.isPublic && 'opacity-50',
+          )}>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                <Megaphone className="size-4 text-muted-foreground" />
+                Show on Landing Page
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Feature this project on the Tokamak Forest landing page so it&#39;s discoverable by visitors.
+              </p>
+            </div>
+            <Toggle
+              checked={!!project.showOnLandingPage}
+              onClick={onToggleLandingPage}
+              disabled={!project.isPublic}
+              aria-label="Toggle show on landing page"
+            />
+          </div>
+
+          <div className={cn(
+            'flex items-start justify-between gap-4 rounded-lg border p-4 transition-opacity',
+            !project.isPublic && 'opacity-50',
+          )}>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                <Globe className="size-4 text-muted-foreground" />
+                Show roadmap on public page
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Allow visitors to see the project roadmap (planned and in-progress work) on the public project page.
+              </p>
+            </div>
+            <Toggle
+              checked={!!project.isRoadmapPublic}
+              onClick={onToggleRoadmapVisibility}
+              disabled={!project.isPublic}
+              aria-label="Toggle roadmap visible on public page"
+            />
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

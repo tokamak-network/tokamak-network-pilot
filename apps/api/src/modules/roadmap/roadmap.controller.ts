@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   ForbiddenException,
   Get,
   Param,
@@ -238,6 +239,25 @@ export class RoadmapController {
       idOrSlug,
       itemId,
       dto,
+      this.getUserId(req),
+    );
+  }
+
+  @Delete(':idOrSlug/roadmap/:itemId')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Delete a roadmap item',
+    description: 'Permanently removes a roadmap item. Only project leads and contributors may delete.',
+  })
+  async deleteRoadmapItem(
+    @Param('idOrSlug') idOrSlug: string,
+    @Param('itemId') itemId: string,
+    @Req() req: any,
+  ) {
+    return this.roadmapService.deleteRoadmapItem(
+      idOrSlug,
+      itemId,
       this.getUserId(req),
     );
   }

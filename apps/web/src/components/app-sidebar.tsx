@@ -70,7 +70,7 @@ const mainNav = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'Content', href: '/content', icon: FileText },
-  { label: 'Snippets', href: '/snippets', icon: Code2 },
+  // { label: 'Snippets', href: '/snippets', icon: Code2 },
 ];
 
 

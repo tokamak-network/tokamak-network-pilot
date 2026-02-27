@@ -1445,6 +1445,17 @@ export async function updateProjectRoadmapItem(
   );
 }
 
+/** Delete a roadmap item. */
+export async function deleteProjectRoadmapItem(
+  idOrSlug: string,
+  itemId: string,
+) {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/projects/${idOrSlug}/roadmap/${itemId}`,
+    { method: 'DELETE' },
+  );
+}
+
 /** Generate an implementation-ready AI task prompt for a roadmap item. */
 export async function generateRoadmapTaskPrompt(
   idOrSlug: string,

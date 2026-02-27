@@ -205,12 +205,14 @@ export class ListRoadmapItemsDto {
 
   @ApiPropertyOptional({ description: 'Page number', minimum: 1, example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
 
   @ApiPropertyOptional({ description: 'Page size', minimum: 1, maximum: 100, example: 20 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -220,6 +222,7 @@ export class ListRoadmapItemsDto {
 export class ListTaskPromptsDto {
   @ApiPropertyOptional({ description: 'Maximum prompts to return', minimum: 1, maximum: 50, example: 10 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(50)

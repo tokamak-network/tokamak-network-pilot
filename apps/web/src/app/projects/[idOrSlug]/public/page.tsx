@@ -523,11 +523,18 @@ export default function ProjectPublicPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [publicProject, feedbackList] = await Promise.all([
-          fetchProjectPublic(slug),
-          fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 }),
-        ]);
+        const publicProject = await fetchProjectPublic(slug);
         setProject(publicProject);
+      } catch {
+        setError('Project not found or not public');
+        setLoading(false);
+        setPublicFeedbackLoading(false);
+        return;
+      }
+      setLoading(false);
+
+      try {
+        const feedbackList = await fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 });
         setPublicFeedbackRows(feedbackList.data);
 
         if (typeof window !== 'undefined') {
@@ -538,18 +545,13 @@ export default function ProjectPublicPage() {
           setVotedFeedbackIds(votedMap);
         }
       } catch {
-        setError('Project not found or not public');
+        // Feedback failed to load but project is still visible
       } finally {
-        setLoading(false);
         setPublicFeedbackLoading(false);
       }
     };
 
-    load().catch(() => {
-      setError('Project not found or not public');
-      setLoading(false);
-      setPublicFeedbackLoading(false);
-    });
+    load();
   }, [slug]);
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
