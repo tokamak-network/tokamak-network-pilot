@@ -625,8 +625,13 @@ export default function ProjectPublicPage() {
     );
   }
 
+  const themeClass = project.publicTheme && project.publicTheme !== 'forest'
+    ? `public-theme-${project.publicTheme}`
+    : '';
+  const radiusClass = `public-radius-${project.publicBorderRadius || 'rounded'}`;
+
   return (
-    <>
+    <div className={cn(themeClass, radiusClass, 'min-h-screen bg-background text-foreground')}>
       {/* Navigation Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="max-w-4xl mx-auto flex h-14 items-center justify-between px-6">
@@ -971,6 +976,6 @@ export default function ProjectPublicPage() {
 
       {/* Floating Chat Widget */}
       <PublicChat project={project} />
-    </>
+    </div>
   );
 }

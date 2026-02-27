@@ -34,6 +34,7 @@ import {
   RefreshCw,
   Clock,
   Settings,
+  Palette,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -316,6 +317,26 @@ export default function ProjectDetailPage() {
     if (!project) return;
     try {
       await updateProject(project.id, { isRoadmapPublic: !project.isRoadmapPublic });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleChangeTheme = async (theme: string) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { publicTheme: theme });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleChangeBorderRadius = async (radius: string) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { publicBorderRadius: radius });
       await loadData();
     } catch (err: any) {
       toast(err.message);
@@ -605,6 +626,8 @@ export default function ProjectDetailPage() {
           onTogglePublic={handleTogglePublic}
           onToggleLandingPage={handleToggleLandingPage}
           onToggleRoadmapVisibility={handleToggleRoadmapVisibility}
+          onChangeTheme={handleChangeTheme}
+          onChangeBorderRadius={handleChangeBorderRadius}
         />
       )}
     </div>
@@ -673,18 +696,37 @@ function Toggle({
 
 // ─── Settings Tab ────────────────────────────────────────────
 
+const THEME_OPTIONS = [
+  { id: 'forest', label: 'Forest', color: 'oklch(0.3 0.06 150)', description: 'Deep greens & warm cream' },
+  { id: 'ocean', label: 'Ocean', color: 'oklch(0.35 0.1 240)', description: 'Cool blues & soft whites' },
+  { id: 'sunset', label: 'Sunset', color: 'oklch(0.5 0.15 30)', description: 'Warm oranges & soft golds' },
+  { id: 'midnight', label: 'Midnight', color: 'oklch(0.65 0.12 260)', description: 'Dark navy & electric accents' },
+  { id: 'lavender', label: 'Lavender', color: 'oklch(0.45 0.12 290)', description: 'Soft purples & gentle tones' },
+  { id: 'slate', label: 'Slate', color: 'oklch(0.3 0.02 260)', description: 'Neutral grays, clean & minimal' },
+] as const;
+
+const RADIUS_OPTIONS = [
+  { id: 'rounded', label: 'Rounded', description: 'Smooth, friendly corners' },
+  { id: 'pill', label: 'Pill', description: 'Fully rounded, bubbly shapes' },
+  { id: 'square', label: 'Square', description: 'Sharp, modern edges' },
+] as const;
+
 function SettingsTab({
   project,
   isLead,
   onTogglePublic,
   onToggleLandingPage,
   onToggleRoadmapVisibility,
+  onChangeTheme,
+  onChangeBorderRadius,
 }: {
   project: ProjectDetailResponse;
   isLead: boolean;
   onTogglePublic: () => void;
   onToggleLandingPage: () => void;
   onToggleRoadmapVisibility: () => void;
+  onChangeTheme: (theme: string) => void;
+  onChangeBorderRadius: (radius: string) => void;
 }) {
   if (!isLead) {
     return (
@@ -697,6 +739,9 @@ function SettingsTab({
       </div>
     );
   }
+
+  const currentTheme = project.publicTheme || 'forest';
+  const currentRadius = project.publicBorderRadius || 'rounded';
 
   return (
     <div className="space-y-6">
@@ -774,6 +819,86 @@ function SettingsTab({
               disabled={!project.isPublic}
               aria-label="Toggle roadmap visible on public page"
             />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Public Page Appearance */}
+      <Card className={cn(!project.isPublic && 'opacity-50 pointer-events-none')}>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="size-4" />
+            Public page appearance
+          </CardTitle>
+          <CardDescription>
+            Customize the color theme and shape style of your public project page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Color Theme Picker */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Color theme</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {THEME_OPTIONS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onChangeTheme(t.id)}
+                  className={cn(
+                    'relative flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:border-primary/50 hover:shadow-sm',
+                    currentTheme === t.id
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border',
+                  )}
+                >
+                  <div
+                    className="size-8 shrink-0 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{t.description}</p>
+                  </div>
+                  {currentTheme === t.id && (
+                    <div className="absolute top-2 right-2">
+                      <div className="size-2 rounded-full bg-primary" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Border Radius Picker */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Corner style</p>
+            <div className="grid grid-cols-3 gap-3">
+              {RADIUS_OPTIONS.map((r) => {
+                const previewRadius = r.id === 'pill' ? '12px' : r.id === 'square' ? '3px' : '8px';
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => onChangeBorderRadius(r.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-2 rounded-lg border p-4 transition-all hover:border-primary/50 hover:shadow-sm',
+                      currentRadius === r.id
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border',
+                    )}
+                  >
+                    <div
+                      className="size-12 border-2 border-foreground/20 bg-primary/10"
+                      style={{ borderRadius: previewRadius }}
+                    />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">{r.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{r.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
           </div>
         </CardContent>
       </Card>

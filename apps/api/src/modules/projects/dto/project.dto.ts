@@ -89,6 +89,26 @@ export class CreateProjectDto {
   @IsOptional()
   @IsBoolean()
   isRoadmapPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Color theme for the public project page',
+    enum: ['forest', 'ocean', 'sunset', 'midnight', 'lavender', 'slate'],
+    default: 'forest',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['forest', 'ocean', 'sunset', 'midnight', 'lavender', 'slate'])
+  publicTheme?: string;
+
+  @ApiPropertyOptional({
+    description: 'Border radius style for the public project page',
+    enum: ['rounded', 'pill', 'square'],
+    default: 'rounded',
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['rounded', 'pill', 'square'])
+  publicBorderRadius?: string;
 }
 
 export class UpdateProjectDto {
@@ -153,6 +173,24 @@ export class UpdateProjectDto {
   @IsOptional()
   @IsBoolean()
   isRoadmapPublic?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Color theme for the public project page',
+    enum: ['forest', 'ocean', 'sunset', 'midnight', 'lavender', 'slate'],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['forest', 'ocean', 'sunset', 'midnight', 'lavender', 'slate'])
+  publicTheme?: string;
+
+  @ApiPropertyOptional({
+    description: 'Border radius style for the public project page',
+    enum: ['rounded', 'pill', 'square'],
+  })
+  @IsOptional()
+  @IsString()
+  @IsIn(['rounded', 'pill', 'square'])
+  publicBorderRadius?: string;
 }
 
 export class AddProjectMemberDto {

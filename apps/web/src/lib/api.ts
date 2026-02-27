@@ -833,6 +833,8 @@ export interface ProjectResponse {
   isPublic: boolean;
   showOnLandingPage: boolean;
   isRoadmapPublic: boolean;
+  publicTheme: string;
+  publicBorderRadius: string;
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -864,6 +866,8 @@ export interface ProjectPublicResponse {
   logoUrl?: string;
   links: ProjectLinkResponse[];
   summary?: string;
+  publicTheme: string;
+  publicBorderRadius: string;
   isRoadmapPublic: boolean;
   roadmap: Array<{
     id: string;
@@ -953,6 +957,8 @@ export async function updateProject(
     isPublic?: boolean;
     showOnLandingPage?: boolean;
     isRoadmapPublic?: boolean;
+    publicTheme?: string;
+    publicBorderRadius?: string;
   },
 ) {
   return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {

@@ -268,6 +268,16 @@ export interface AskInConversationResponse {
 
 export type ProjectRole = 'lead' | 'contributor' | 'viewer';
 
+export type PublicTheme =
+  | 'forest'
+  | 'ocean'
+  | 'sunset'
+  | 'midnight'
+  | 'lavender'
+  | 'slate';
+
+export type PublicBorderRadius = 'rounded' | 'pill' | 'square';
+
 export interface ProjectLink {
   label: string;
   url: string;
@@ -283,6 +293,8 @@ export interface ProjectInfo {
   summary?: string;
   summaryUpdatedAt?: string;
   isPublic: boolean;
+  publicTheme: PublicTheme;
+  publicBorderRadius: PublicBorderRadius;
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -328,6 +340,8 @@ export interface CreateProjectRequest {
   logoUrl?: string;
   links?: ProjectLink[];
   isPublic?: boolean;
+  publicTheme?: PublicTheme;
+  publicBorderRadius?: PublicBorderRadius;
 }
 
 export interface UpdateProjectRequest {
@@ -338,6 +352,8 @@ export interface UpdateProjectRequest {
   links?: ProjectLink[];
   summary?: string;
   isPublic?: boolean;
+  publicTheme?: PublicTheme;
+  publicBorderRadius?: PublicBorderRadius;
 }
 
 export interface AddProjectMemberRequest {
@@ -402,6 +418,8 @@ export interface ProjectPublicInfo {
   logoUrl?: string;
   links: ProjectLink[];
   summary?: string;
+  publicTheme: PublicTheme;
+  publicBorderRadius: PublicBorderRadius;
   members: Array<{
     role: ProjectRole;
     user: { name?: string; email: string };
