@@ -52,6 +52,12 @@ export class Project {
   @Column({ type: 'varchar', length: 16, default: 'rounded' })
   publicBorderRadius!: string;
 
+  @Column({ type: 'boolean', default: false })
+  isNewsEnabled!: boolean;
+
+  @Column({ type: 'jsonb', default: [] })
+  newsKeywords!: string[];
+
   @CreateDateColumn()
   createdAt!: Date;
 

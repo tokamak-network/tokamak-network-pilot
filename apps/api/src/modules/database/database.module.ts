@@ -17,6 +17,7 @@ import { Feedback } from '../../entities/feedback.entity';
 import { Snippet } from '../../entities/snippet.entity';
 import { ProjectInvitation } from '../../entities/project-invitation.entity';
 import { ProjectFeedback } from '../../entities/project-feedback.entity';
+import { ProjectNews } from '../../entities/project-news.entity';
 import { RoadmapItem } from '../../entities/roadmap-item.entity';
 import { RoadmapTaskPrompt } from '../../entities/roadmap-task-prompt.entity';
 
@@ -53,6 +54,7 @@ import { RoadmapTaskPrompt } from '../../entities/roadmap-task-prompt.entity';
             Snippet,
             ProjectInvitation,
             ProjectFeedback,
+            ProjectNews,
             RoadmapItem,
             RoadmapTaskPrompt,
           ],

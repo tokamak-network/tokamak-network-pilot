@@ -26,6 +26,7 @@ import { ChangelogModule } from './modules/changelog/changelog.module';
 import { FeedbackModule } from './modules/feedback/feedback.module';
 import { SnippetsModule } from './modules/snippets/snippets.module';
 import { RoadmapModule } from './modules/roadmap/roadmap.module';
+import { NewsModule } from './modules/news/news.module';
 
 @Module({
   imports: [
@@ -107,6 +108,9 @@ import { RoadmapModule } from './modules/roadmap/roadmap.module';
 
     // ── Developer Tools ──
     SnippetsModule,
+
+    // ── News Aggregation (Google News per project) ──
+    NewsModule,
   ],
   controllers: [AppController],
   providers: [AppService],

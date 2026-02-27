@@ -295,6 +295,8 @@ export interface ProjectInfo {
   isPublic: boolean;
   publicTheme: PublicTheme;
   publicBorderRadius: PublicBorderRadius;
+  isNewsEnabled: boolean;
+  newsKeywords: string[];
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -342,6 +344,8 @@ export interface CreateProjectRequest {
   isPublic?: boolean;
   publicTheme?: PublicTheme;
   publicBorderRadius?: PublicBorderRadius;
+  isNewsEnabled?: boolean;
+  newsKeywords?: string[];
 }
 
 export interface UpdateProjectRequest {
@@ -354,6 +358,8 @@ export interface UpdateProjectRequest {
   isPublic?: boolean;
   publicTheme?: PublicTheme;
   publicBorderRadius?: PublicBorderRadius;
+  isNewsEnabled?: boolean;
+  newsKeywords?: string[];
 }
 
 export interface AddProjectMemberRequest {
@@ -429,6 +435,32 @@ export interface ProjectPublicInfo {
     type: string;
     documentCount: number;
   }>;
+}
+
+// ---- Project News Types ----
+
+export interface ProjectNewsInfo {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  url: string;
+  source?: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+}
+
+export interface ProjectNewsResponse {
+  data: ProjectNewsInfo[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface NewsSyncResponse {
+  synced: number;
 }
 
 // ---- Feedback Types ----

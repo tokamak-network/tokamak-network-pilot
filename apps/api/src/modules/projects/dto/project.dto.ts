@@ -109,6 +109,23 @@ export class CreateProjectDto {
   @IsString()
   @IsIn(['rounded', 'pill', 'square'])
   publicBorderRadius?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether Google News aggregation is enabled for this project',
+    default: false,
+  })
+  @IsOptional()
+  @IsBoolean()
+  isNewsEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Custom keywords for news search (defaults to project name if empty)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  newsKeywords?: string[];
 }
 
 export class UpdateProjectDto {
@@ -191,6 +208,22 @@ export class UpdateProjectDto {
   @IsString()
   @IsIn(['rounded', 'pill', 'square'])
   publicBorderRadius?: string;
+
+  @ApiPropertyOptional({
+    description: 'Whether Google News aggregation is enabled for this project',
+  })
+  @IsOptional()
+  @IsBoolean()
+  isNewsEnabled?: boolean;
+
+  @ApiPropertyOptional({
+    description: 'Custom keywords for news search (defaults to project name if empty)',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  newsKeywords?: string[];
 }
 
 export class AddProjectMemberDto {

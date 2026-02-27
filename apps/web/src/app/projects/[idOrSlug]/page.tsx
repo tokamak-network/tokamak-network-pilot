@@ -35,6 +35,7 @@ import {
   Clock,
   Settings,
   Palette,
+  Newspaper,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -82,6 +83,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { ConversationMessage } from '@/store/ask';
+import { NewsTab } from '@/components/news';
 
 const roleColors: Record<string, string> = {
   lead: 'bg-warning-bg text-warning border-warning-border',
@@ -122,7 +124,7 @@ export default function ProjectDetailPage() {
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat' | 'news' | 'settings'>('overview');
   const [invitations, setInvitations] = useState<ProjectInvitationResponse[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -323,6 +325,26 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleToggleNews = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { isNewsEnabled: !project.isNewsEnabled });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleUpdateNewsKeywords = async (keywords: string[]) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { newsKeywords: keywords });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
   const handleChangeTheme = async (theme: string) => {
     if (!project) return;
     try {
@@ -414,6 +436,7 @@ export default function ProjectDetailPage() {
     { id: 'sources' as const, label: `Sources (${project.sources.length})`, icon: Database },
     { id: 'team' as const, label: `Team (${project.members.length})`, icon: Users },
     { id: 'chat' as const, label: 'Ask', icon: MessageSquare },
+    { id: 'news' as const, label: 'News', icon: Newspaper },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
@@ -619,6 +642,10 @@ export default function ProjectDetailPage() {
         <ChatTab project={project} />
       )}
 
+      {activeTab === 'news' && (
+        <NewsTab project={project} canEdit={canEdit} isLead={isLead} />
+      )}
+
       {activeTab === 'settings' && (
         <SettingsTab
           project={project}
@@ -626,6 +653,8 @@ export default function ProjectDetailPage() {
           onTogglePublic={handleTogglePublic}
           onToggleLandingPage={handleToggleLandingPage}
           onToggleRoadmapVisibility={handleToggleRoadmapVisibility}
+          onToggleNews={handleToggleNews}
+          onUpdateNewsKeywords={handleUpdateNewsKeywords}
           onChangeTheme={handleChangeTheme}
           onChangeBorderRadius={handleChangeBorderRadius}
         />
@@ -717,6 +746,8 @@ function SettingsTab({
   onTogglePublic,
   onToggleLandingPage,
   onToggleRoadmapVisibility,
+  onToggleNews,
+  onUpdateNewsKeywords,
   onChangeTheme,
   onChangeBorderRadius,
 }: {
@@ -725,6 +756,8 @@ function SettingsTab({
   onTogglePublic: () => void;
   onToggleLandingPage: () => void;
   onToggleRoadmapVisibility: () => void;
+  onToggleNews: () => void;
+  onUpdateNewsKeywords: (keywords: string[]) => void;
   onChangeTheme: (theme: string) => void;
   onChangeBorderRadius: (radius: string) => void;
 }) {
@@ -822,6 +855,13 @@ function SettingsTab({
           </div>
         </CardContent>
       </Card>
+
+      {/* News Aggregation */}
+      <NewsSettingsCard
+        project={project}
+        onToggleNews={onToggleNews}
+        onUpdateKeywords={onUpdateNewsKeywords}
+      />
 
       {/* Public Page Appearance */}
       <Card className={cn(!project.isPublic && 'opacity-50 pointer-events-none')}>
@@ -979,6 +1019,126 @@ function ProjectExportButtons({ slug }: { slug: string }) {
 }
 
 // ─── Overview Tab ────────────────────────────────────────────
+
+// ─── News Settings Card ──────────────────────────────────────
+
+function NewsSettingsCard({
+  project,
+  onToggleNews,
+  onUpdateKeywords,
+}: {
+  project: ProjectDetailResponse;
+  onToggleNews: () => void;
+  onUpdateKeywords: (keywords: string[]) => void;
+}) {
+  const [keywordInput, setKeywordInput] = useState('');
+  const keywords = project.newsKeywords || [];
+
+  const handleAddKeyword = () => {
+    const trimmed = keywordInput.trim();
+    if (!trimmed || keywords.includes(trimmed)) return;
+    onUpdateKeywords([...keywords, trimmed]);
+    setKeywordInput('');
+  };
+
+  const handleRemoveKeyword = (keyword: string) => {
+    onUpdateKeywords(keywords.filter((k) => k !== keyword));
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Newspaper className="size-4" />
+          News Aggregation
+        </CardTitle>
+        <CardDescription>
+          Automatically collect news articles related to this project from Google News.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 font-medium">
+              <Newspaper className="size-4 text-muted-foreground" />
+              Enable news feed
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {project.isNewsEnabled
+                ? 'News articles are being fetched automatically every hour.'
+                : 'Turn on to start aggregating news articles related to this project.'}
+            </p>
+          </div>
+          <Toggle
+            checked={!!project.isNewsEnabled}
+            onClick={onToggleNews}
+            aria-label="Toggle news aggregation"
+          />
+        </div>
+
+        {project.isNewsEnabled && (
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Search keywords</p>
+              <p className="text-xs text-muted-foreground">
+                Customize which keywords are used to search for news. If empty, the project name is used.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddKeyword();
+                  }
+                }}
+                placeholder="Add a keyword..."
+                className="h-8 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddKeyword}
+                disabled={!keywordInput.trim()}
+                className="h-8 shrink-0"
+              >
+                <Plus className="size-3.5 mr-1" />
+                Add
+              </Button>
+            </div>
+
+            {keywords.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {keywords.map((kw) => (
+                  <Badge
+                    key={kw}
+                    variant="secondary"
+                    className="text-xs gap-1 pr-1"
+                  >
+                    {kw}
+                    <button
+                      onClick={() => handleRemoveKeyword(kw)}
+                      className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic">
+                Using project name &quot;{project.name}&quot; as default search keyword
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function OverviewTab({
   project,

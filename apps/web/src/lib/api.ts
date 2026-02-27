@@ -835,6 +835,8 @@ export interface ProjectResponse {
   isRoadmapPublic: boolean;
   publicTheme: string;
   publicBorderRadius: string;
+  isNewsEnabled: boolean;
+  newsKeywords: string[];
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -959,6 +961,8 @@ export async function updateProject(
     isRoadmapPublic?: boolean;
     publicTheme?: string;
     publicBorderRadius?: string;
+    isNewsEnabled?: boolean;
+    newsKeywords?: string[];
   },
 ) {
   return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {
@@ -1598,4 +1602,59 @@ export async function fetchSnippetLanguages() {
 /** Get available snippet categories */
 export async function fetchSnippetCategories() {
   return apiFetch<Array<{ category: string; count: number }>>('/snippets/categories');
+}
+
+// ───────────────────── Project News API ─────────────────────
+
+export interface ProjectNewsArticle {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  url: string;
+  source?: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+}
+
+export interface ProjectNewsResponse {
+  data: ProjectNewsArticle[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+/** Fetch news articles for a project */
+export async function fetchProjectNews(
+  idOrSlug: string,
+  filters?: { page?: number; limit?: number; search?: string },
+) {
+  const params = new URLSearchParams();
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  if (filters?.search) params.set('search', filters.search);
+  const qs = params.toString();
+  return apiFetch<ProjectNewsResponse>(
+    `/projects/${idOrSlug}/news${qs ? `?${qs}` : ''}`,
+  );
+}
+
+/** Manually trigger news sync for a project */
+export async function syncProjectNews(idOrSlug: string) {
+  return apiFetch<{ synced: number }>(`/projects/${idOrSlug}/news/sync`, {
+    method: 'POST',
+  });
+}
+
+/** Delete a news article */
+export async function deleteProjectNewsArticle(
+  idOrSlug: string,
+  articleId: string,
+) {
+  return apiFetch<{ deleted: boolean }>(
+    `/projects/${idOrSlug}/news/${articleId}`,
+    { method: 'DELETE' },
+  );
 }
