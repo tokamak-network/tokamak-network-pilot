@@ -1,6 +1,14 @@
-import { IsOptional, IsInt, Min, Max, IsString } from 'class-validator';
+import {
+  IsOptional,
+  IsInt,
+  Min,
+  Max,
+  IsString,
+  IsNotEmpty,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
-import { ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class FetchNewsQueryDto {
   @ApiPropertyOptional({ description: 'Page number', default: 1 })
@@ -26,4 +34,22 @@ export class FetchNewsQueryDto {
   @IsOptional()
   @IsString()
   search?: string;
+}
+
+export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram';
+
+export class GenerateSocialPostDto {
+  @ApiProperty({
+    description: 'Target social media platform',
+    enum: ['twitter', 'linkedin', 'instagram'],
+  })
+  @IsString()
+  @IsNotEmpty()
+  @IsIn(['twitter', 'linkedin', 'instagram'])
+  platform!: SocialPlatform;
+
+  @ApiPropertyOptional({ description: 'Custom tone or instructions for the AI' })
+  @IsOptional()
+  @IsString()
+  customPrompt?: string;
 }

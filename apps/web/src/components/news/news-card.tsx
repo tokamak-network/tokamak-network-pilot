@@ -1,6 +1,6 @@
 'use client';
 
-import { ExternalLink, Trash2, Clock, Newspaper } from 'lucide-react';
+import { ExternalLink, Trash2, Clock, Newspaper, Sparkles } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import type { ProjectNewsArticle } from '@/lib/api';
 
@@ -32,10 +32,18 @@ function extractDomain(url: string): string {
 interface NewsCardProps {
   article: ProjectNewsArticle;
   canDelete?: boolean;
+  canGenerate?: boolean;
   onDelete?: (id: string) => void;
+  onGeneratePost?: (article: ProjectNewsArticle) => void;
 }
 
-export function NewsCard({ article, canDelete, onDelete }: NewsCardProps) {
+export function NewsCard({
+  article,
+  canDelete,
+  canGenerate,
+  onDelete,
+  onGeneratePost,
+}: NewsCardProps) {
   return (
     <div className="group relative flex gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/20 hover:shadow-sm">
       {article.imageUrl ? (
@@ -93,7 +101,7 @@ export function NewsCard({ article, canDelete, onDelete }: NewsCardProps) {
         </div>
       </div>
 
-      <div className="flex flex-col items-end justify-between shrink-0">
+      <div className="flex flex-col items-end justify-between shrink-0 gap-1">
         <a
           href={article.url}
           target="_blank"
@@ -104,19 +112,35 @@ export function NewsCard({ article, canDelete, onDelete }: NewsCardProps) {
           <ExternalLink className="size-3.5" />
         </a>
 
-        {canDelete && onDelete && (
-          <button
-            onClick={() => onDelete(article.id)}
-            className={cn(
-              'p-1 rounded-md text-muted-foreground/50 transition-all',
-              'opacity-0 group-hover:opacity-100',
-              'hover:text-destructive hover:bg-destructive/10',
-            )}
-            title="Remove article"
-          >
-            <Trash2 className="size-3.5" />
-          </button>
-        )}
+        <div className="flex flex-col gap-1">
+          {canGenerate && onGeneratePost && (
+            <button
+              onClick={() => onGeneratePost(article)}
+              className={cn(
+                'p-1 rounded-md text-muted-foreground/50 transition-all',
+                'opacity-0 group-hover:opacity-100',
+                'hover:text-primary hover:bg-primary/10',
+              )}
+              title="Generate social media post"
+            >
+              <Sparkles className="size-3.5" />
+            </button>
+          )}
+
+          {canDelete && onDelete && (
+            <button
+              onClick={() => onDelete(article.id)}
+              className={cn(
+                'p-1 rounded-md text-muted-foreground/50 transition-all',
+                'opacity-0 group-hover:opacity-100',
+                'hover:text-destructive hover:bg-destructive/10',
+              )}
+              title="Remove article"
+            >
+              <Trash2 className="size-3.5" />
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );

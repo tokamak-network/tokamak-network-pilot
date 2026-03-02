@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, ILike } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -6,6 +6,8 @@ import { XMLParser } from 'fast-xml-parser';
 import { createHash } from 'crypto';
 import { Project } from '../../entities/project.entity';
 import { ProjectNews } from '../../entities/project-news.entity';
+import { LlmService } from '../llm/llm.service';
+import type { SocialPlatform } from './dto/news.dto';
 
 interface RssItem {
   title: string;
@@ -28,6 +30,7 @@ export class NewsService {
     private readonly projectRepo: Repository<Project>,
     @InjectRepository(ProjectNews)
     private readonly newsRepo: Repository<ProjectNews>,
+    private readonly llm: LlmService,
   ) {}
 
   @Cron(CronExpression.EVERY_HOUR)
@@ -134,6 +137,74 @@ export class NewsService {
     return { deleted: true };
   }
 
+  async generateSocialPost(
+    articleId: string,
+    projectId: string,
+    platform: SocialPlatform,
+    customPrompt?: string,
+  ) {
+    const article = await this.newsRepo.findOne({
+      where: { id: articleId, projectId },
+    });
+    if (!article) throw new NotFoundException('News article not found');
+
+    const project = await this.projectRepo.findOneOrFail({
+      where: { id: projectId },
+    });
+
+    const platformInstructions = PLATFORM_PROMPTS[platform];
+
+    const systemPrompt = [
+      'You are a professional social media content creator for a Web3/blockchain project.',
+      `Project name: "${project.name}".`,
+      project.description
+        ? `Project description: "${project.description}".`
+        : '',
+      '',
+      platformInstructions,
+      '',
+      customPrompt ? `Additional instructions: ${customPrompt}` : '',
+      '',
+      'IMPORTANT RULES:',
+      '- Write ONLY the post content, no explanations or meta-commentary.',
+      '- Be engaging but professional.',
+      '- Include relevant hashtags where appropriate for the platform.',
+      '- Reference the article source or link naturally.',
+      '- Keep the tone informative and exciting, aligned with crypto/blockchain community.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const userMessage = [
+      'Generate a social media post based on this news article:',
+      '',
+      `Title: ${article.title}`,
+      article.description ? `Description: ${article.description}` : '',
+      `Source: ${article.source || 'Unknown'}`,
+      `URL: ${article.url}`,
+    ]
+      .filter(Boolean)
+      .join('\n');
+
+    const result = await this.llm.chatCompletion({
+      messages: [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userMessage },
+      ],
+      temperature: 0.7,
+      maxTokens: 600,
+    });
+
+    return {
+      content: result.content,
+      platform,
+      articleId: article.id,
+      articleTitle: article.title,
+      provider: result.provider,
+      model: result.model,
+    };
+  }
+
   private getSearchKeywords(project: Project): string[] {
     if (project.newsKeywords && project.newsKeywords.length > 0) {
       return project.newsKeywords;
@@ -214,3 +285,36 @@ export class NewsService {
     return createHash('sha256').update(url).digest('hex').slice(0, 64);
   }
 }
+
+const PLATFORM_PROMPTS: Record<SocialPlatform, string> = {
+  twitter: [
+    'Platform: Twitter/X',
+    '- Maximum 280 characters (strict limit).',
+    '- Use a punchy, concise tone.',
+    '- Include 2-3 relevant hashtags.',
+    '- You may use emojis sparingly for engagement.',
+    '- End with the article URL if space permits, otherwise just the key message.',
+  ].join('\n'),
+
+  linkedin: [
+    'Platform: LinkedIn',
+    '- Professional and insightful tone.',
+    '- 150-300 words for good engagement.',
+    '- Start with a hook (question, bold statement, or statistic).',
+    '- Use line breaks for readability.',
+    '- Include 3-5 relevant hashtags at the end.',
+    '- Encourage discussion with a question at the end.',
+    '- Include the article URL.',
+  ].join('\n'),
+
+  instagram: [
+    'Platform: Instagram',
+    '- Engaging, visual-first language.',
+    '- 100-200 words for the caption.',
+    '- Start with a compelling hook.',
+    '- Use emojis to add personality and break up text.',
+    '- Include 10-15 relevant hashtags at the very end (after a line break).',
+    '- Include a call-to-action (e.g., "Link in bio", "Save for later").',
+    '- Do NOT include the URL in the caption (Instagram captions are not clickable).',
+  ].join('\n'),
+};

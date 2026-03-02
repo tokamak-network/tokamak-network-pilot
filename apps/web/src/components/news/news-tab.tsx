@@ -14,6 +14,7 @@ import { NewsCard } from './news-card';
 import { NewsEmptyState } from './news-empty-state';
 import { NewsSearchBar } from './news-search-bar';
 import { NewsPagination } from './news-pagination';
+import { SocialPostGenerator } from './social-post-generator';
 
 interface NewsTabProps {
   project: ProjectDetailResponse;
@@ -30,6 +31,11 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
   const [syncing, setSyncing] = useState(false);
   const [search, setSearch] = useState('');
   const limit = 20;
+
+  // Social post generator state
+  const [generatorOpen, setGeneratorOpen] = useState(false);
+  const [generatorArticle, setGeneratorArticle] =
+    useState<ProjectNewsArticle | null>(null);
 
   const loadNews = useCallback(async () => {
     if (!project.isNewsEnabled) {
@@ -84,6 +90,11 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
     }
   };
 
+  const handleGeneratePost = (article: ProjectNewsArticle) => {
+    setGeneratorArticle(article);
+    setGeneratorOpen(true);
+  };
+
   if (!project.isNewsEnabled) {
     return <NewsEmptyState isNewsEnabled={false} isLead={isLead} />;
   }
@@ -126,7 +137,9 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
                 key={article.id}
                 article={article}
                 canDelete={canEdit}
+                canGenerate={canEdit}
                 onDelete={handleDelete}
+                onGeneratePost={handleGeneratePost}
               />
             ))}
           </div>
@@ -139,6 +152,16 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
             onPageChange={setPage}
           />
         </>
+      )}
+
+      {/* Social Post Generator Dialog */}
+      {generatorArticle && (
+        <SocialPostGenerator
+          open={generatorOpen}
+          onOpenChange={setGeneratorOpen}
+          article={generatorArticle}
+          projectIdOrSlug={project.id}
+        />
       )}
     </div>
   );

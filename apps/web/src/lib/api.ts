@@ -1658,3 +1658,30 @@ export async function deleteProjectNewsArticle(
     { method: 'DELETE' },
   );
 }
+
+export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram';
+
+export interface GeneratedSocialPost {
+  content: string;
+  platform: SocialPlatform;
+  articleId: string;
+  articleTitle: string;
+  provider: string;
+  model: string;
+}
+
+/** Generate an AI social media post from a news article */
+export async function generateSocialPost(
+  idOrSlug: string,
+  articleId: string,
+  platform: SocialPlatform,
+  customPrompt?: string,
+) {
+  return apiFetch<GeneratedSocialPost>(
+    `/projects/${idOrSlug}/news/${articleId}/generate-post`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ platform, customPrompt }),
+    },
+  );
+}

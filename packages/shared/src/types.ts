@@ -463,6 +463,22 @@ export interface NewsSyncResponse {
   synced: number;
 }
 
+export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram';
+
+export interface GenerateSocialPostRequest {
+  platform: SocialPlatform;
+  customPrompt?: string;
+}
+
+export interface GeneratedSocialPost {
+  content: string;
+  platform: SocialPlatform;
+  articleId: string;
+  articleTitle: string;
+  provider: string;
+  model: string;
+}
+
 // ---- Feedback Types ----
 
 export type FeedbackRating = 'up' | 'down';

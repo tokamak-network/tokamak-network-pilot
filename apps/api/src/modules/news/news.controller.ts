@@ -5,6 +5,7 @@ import {
   Delete,
   Param,
   Query,
+  Body,
   UseGuards,
   NotFoundException,
   ForbiddenException,
@@ -16,7 +17,7 @@ import {
   ApiParam,
 } from '@nestjs/swagger';
 import { NewsService } from './news.service';
-import { FetchNewsQueryDto } from './dto/news.dto';
+import { FetchNewsQueryDto, GenerateSocialPostDto } from './dto/news.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { ProjectsService } from '../projects/projects.service';
 
@@ -60,6 +61,29 @@ export class NewsController {
       throw new ForbiddenException('News is not enabled for this project');
     }
     return this.newsService.triggerSync(project.id);
+  }
+
+  @Post(':articleId/generate-post')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard)
+  @ApiOperation({
+    summary: 'Generate a social media post from a news article using AI',
+  })
+  @ApiParam({ name: 'idOrSlug', description: 'Project UUID or slug' })
+  @ApiParam({ name: 'articleId', description: 'News article ID' })
+  async generateSocialPost(
+    @Param('idOrSlug') idOrSlug: string,
+    @Param('articleId') articleId: string,
+    @Body() dto: GenerateSocialPostDto,
+  ) {
+    const project = await this.projectsService.findOne(idOrSlug);
+    if (!project) throw new NotFoundException('Project not found');
+    return this.newsService.generateSocialPost(
+      articleId,
+      project.id,
+      dto.platform,
+      dto.customPrompt,
+    );
   }
 
   @Delete(':articleId')
