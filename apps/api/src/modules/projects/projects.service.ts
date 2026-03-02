@@ -369,6 +369,8 @@ export class ProjectsService {
     if (dto.isRoadmapPublic !== undefined) project.isRoadmapPublic = dto.isRoadmapPublic;
     if (dto.publicTheme !== undefined) project.publicTheme = dto.publicTheme;
     if (dto.publicBorderRadius !== undefined) project.publicBorderRadius = dto.publicBorderRadius;
+    if (dto.isNewsEnabled !== undefined) project.isNewsEnabled = dto.isNewsEnabled;
+    if (dto.newsKeywords !== undefined) project.newsKeywords = dto.newsKeywords;
     if (dto.summary !== undefined) {
       project.summary = dto.summary;
       project.summaryUpdatedAt = new Date();
