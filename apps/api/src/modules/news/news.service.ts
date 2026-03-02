@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, ILike } from 'typeorm';
+import { Repository, ILike, In } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { XMLParser } from 'fast-xml-parser';
 import { createHash } from 'crypto';
@@ -65,27 +65,37 @@ export class NewsService {
     const query = keywords.join(' OR ');
     const articles = await this.fetchGoogleNewsRss(query);
 
-    let inserted = 0;
-    for (const article of articles) {
-      const externalId = this.hashArticle(article.url);
-      const exists = await this.newsRepo.findOne({
-        where: { projectId: project.id, externalId },
-      });
-      if (exists) continue;
+    const articleHashes = articles.map((a) => this.hashArticle(a.url));
+    const existingIds = new Set(
+      (
+        await this.newsRepo.find({
+          where: { projectId: project.id, externalId: In(articleHashes) },
+          select: ['externalId'],
+        })
+      ).map((r) => r.externalId),
+    );
 
-      const news = this.newsRepo.create({
-        projectId: project.id,
-        title: article.title,
-        description: article.description,
-        url: article.url,
-        source: article.source,
-        imageUrl: article.imageUrl,
-        publishedAt: article.publishedAt,
-        externalId,
-      });
-      await this.newsRepo.save(news);
-      inserted++;
+    const newArticles = articles
+      .map((article) => {
+        const externalId = this.hashArticle(article.url);
+        if (existingIds.has(externalId)) return null;
+        return this.newsRepo.create({
+          projectId: project.id,
+          title: article.title,
+          description: article.description,
+          url: article.url,
+          source: article.source,
+          imageUrl: article.imageUrl,
+          publishedAt: article.publishedAt,
+          externalId,
+        });
+      })
+      .filter((a): a is ProjectNews => a !== null);
+
+    if (newArticles.length > 0) {
+      await this.newsRepo.save(newArticles);
     }
+    const inserted = newArticles.length;
 
     this.logger.log(
       `Synced ${inserted} new article(s) for project "${project.slug}" (${articles.length} total fetched)`,
@@ -272,6 +282,7 @@ export class NewsService {
         headers: {
           'User-Agent': 'TokamakPilot/1.0 NewsAggregator',
         },
+        signal: AbortSignal.timeout(15_000),
       });
 
       if (!response.ok) {

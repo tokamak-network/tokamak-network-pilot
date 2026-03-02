@@ -1,6 +1,6 @@
 import { Injectable, Logger, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { EmbeddingService } from '../embedding/embedding.service';
 import { VectorService, VectorSearchResult } from '../vector/vector.service';
 import { LlmService } from '../llm/llm.service';
@@ -373,12 +373,20 @@ Reply with ONLY the category name. No explanation, no punctuation.`,
 
     const citations: Citation[] = [];
 
-    const enrichedProjects = await Promise.all(
-      projects.map(async (p) => {
-        const sources = await this.projectSourceRepo.find({
-          where: { projectId: p.id },
-          relations: ['source'],
-        });
+    const projectIds = projects.map((p) => p.id);
+    const allProjectSources = await this.projectSourceRepo.find({
+      where: { projectId: In(projectIds) },
+      relations: ['source'],
+    });
+    const sourcesByProject = new Map<string, ProjectSource[]>();
+    for (const ps of allProjectSources) {
+      const list = sourcesByProject.get(ps.projectId) ?? [];
+      list.push(ps);
+      sourcesByProject.set(ps.projectId, list);
+    }
+
+    const enrichedProjects = projects.map((p) => {
+        const sources = sourcesByProject.get(p.id) ?? [];
         const sourceNames = sources
           .map((ps) => `${ps.source.name} (${ps.source.type})`)
           .join(', ');
@@ -426,8 +434,7 @@ Reply with ONLY the category name. No explanation, no punctuation.`,
           createdAt: p.createdAt.toISOString().split('T')[0],
           summary: p.summary ? p.summary.slice(0, 300) : null,
         };
-      }),
-    );
+      });
 
     const lines = enrichedProjects.map((p, i) => {
       let entry = `${i + 1}. **${p.name}** (slug: ${p.slug})`;
