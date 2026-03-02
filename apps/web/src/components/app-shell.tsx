@@ -4,8 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAtom } from 'jotai';
 import Link from 'next/link';
-import { BookOpen, Loader2, LogIn } from 'lucide-react';
-import { userAtom } from '@/store';
+import { BookOpen, ChevronRight, FolderKanban, Loader2, LogIn } from 'lucide-react';
+import { userAtom, activeProjectAtom } from '@/store';
 import { fetchMe } from '@/lib/api';
 import { AppSidebar } from '@/components/app-sidebar';
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -136,23 +136,53 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <SidebarProvider>
       <AppSidebar />
       <SidebarInset>
-        <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/60 px-4">
-          <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 h-5" />
-          <span className="text-sm font-serif text-muted-foreground">
-            Tokamak Forest
-          </span>
-          <div className="ml-auto flex items-center gap-1">
-            <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
-              <Link href="/docs">
-                <BookOpen className="size-3.5" />
-                <span className="text-xs">API Docs</span>
-              </Link>
-            </Button>
-          </div>
-        </header>
+        <HeaderBar />
         <div className="flex-1 overflow-auto">{children}</div>
       </SidebarInset>
     </SidebarProvider>
+  );
+}
+
+function HeaderBar() {
+  const [activeProject] = useAtom(activeProjectAtom);
+
+  return (
+    <header className="flex h-14 shrink-0 items-center gap-2 border-b border-border/60 px-4">
+      <SidebarTrigger className="-ml-1" />
+      <Separator orientation="vertical" className="mr-2 h-5" />
+      <div className="flex items-center gap-1.5 text-sm min-w-0">
+        <span className="font-serif text-muted-foreground shrink-0">
+          Tokamak Forest
+        </span>
+        {activeProject && (
+          <>
+            <ChevronRight className="size-3.5 text-muted-foreground/50 shrink-0" />
+            <Link
+              href={`/projects/${activeProject.slug}`}
+              className="flex items-center gap-1.5 font-medium text-foreground hover:text-primary transition-colors truncate"
+            >
+              {activeProject.logoUrl ? (
+                <img
+                  src={activeProject.logoUrl}
+                  alt=""
+                  className="size-5 rounded object-cover shrink-0"
+                />
+              ) : (
+                <FolderKanban className="size-3.5 shrink-0" />
+              )}
+              <span className="truncate">{activeProject.name}</span>
+            </Link>
+          </>
+        )}
+      </div>
+      <div className="ml-auto flex items-center gap-1">
+        <Button variant="ghost" size="sm" asChild className="gap-1.5 text-muted-foreground hover:text-foreground">
+          <Link href="/docs">
+            <BookOpen className="size-3.5" />
+            <span className="text-xs">API Docs</span>
+          </Link>
+        </Button>
+      </div>
+    </header>
   );
 }

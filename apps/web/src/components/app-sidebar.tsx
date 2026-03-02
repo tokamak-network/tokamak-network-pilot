@@ -28,6 +28,11 @@ import {
   History,
   FolderKanban,
   Code2,
+  Newspaper,
+  BarChart3,
+  Users,
+  Sparkles,
+  Map,
 } from 'lucide-react';
 import {
   sourcesAtom,
@@ -36,6 +41,7 @@ import {
   activeConversationIdAtom,
   conversationAtom,
   queryAtom,
+  activeProjectAtom,
 } from '@/store';
 import { dbMessageToLocal } from '@/store/ask';
 import {
@@ -64,15 +70,15 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
 } from '@/components/ui/sidebar';
+import { ProjectSwitcher } from '@/components/project-switcher';
 
-const mainNav = [
+const globalNav = [
   { label: 'Ask', href: '/', icon: MessageSquare },
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
+  { label: 'News', href: '/news', icon: Newspaper },
   { label: 'Content', href: '/content', icon: FileText },
-  // { label: 'Snippets', href: '/snippets', icon: Code2 },
 ];
-
 
 const sourceTypeIcons: Record<string, React.ElementType> = {
   github_repo: Github,
@@ -96,13 +102,13 @@ export function AppSidebar() {
   const router = useRouter();
   const [sources, setSources] = useAtom(sourcesAtom);
   const [user, setUser] = useAtom(userAtom);
+  const [activeProject] = useAtom(activeProjectAtom);
   const [repoPopoverOpen, setRepoPopoverOpen] = useState(false);
   const [repoSearch, setRepoSearch] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Conversation state
   const [conversationsList, setConversationsList] = useAtom(conversationsListAtom);
   const [activeConversationId, setActiveConversationId] = useAtom(activeConversationIdAtom);
   const [, setConversation] = useAtom(conversationAtom);
@@ -114,7 +120,6 @@ export function AppSidebar() {
       .catch(() => {});
   }, [setSources]);
 
-  // Load conversation list
   useEffect(() => {
     fetchConversations()
       .then((res) => setConversationsList(res.data))
@@ -153,7 +158,6 @@ export function AppSidebar() {
         setQuery('');
         router.push('/');
       } catch {
-        // If conversation can't be loaded, just navigate home
         router.push('/');
       }
     },
@@ -180,7 +184,6 @@ export function AppSidebar() {
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
 
-  // Sort repos for the flyout: latest commit first, then most documents
   const sortedSources = useMemo(() => {
     let filtered = [...sources];
 
@@ -200,7 +203,6 @@ export function AppSidebar() {
     return filtered;
   }, [sources, repoSearch]);
 
-  // Focus the search input when the popover opens
   useEffect(() => {
     if (repoPopoverOpen) {
       setTimeout(() => searchInputRef.current?.focus(), 100);
@@ -209,89 +211,225 @@ export function AppSidebar() {
     }
   }, [repoPopoverOpen]);
 
+  const projectNav = activeProject
+    ? [
+        { label: 'Overview', href: `/projects/${activeProject.slug}`, icon: BarChart3 },
+        { label: 'News', href: '/news', icon: Newspaper },
+        { label: 'Ask', href: '/', icon: MessageSquare },
+        { label: 'Roadmap', href: `/projects/${activeProject.slug}/roadmap`, icon: Map },
+      ]
+    : [];
+
+  const projectManageNav = activeProject
+    ? [
+        { label: 'Sources', href: `/projects/${activeProject.slug}#sources`, icon: Database },
+        { label: 'Team', href: `/projects/${activeProject.slug}#team`, icon: Users },
+        { label: 'Settings', href: `/projects/${activeProject.slug}#settings`, icon: Settings },
+      ]
+    : [];
+
   return (
     <Sidebar variant="sidebar" collapsible="icon">
-      {/* Header / Logo */}
-      <SidebarHeader className="h-14 justify-center border-b border-sidebar-border p-2">
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="group-data-[collapsible=icon]:justify-center">
-              <Link href="/">
-                <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground group-data-[collapsible=icon]:bg-transparent group-data-[collapsible=icon]:text-foreground">
-                  <TreePine className="size-4" />
-                </div>
-                <div className="flex flex-col gap-0.5 leading-none group-data-[collapsible=icon]:hidden">
-                  <span className="font-serif font-semibold">Tokamak Forest</span>
-                  <span className="text-xs text-muted-foreground">Knowledge Hub</span>
-                </div>
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
+      {/* Header — Project Switcher */}
+      <SidebarHeader className="border-b border-sidebar-border p-2">
+        <ProjectSwitcher />
       </SidebarHeader>
 
-      {/* Main Navigation */}
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {mainNav.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive(item.href)}
-                    tooltip={item.label}
-                  >
-                    <Link href={item.href}>
-                      <item.icon />
-                      <span>{item.label}</span>
-                    </Link>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
+        {activeProject ? (
+          <>
+            {/* Project-scoped navigation */}
+            <SidebarGroup>
+              <SidebarGroupLabel>Project</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {projectNav.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.href)}
+                        tooltip={item.label}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
 
-              {/* Sources — with repo flyout */}
-              <SidebarMenuItem>
-                <Popover open={repoPopoverOpen} onOpenChange={setRepoPopoverOpen}>
-                  <PopoverTrigger asChild>
+            <SidebarGroup>
+              <SidebarGroupLabel>Manage</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {projectManageNav.map((item) => (
+                    <SidebarMenuItem key={item.label}>
+                      <SidebarMenuButton
+                        asChild
+                        tooltip={item.label}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+
+            {/* Global quick links */}
+            <SidebarGroup>
+              <SidebarGroupLabel>Global</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  <SidebarMenuItem>
                     <SidebarMenuButton
-                      isActive={isActive('/sources')}
-                      tooltip="Sources"
-                      className="w-full"
+                      asChild
+                      isActive={isActive('/dashboard')}
+                      tooltip="Dashboard"
                     >
-                      <Database />
-                      <span className="flex-1">Sources</span>
-                      {sources.length > 0 && (
-                        <span className="text-[10px] text-muted-foreground tabular-nums">
-                          {sources.length}
-                        </span>
-                      )}
-                      <ChevronRight className={`size-3 text-muted-foreground transition-transform ${repoPopoverOpen ? 'rotate-90' : ''}`} />
+                      <Link href="/dashboard">
+                        <LayoutDashboard />
+                        <span>Dashboard</span>
+                      </Link>
                     </SidebarMenuButton>
-                  </PopoverTrigger>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/projects')}
+                      tooltip="All Projects"
+                    >
+                      <Link href="/projects">
+                        <FolderKanban />
+                        <span>All Projects</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                  <SidebarMenuItem>
+                    <SidebarMenuButton
+                      asChild
+                      isActive={isActive('/content')}
+                      tooltip="Content"
+                    >
+                      <Link href="/content">
+                        <FileText />
+                        <span>Content</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
 
-                  <PopoverContent
-                    side="right"
-                    align="start"
-                    sideOffset={8}
-                    className="w-80 p-0"
-                  >
-                    <RepoFlyout
-                      sources={sortedSources}
-                      allCount={sources.length}
-                      search={repoSearch}
-                      onSearchChange={setRepoSearch}
-                      searchRef={searchInputRef}
-                      pathname={pathname}
-                      onSelect={() => setRepoPopoverOpen(false)}
-                    />
-                  </PopoverContent>
-                </Popover>
-              </SidebarMenuItem>
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+                  {/* Sources flyout */}
+                  <SidebarMenuItem>
+                    <Popover open={repoPopoverOpen} onOpenChange={setRepoPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={isActive('/sources')}
+                          tooltip="Sources"
+                          className="w-full"
+                        >
+                          <Database />
+                          <span className="flex-1">Sources</span>
+                          {sources.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                              {sources.length}
+                            </span>
+                          )}
+                          <ChevronRight className={`size-3 text-muted-foreground transition-transform ${repoPopoverOpen ? 'rotate-90' : ''}`} />
+                        </SidebarMenuButton>
+                      </PopoverTrigger>
+                      <PopoverContent
+                        side="right"
+                        align="start"
+                        sideOffset={8}
+                        className="w-80 p-0"
+                      >
+                        <RepoFlyout
+                          sources={sortedSources}
+                          allCount={sources.length}
+                          search={repoSearch}
+                          onSearchChange={setRepoSearch}
+                          searchRef={searchInputRef}
+                          pathname={pathname}
+                          onSelect={() => setRepoPopoverOpen(false)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        ) : (
+          <>
+            {/* Global navigation (no project selected) */}
+            <SidebarGroup>
+              <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {globalNav.map((item) => (
+                    <SidebarMenuItem key={item.href}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item.href)}
+                        tooltip={item.label}
+                      >
+                        <Link href={item.href}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                        </Link>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  ))}
+
+                  {/* Sources — with repo flyout */}
+                  <SidebarMenuItem>
+                    <Popover open={repoPopoverOpen} onOpenChange={setRepoPopoverOpen}>
+                      <PopoverTrigger asChild>
+                        <SidebarMenuButton
+                          isActive={isActive('/sources')}
+                          tooltip="Sources"
+                          className="w-full"
+                        >
+                          <Database />
+                          <span className="flex-1">Sources</span>
+                          {sources.length > 0 && (
+                            <span className="text-[10px] text-muted-foreground tabular-nums">
+                              {sources.length}
+                            </span>
+                          )}
+                          <ChevronRight className={`size-3 text-muted-foreground transition-transform ${repoPopoverOpen ? 'rotate-90' : ''}`} />
+                        </SidebarMenuButton>
+                      </PopoverTrigger>
+
+                      <PopoverContent
+                        side="right"
+                        align="start"
+                        sideOffset={8}
+                        className="w-80 p-0"
+                      >
+                        <RepoFlyout
+                          sources={sortedSources}
+                          allCount={sources.length}
+                          search={repoSearch}
+                          onSearchChange={setRepoSearch}
+                          searchRef={searchInputRef}
+                          pathname={pathname}
+                          onSelect={() => setRepoPopoverOpen(false)}
+                        />
+                      </PopoverContent>
+                    </Popover>
+                  </SidebarMenuItem>
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          </>
+        )}
 
         {/* Conversation History */}
         <SidebarGroup>
@@ -543,7 +681,6 @@ function RepoFlyout({
   );
 }
 
-/** Format a date string as a relative time (e.g. "3d ago") */
 function timeAgo(dateStr: string): string {
   const now = Date.now();
   const then = new Date(dateStr).getTime();
@@ -560,4 +697,3 @@ function timeAgo(dateStr: string): string {
   const years = Math.floor(days / 365);
   return `${years}y ago`;
 }
-

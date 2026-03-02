@@ -239,8 +239,9 @@ export function quickAskStream(
   question: string,
   callbacks: StreamCallbacks,
   filters?: string[],
+  projectId?: string,
 ) {
-  return streamSSE('/conversations/quick-ask/stream', { question, filters }, callbacks);
+  return streamSSE('/conversations/quick-ask/stream', { question, filters, projectId }, callbacks);
 }
 
 /** Ask in conversation with streaming */
@@ -249,10 +250,11 @@ export function askInConversationStream(
   question: string,
   callbacks: StreamCallbacks,
   filters?: string[],
+  projectId?: string,
 ) {
   return streamSSE(
     `/conversations/${conversationId}/ask/stream`,
-    { question, filters },
+    { question, filters, projectId },
     callbacks,
   );
 }
