@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { RefreshCw, Loader2 } from 'lucide-react';
+import { RefreshCw, Loader2, CheckSquare, X, Sparkles } from 'lucide-react';
 import {
   fetchProjectNews,
   syncProjectNews,
@@ -15,6 +15,7 @@ import { NewsEmptyState } from './news-empty-state';
 import { NewsSearchBar } from './news-search-bar';
 import { NewsPagination } from './news-pagination';
 import { SocialPostGenerator } from './social-post-generator';
+import { BulkSocialGenerator } from './bulk-social-generator';
 
 interface NewsTabProps {
   project: ProjectDetailResponse;
@@ -36,6 +37,11 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
   const [generatorOpen, setGeneratorOpen] = useState(false);
   const [generatorArticle, setGeneratorArticle] =
     useState<ProjectNewsArticle | null>(null);
+
+  // Multi-select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkGeneratorOpen, setBulkGeneratorOpen] = useState(false);
 
   const loadNews = useCallback(async () => {
     if (!project.isNewsEnabled) {
@@ -95,6 +101,34 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
     setGeneratorOpen(true);
   };
 
+  const handleSelect = (id: string, checked: boolean) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  };
+
+  const handleSelectAll = () => {
+    if (selectedIds.size === articles.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(articles.map((a) => a.id)));
+    }
+  };
+
+  const exitSelectMode = () => {
+    setSelectMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const openBulkGenerator = () => {
+    setBulkGeneratorOpen(true);
+  };
+
+  const selectedArticles = articles.filter((a) => selectedIds.has(a.id));
+
   if (!project.isNewsEnabled) {
     return <NewsEmptyState isNewsEnabled={false} isLead={isLead} />;
   }
@@ -107,16 +141,27 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
           onChange={setSearch}
           total={total}
         />
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSync}
-          disabled={syncing}
-          className="shrink-0"
-        >
-          <RefreshCw className={`size-3.5 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
-          {syncing ? 'Syncing...' : 'Sync'}
-        </Button>
+        <div className="flex items-center gap-2 shrink-0">
+          {canEdit && articles.length > 0 && !selectMode && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setSelectMode(true)}
+            >
+              <CheckSquare className="size-3.5 mr-1.5" />
+              Select
+            </Button>
+          )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSync}
+            disabled={syncing}
+          >
+            <RefreshCw className={`size-3.5 mr-1.5 ${syncing ? 'animate-spin' : ''}`} />
+            {syncing ? 'Syncing...' : 'Sync'}
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -138,6 +183,9 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
                 article={article}
                 canDelete={canEdit}
                 canGenerate={canEdit}
+                selectable={selectMode}
+                selected={selectedIds.has(article.id)}
+                onSelect={handleSelect}
                 onDelete={handleDelete}
                 onGeneratePost={handleGeneratePost}
               />
@@ -154,13 +202,55 @@ export function NewsTab({ project, canEdit, isLead }: NewsTabProps) {
         </>
       )}
 
-      {/* Social Post Generator Dialog */}
+      {/* Sticky selection bar */}
+      {selectMode && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex items-center gap-3 rounded-xl border bg-card px-4 py-3 shadow-lg">
+          <button
+            onClick={handleSelectAll}
+            className="text-xs text-primary hover:underline font-medium"
+          >
+            {selectedIds.size === articles.length ? 'Deselect all' : 'Select all'}
+          </button>
+          <div className="h-4 w-px bg-border" />
+          <span className="text-sm font-medium tabular-nums">
+            {selectedIds.size} selected
+          </span>
+          <Button
+            size="sm"
+            disabled={selectedIds.size === 0}
+            onClick={openBulkGenerator}
+            className="gap-1.5"
+          >
+            <Sparkles className="size-3.5" />
+            Generate Posts
+          </Button>
+          <button
+            onClick={exitSelectMode}
+            className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+          >
+            <X className="size-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Social Post Generator Dialog (single) */}
       {generatorArticle && (
         <SocialPostGenerator
           open={generatorOpen}
           onOpenChange={setGeneratorOpen}
           article={generatorArticle}
           projectIdOrSlug={project.id}
+        />
+      )}
+
+      {/* Bulk Social Generator Dialog */}
+      {selectedArticles.length > 0 && (
+        <BulkSocialGenerator
+          open={bulkGeneratorOpen}
+          onOpenChange={setBulkGeneratorOpen}
+          articles={selectedArticles}
+          projectIdOrSlug={project.id}
+          onComplete={exitSelectMode}
         />
       )}
     </div>

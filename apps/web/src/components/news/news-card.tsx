@@ -33,6 +33,9 @@ interface NewsCardProps {
   article: ProjectNewsArticle;
   canDelete?: boolean;
   canGenerate?: boolean;
+  selectable?: boolean;
+  selected?: boolean;
+  onSelect?: (id: string, selected: boolean) => void;
   onDelete?: (id: string) => void;
   onGeneratePost?: (article: ProjectNewsArticle) => void;
 }
@@ -41,11 +44,28 @@ export function NewsCard({
   article,
   canDelete,
   canGenerate,
+  selectable,
+  selected,
+  onSelect,
   onDelete,
   onGeneratePost,
 }: NewsCardProps) {
   return (
-    <div className="group relative flex gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/20 hover:shadow-sm">
+    <div className={cn(
+      'group relative flex gap-4 rounded-lg border bg-card p-4 transition-all hover:border-primary/20 hover:shadow-sm',
+      selected && 'border-primary/40 bg-primary/[0.02] ring-1 ring-primary/10',
+    )}>
+      {selectable && (
+        <label className="flex items-center shrink-0 cursor-pointer self-center">
+          <input
+            type="checkbox"
+            checked={selected}
+            onChange={(e) => onSelect?.(article.id, e.target.checked)}
+            className="size-4 rounded border-muted-foreground/40 text-primary focus:ring-primary/30 cursor-pointer accent-primary"
+          />
+        </label>
+      )}
+
       {article.imageUrl ? (
         <div className="hidden sm:block shrink-0 w-24 h-24 rounded-md overflow-hidden bg-muted">
           <img

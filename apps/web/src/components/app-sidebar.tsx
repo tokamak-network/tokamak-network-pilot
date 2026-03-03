@@ -77,6 +77,7 @@ const globalNav = [
   { label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { label: 'Projects', href: '/projects', icon: FolderKanban },
   { label: 'News', href: '/news', icon: Newspaper },
+  { label: 'Social Posts', href: '/social-posts', icon: Sparkles },
   { label: 'Content', href: '/content', icon: FileText },
 ];
 
@@ -215,6 +216,7 @@ export function AppSidebar() {
     ? [
         { label: 'Overview', href: `/projects/${activeProject.slug}`, icon: BarChart3 },
         { label: 'News', href: '/news', icon: Newspaper },
+        { label: 'Social Posts', href: '/social-posts', icon: Sparkles },
         { label: 'Ask', href: '/', icon: MessageSquare },
         { label: 'Roadmap', href: `/projects/${activeProject.slug}/roadmap`, icon: Map },
       ]

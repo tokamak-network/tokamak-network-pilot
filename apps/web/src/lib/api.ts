@@ -1687,3 +1687,114 @@ export async function generateSocialPost(
     },
   );
 }
+
+// ───────────────────── Generated Posts API ─────────────────────
+
+export interface GeneratedPostItem {
+  id: string;
+  projectId: string;
+  articleId: string;
+  platform: SocialPlatform;
+  content: string;
+  status: 'draft' | 'published' | 'archived';
+  articleTitle: string;
+  articleUrl?: string;
+  provider?: string;
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GeneratedPostsResponse {
+  data: GeneratedPostItem[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface BulkGenerateResult {
+  generated: Array<{
+    id: string;
+    articleId: string;
+    articleTitle: string;
+    platform: SocialPlatform;
+    content: string;
+    status: string;
+  }>;
+  errors: Array<{ articleId: string; platform: string; error: string }>;
+  total: number;
+}
+
+export interface GeneratedPostStats {
+  total: number;
+  byPlatform: Record<string, number>;
+  byStatus: Record<string, number>;
+}
+
+/** Bulk generate social posts for multiple articles and platforms */
+export async function bulkGeneratePosts(
+  idOrSlug: string,
+  articleIds: string[],
+  platforms: SocialPlatform[],
+  customPrompt?: string,
+) {
+  return apiFetch<BulkGenerateResult>(
+    `/projects/${idOrSlug}/news/bulk-generate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ articleIds, platforms, customPrompt }),
+    },
+  );
+}
+
+/** Fetch generated social media posts */
+export async function fetchGeneratedPosts(
+  idOrSlug: string,
+  filters?: {
+    page?: number;
+    limit?: number;
+    platform?: SocialPlatform;
+    status?: string;
+    search?: string;
+  },
+) {
+  const params = new URLSearchParams();
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  if (filters?.platform) params.set('platform', filters.platform);
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.search) params.set('search', filters.search);
+  const qs = params.toString();
+  return apiFetch<GeneratedPostsResponse>(
+    `/projects/${idOrSlug}/news/posts${qs ? `?${qs}` : ''}`,
+  );
+}
+
+/** Get generated post statistics */
+export async function fetchGeneratedPostStats(idOrSlug: string) {
+  return apiFetch<GeneratedPostStats>(`/projects/${idOrSlug}/news/posts/stats`);
+}
+
+/** Update a generated post */
+export async function updateGeneratedPost(
+  idOrSlug: string,
+  postId: string,
+  updates: { content?: string; status?: string },
+) {
+  return apiFetch<GeneratedPostItem>(
+    `/projects/${idOrSlug}/news/posts/${postId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    },
+  );
+}
+
+/** Delete a generated post */
+export async function deleteGeneratedPost(idOrSlug: string, postId: string) {
+  return apiFetch<{ deleted: boolean }>(
+    `/projects/${idOrSlug}/news/posts/${postId}`,
+    { method: 'DELETE' },
+  );
+}

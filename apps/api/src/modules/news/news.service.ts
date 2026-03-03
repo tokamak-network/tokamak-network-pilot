@@ -6,6 +6,7 @@ import { XMLParser } from 'fast-xml-parser';
 import { createHash } from 'crypto';
 import { Project } from '../../entities/project.entity';
 import { ProjectNews } from '../../entities/project-news.entity';
+import { GeneratedPost, type PostStatus } from '../../entities/generated-post.entity';
 import { LlmService } from '../llm/llm.service';
 import type { SocialPlatform } from './dto/news.dto';
 
@@ -30,6 +31,8 @@ export class NewsService {
     private readonly projectRepo: Repository<Project>,
     @InjectRepository(ProjectNews)
     private readonly newsRepo: Repository<ProjectNews>,
+    @InjectRepository(GeneratedPost)
+    private readonly generatedPostRepo: Repository<GeneratedPost>,
     private readonly llm: LlmService,
   ) {}
 
@@ -162,6 +165,193 @@ export class NewsService {
       where: { id: projectId },
     });
 
+    const result = await this.generatePostContent(project, article, platform, customPrompt);
+
+    const post = this.generatedPostRepo.create({
+      projectId,
+      articleId: article.id,
+      platform,
+      content: result.content,
+      articleTitle: article.title,
+      articleUrl: article.url,
+      provider: result.provider,
+      model: result.model,
+      status: 'draft',
+    });
+    await this.generatedPostRepo.save(post);
+
+    return {
+      id: post.id,
+      content: result.content,
+      platform,
+      articleId: article.id,
+      articleTitle: article.title,
+      provider: result.provider,
+      model: result.model,
+    };
+  }
+
+  async bulkGeneratePosts(
+    projectId: string,
+    articleIds: string[],
+    platforms: SocialPlatform[],
+    customPrompt?: string,
+  ) {
+    const project = await this.projectRepo.findOneOrFail({
+      where: { id: projectId },
+    });
+
+    const articles = await this.newsRepo.find({
+      where: { id: In(articleIds), projectId },
+    });
+
+    if (articles.length === 0) {
+      throw new NotFoundException('No matching articles found');
+    }
+
+    const results: Array<{
+      id: string;
+      articleId: string;
+      articleTitle: string;
+      platform: SocialPlatform;
+      content: string;
+      status: string;
+    }> = [];
+    const errors: Array<{ articleId: string; platform: string; error: string }> = [];
+
+    for (const article of articles) {
+      for (const platform of platforms) {
+        try {
+          const result = await this.generatePostContent(project, article, platform, customPrompt);
+          const post = this.generatedPostRepo.create({
+            projectId,
+            articleId: article.id,
+            platform,
+            content: result.content,
+            articleTitle: article.title,
+            articleUrl: article.url,
+            provider: result.provider,
+            model: result.model,
+            status: 'draft',
+          });
+          await this.generatedPostRepo.save(post);
+          results.push({
+            id: post.id,
+            articleId: article.id,
+            articleTitle: article.title,
+            platform,
+            content: post.content,
+            status: post.status,
+          });
+        } catch (err) {
+          this.logger.error(`Failed to generate ${platform} post for article ${article.id}: ${err}`);
+          errors.push({
+            articleId: article.id,
+            platform,
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    }
+
+    return { generated: results, errors, total: results.length };
+  }
+
+  async getGeneratedPosts(
+    projectId: string,
+    options?: {
+      page?: number;
+      limit?: number;
+      platform?: SocialPlatform;
+      status?: string;
+      search?: string;
+    },
+  ) {
+    const page = Math.max(1, options?.page ?? 1);
+    const limit = Math.min(100, Math.max(1, options?.limit ?? 20));
+
+    const qb = this.generatedPostRepo
+      .createQueryBuilder('post')
+      .where('post.projectId = :projectId', { projectId })
+      .orderBy('post.createdAt', 'DESC');
+
+    if (options?.platform) {
+      qb.andWhere('post.platform = :platform', { platform: options.platform });
+    }
+    if (options?.status) {
+      qb.andWhere('post.status = :status', { status: options.status });
+    }
+    if (options?.search?.trim()) {
+      const term = `%${options.search.trim()}%`;
+      qb.andWhere('(post.content ILIKE :term OR post.articleTitle ILIKE :term)', { term });
+    }
+
+    const [data, total] = await qb
+      .skip((page - 1) * limit)
+      .take(limit)
+      .getManyAndCount();
+
+    return { data, total, page, limit, hasMore: page * limit < total };
+  }
+
+  async updateGeneratedPost(
+    postId: string,
+    projectId: string,
+    updates: { content?: string; status?: string },
+  ) {
+    const post = await this.generatedPostRepo.findOne({
+      where: { id: postId, projectId },
+    });
+    if (!post) throw new NotFoundException('Generated post not found');
+
+    if (updates.content !== undefined) post.content = updates.content;
+    if (updates.status !== undefined) post.status = updates.status as PostStatus;
+
+    await this.generatedPostRepo.save(post);
+    return post;
+  }
+
+  async deleteGeneratedPost(postId: string, projectId: string) {
+    const post = await this.generatedPostRepo.findOne({
+      where: { id: postId, projectId },
+    });
+    if (!post) return { deleted: false };
+    await this.generatedPostRepo.remove(post);
+    return { deleted: true };
+  }
+
+  async getGeneratedPostStats(projectId: string) {
+    const total = await this.generatedPostRepo.count({ where: { projectId } });
+
+    const byPlatform = await this.generatedPostRepo
+      .createQueryBuilder('post')
+      .select('post.platform', 'platform')
+      .addSelect('COUNT(*)', 'count')
+      .where('post.projectId = :projectId', { projectId })
+      .groupBy('post.platform')
+      .getRawMany<{ platform: string; count: string }>();
+
+    const byStatus = await this.generatedPostRepo
+      .createQueryBuilder('post')
+      .select('post.status', 'status')
+      .addSelect('COUNT(*)', 'count')
+      .where('post.projectId = :projectId', { projectId })
+      .groupBy('post.status')
+      .getRawMany<{ status: string; count: string }>();
+
+    return {
+      total,
+      byPlatform: Object.fromEntries(byPlatform.map((r) => [r.platform, parseInt(r.count, 10)])),
+      byStatus: Object.fromEntries(byStatus.map((r) => [r.status, parseInt(r.count, 10)])),
+    };
+  }
+
+  private async generatePostContent(
+    project: Project,
+    article: ProjectNews,
+    platform: SocialPlatform,
+    customPrompt?: string,
+  ) {
     const platformInstructions = PLATFORM_PROMPTS[platform];
     const projectContext = this.buildProjectContext(project);
 
@@ -208,7 +398,7 @@ export class NewsService {
       .filter(Boolean)
       .join('\n');
 
-    const result = await this.llm.chatCompletion({
+    return this.llm.chatCompletion({
       messages: [
         { role: 'system', content: systemPrompt },
         { role: 'user', content: userMessage },
@@ -216,15 +406,6 @@ export class NewsService {
       temperature: 0.7,
       maxTokens: 800,
     });
-
-    return {
-      content: result.content,
-      platform,
-      articleId: article.id,
-      articleTitle: article.title,
-      provider: result.provider,
-      model: result.model,
-    };
   }
 
   private buildProjectContext(project: Project): string {
