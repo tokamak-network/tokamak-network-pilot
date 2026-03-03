@@ -214,6 +214,8 @@ export class ProjectsService {
       isPublic: dto.isPublic ?? true,
       showOnLandingPage: dto.showOnLandingPage ?? false,
       isRoadmapPublic: dto.isRoadmapPublic ?? false,
+      publicTheme: dto.publicTheme ?? 'forest',
+      publicBorderRadius: dto.publicBorderRadius ?? 'rounded',
     });
 
     const saved = await this.projectRepo.save(project);
@@ -365,6 +367,10 @@ export class ProjectsService {
     if (dto.isPublic !== undefined) project.isPublic = dto.isPublic;
     if (dto.showOnLandingPage !== undefined) project.showOnLandingPage = dto.showOnLandingPage;
     if (dto.isRoadmapPublic !== undefined) project.isRoadmapPublic = dto.isRoadmapPublic;
+    if (dto.publicTheme !== undefined) project.publicTheme = dto.publicTheme;
+    if (dto.publicBorderRadius !== undefined) project.publicBorderRadius = dto.publicBorderRadius;
+    if (dto.isNewsEnabled !== undefined) project.isNewsEnabled = dto.isNewsEnabled;
+    if (dto.newsKeywords !== undefined) project.newsKeywords = dto.newsKeywords;
     if (dto.summary !== undefined) {
       project.summary = dto.summary;
       project.summaryUpdatedAt = new Date();
@@ -741,6 +747,8 @@ ${sampleContent}`,
       logoUrl: project.logoUrl,
       links: project.links,
       summary: project.summary,
+      publicTheme: project.publicTheme,
+      publicBorderRadius: project.publicBorderRadius,
       isRoadmapPublic: project.isRoadmapPublic,
       roadmap: project.isRoadmapPublic
         ? sortedRoadmap.map((item) => ({

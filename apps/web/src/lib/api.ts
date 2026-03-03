@@ -239,8 +239,9 @@ export function quickAskStream(
   question: string,
   callbacks: StreamCallbacks,
   filters?: string[],
+  projectId?: string,
 ) {
-  return streamSSE('/conversations/quick-ask/stream', { question, filters }, callbacks);
+  return streamSSE('/conversations/quick-ask/stream', { question, filters, projectId }, callbacks);
 }
 
 /** Ask in conversation with streaming */
@@ -249,10 +250,11 @@ export function askInConversationStream(
   question: string,
   callbacks: StreamCallbacks,
   filters?: string[],
+  projectId?: string,
 ) {
   return streamSSE(
     `/conversations/${conversationId}/ask/stream`,
-    { question, filters },
+    { question, filters, projectId },
     callbacks,
   );
 }
@@ -833,6 +835,10 @@ export interface ProjectResponse {
   isPublic: boolean;
   showOnLandingPage: boolean;
   isRoadmapPublic: boolean;
+  publicTheme: string;
+  publicBorderRadius: string;
+  isNewsEnabled: boolean;
+  newsKeywords: string[];
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -864,6 +870,8 @@ export interface ProjectPublicResponse {
   logoUrl?: string;
   links: ProjectLinkResponse[];
   summary?: string;
+  publicTheme: string;
+  publicBorderRadius: string;
   isRoadmapPublic: boolean;
   roadmap: Array<{
     id: string;
@@ -953,6 +961,10 @@ export async function updateProject(
     isPublic?: boolean;
     showOnLandingPage?: boolean;
     isRoadmapPublic?: boolean;
+    publicTheme?: string;
+    publicBorderRadius?: string;
+    isNewsEnabled?: boolean;
+    newsKeywords?: string[];
   },
 ) {
   return apiFetch<ProjectDetailResponse>(`/projects/${id}`, {
@@ -1445,6 +1457,17 @@ export async function updateProjectRoadmapItem(
   );
 }
 
+/** Delete a roadmap item. */
+export async function deleteProjectRoadmapItem(
+  idOrSlug: string,
+  itemId: string,
+) {
+  return apiFetch<{ deleted: boolean; id: string }>(
+    `/projects/${idOrSlug}/roadmap/${itemId}`,
+    { method: 'DELETE' },
+  );
+}
+
 /** Generate an implementation-ready AI task prompt for a roadmap item. */
 export async function generateRoadmapTaskPrompt(
   idOrSlug: string,
@@ -1581,4 +1604,197 @@ export async function fetchSnippetLanguages() {
 /** Get available snippet categories */
 export async function fetchSnippetCategories() {
   return apiFetch<Array<{ category: string; count: number }>>('/snippets/categories');
+}
+
+// ───────────────────── Project News API ─────────────────────
+
+export interface ProjectNewsArticle {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  url: string;
+  source?: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+}
+
+export interface ProjectNewsResponse {
+  data: ProjectNewsArticle[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+/** Fetch news articles for a project */
+export async function fetchProjectNews(
+  idOrSlug: string,
+  filters?: { page?: number; limit?: number; search?: string },
+) {
+  const params = new URLSearchParams();
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  if (filters?.search) params.set('search', filters.search);
+  const qs = params.toString();
+  return apiFetch<ProjectNewsResponse>(
+    `/projects/${idOrSlug}/news${qs ? `?${qs}` : ''}`,
+  );
+}
+
+/** Manually trigger news sync for a project */
+export async function syncProjectNews(idOrSlug: string) {
+  return apiFetch<{ synced: number }>(`/projects/${idOrSlug}/news/sync`, {
+    method: 'POST',
+  });
+}
+
+/** Delete a news article */
+export async function deleteProjectNewsArticle(
+  idOrSlug: string,
+  articleId: string,
+) {
+  return apiFetch<{ deleted: boolean }>(
+    `/projects/${idOrSlug}/news/${articleId}`,
+    { method: 'DELETE' },
+  );
+}
+
+export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram';
+
+export interface GeneratedSocialPost {
+  content: string;
+  platform: SocialPlatform;
+  articleId: string;
+  articleTitle: string;
+  provider: string;
+  model: string;
+}
+
+/** Generate an AI social media post from a news article */
+export async function generateSocialPost(
+  idOrSlug: string,
+  articleId: string,
+  platform: SocialPlatform,
+  customPrompt?: string,
+) {
+  return apiFetch<GeneratedSocialPost>(
+    `/projects/${idOrSlug}/news/${articleId}/generate-post`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ platform, customPrompt }),
+    },
+  );
+}
+
+// ───────────────────── Generated Posts API ─────────────────────
+
+export interface GeneratedPostItem {
+  id: string;
+  projectId: string;
+  articleId: string;
+  platform: SocialPlatform;
+  content: string;
+  status: 'draft' | 'published' | 'archived';
+  articleTitle: string;
+  articleUrl?: string;
+  provider?: string;
+  model?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GeneratedPostsResponse {
+  data: GeneratedPostItem[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface BulkGenerateResult {
+  generated: Array<{
+    id: string;
+    articleId: string;
+    articleTitle: string;
+    platform: SocialPlatform;
+    content: string;
+    status: string;
+  }>;
+  errors: Array<{ articleId: string; platform: string; error: string }>;
+  total: number;
+}
+
+export interface GeneratedPostStats {
+  total: number;
+  byPlatform: Record<string, number>;
+  byStatus: Record<string, number>;
+}
+
+/** Bulk generate social posts for multiple articles and platforms */
+export async function bulkGeneratePosts(
+  idOrSlug: string,
+  articleIds: string[],
+  platforms: SocialPlatform[],
+  customPrompt?: string,
+) {
+  return apiFetch<BulkGenerateResult>(
+    `/projects/${idOrSlug}/news/bulk-generate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({ articleIds, platforms, customPrompt }),
+    },
+  );
+}
+
+/** Fetch generated social media posts */
+export async function fetchGeneratedPosts(
+  idOrSlug: string,
+  filters?: {
+    page?: number;
+    limit?: number;
+    platform?: SocialPlatform;
+    status?: string;
+    search?: string;
+  },
+) {
+  const params = new URLSearchParams();
+  if (filters?.page) params.set('page', String(filters.page));
+  if (filters?.limit) params.set('limit', String(filters.limit));
+  if (filters?.platform) params.set('platform', filters.platform);
+  if (filters?.status) params.set('status', filters.status);
+  if (filters?.search) params.set('search', filters.search);
+  const qs = params.toString();
+  return apiFetch<GeneratedPostsResponse>(
+    `/projects/${idOrSlug}/news/posts${qs ? `?${qs}` : ''}`,
+  );
+}
+
+/** Get generated post statistics */
+export async function fetchGeneratedPostStats(idOrSlug: string) {
+  return apiFetch<GeneratedPostStats>(`/projects/${idOrSlug}/news/posts/stats`);
+}
+
+/** Update a generated post */
+export async function updateGeneratedPost(
+  idOrSlug: string,
+  postId: string,
+  updates: { content?: string; status?: string },
+) {
+  return apiFetch<GeneratedPostItem>(
+    `/projects/${idOrSlug}/news/posts/${postId}`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    },
+  );
+}
+
+/** Delete a generated post */
+export async function deleteGeneratedPost(idOrSlug: string, postId: string) {
+  return apiFetch<{ deleted: boolean }>(
+    `/projects/${idOrSlug}/news/posts/${postId}`,
+    { method: 'DELETE' },
+  );
 }

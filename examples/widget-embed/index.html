@@ -1,0 +1,585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Tokamak Pilot — Widget Embed Demo</title>
+  <style>
+    :root {
+      --bg: #0a0a1a;
+      --surface: #12122a;
+      --border: #2a2a4a;
+      --text: #e0e0f0;
+      --text-muted: #8888aa;
+      --accent: #6366f1;
+      --accent-hover: #818cf8;
+      --code-bg: #0d0d20;
+      --success: #22c55e;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Inter, Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.6;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 860px;
+      margin: 0 auto;
+      padding: 48px 24px 120px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+
+    header h1 {
+      font-size: 32px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      background: linear-gradient(135deg, #6366f1, #a78bfa);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    header p {
+      color: var(--text-muted);
+      font-size: 16px;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 24px;
+    }
+
+    .card h2 {
+      font-size: 18px;
+      font-weight: 600;
+      margin-bottom: 16px;
+    }
+
+    .card h3 {
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .form-group {
+      margin-bottom: 16px;
+    }
+
+    label {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      margin-bottom: 6px;
+      color: var(--text-muted);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      font-size: 14px;
+      font-family: 'SF Mono', 'Fira Code', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    input[type="text"]:focus {
+      border-color: var(--accent);
+    }
+
+    .toggle-group {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 16px;
+    }
+
+    .toggle-btn {
+      flex: 1;
+      padding: 10px 16px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text-muted);
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      text-align: center;
+    }
+
+    .toggle-btn:hover {
+      border-color: var(--accent);
+      color: var(--text);
+    }
+
+    .toggle-btn.active {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+
+    .code-block {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 16px 20px;
+      font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+      font-size: 13px;
+      line-height: 1.7;
+      overflow-x: auto;
+      white-space: pre;
+      color: var(--text-muted);
+    }
+
+    .code-block .tag { color: #f472b6; }
+    .code-block .attr { color: #a78bfa; }
+    .code-block .val { color: #34d399; }
+    .code-block .comment { color: #4a4a6a; }
+
+    .copy-btn {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      padding: 6px 12px;
+      background: var(--border);
+      border: none;
+      border-radius: 6px;
+      color: var(--text-muted);
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .copy-btn:hover {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    .copy-btn.copied {
+      background: var(--success);
+      color: #fff;
+    }
+
+    .preview-frame {
+      position: relative;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      height: 160px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+
+    .preview-frame .placeholder {
+      color: var(--text-muted);
+      font-size: 13px;
+      text-align: center;
+      padding: 20px;
+    }
+
+    .preview-frame .placeholder code {
+      display: block;
+      margin-top: 8px;
+      font-family: 'SF Mono', monospace;
+      color: var(--accent);
+      font-size: 12px;
+    }
+
+    .preview-widget-btn {
+      position: absolute;
+      width: 48px;
+      height: 48px;
+      border-radius: 24px;
+      border: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+      cursor: default;
+      transition: all 0.3s;
+    }
+
+    .preview-widget-btn.dark { background: #1a1a2e; color: #fff; }
+    .preview-widget-btn.light { background: #fff; color: #1a1a2e; border: 1px solid #e0e0e0; }
+    .preview-widget-btn.bottom-right { bottom: 16px; right: 16px; }
+    .preview-widget-btn.bottom-left { bottom: 16px; left: 16px; }
+
+    .preview-widget-btn svg { width: 20px; height: 20px; }
+
+    .demo-links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+    }
+
+    .demo-link {
+      display: block;
+      padding: 14px 16px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      text-decoration: none;
+      font-size: 14px;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+
+    .demo-link:hover {
+      border-color: var(--accent);
+      background: var(--surface);
+    }
+
+    .demo-link small {
+      display: block;
+      color: var(--text-muted);
+      font-size: 12px;
+      font-weight: 400;
+      margin-top: 4px;
+    }
+
+    .steps {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .step {
+      padding: 16px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    .step-num {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 14px;
+      background: var(--accent);
+      color: #fff;
+      font-size: 13px;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .step p {
+      font-size: 13px;
+      color: var(--text-muted);
+    }
+
+    .step strong {
+      color: var(--text);
+    }
+
+    .section-divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      margin: 32px 0;
+    }
+
+    footer {
+      text-align: center;
+      padding: 32px;
+      color: var(--text-muted);
+      font-size: 13px;
+    }
+
+    footer a {
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Tokamak Pilot Widget</h1>
+      <p>Embed a chat widget on any website with a single script tag</p>
+    </header>
+
+    <!-- How it works -->
+    <div class="card">
+      <h2>How It Works</h2>
+      <div class="steps">
+        <div class="step">
+          <div class="step-num">1</div>
+          <p><strong>Get an API key</strong> from the Tokamak Pilot dashboard with the <code>ask</code> scope</p>
+        </div>
+        <div class="step">
+          <div class="step-num">2</div>
+          <p><strong>Add the script tag</strong> to your HTML page, right before <code>&lt;/body&gt;</code></p>
+        </div>
+        <div class="step">
+          <div class="step-num">3</div>
+          <p><strong>Done.</strong> A floating chat button appears — visitors can ask questions about Tokamak</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configurator -->
+    <div class="card">
+      <h2>Configure &amp; Copy</h2>
+
+      <div class="form-group">
+        <label for="api-key-input">API Key</label>
+        <input type="text" id="api-key-input" placeholder="tk_your_api_key_here" />
+      </div>
+
+      <div class="form-group">
+        <label for="api-url-input">API URL (optional — leave blank for production)</label>
+        <input type="text" id="api-url-input" placeholder="https://api.tokamakforest.com/api/v1/public" />
+      </div>
+
+      <div class="form-group">
+        <h3>Theme</h3>
+        <div class="toggle-group" id="theme-toggle">
+          <button class="toggle-btn active" data-value="dark">Dark</button>
+          <button class="toggle-btn" data-value="light">Light</button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <h3>Position</h3>
+        <div class="toggle-group" id="position-toggle">
+          <button class="toggle-btn active" data-value="bottom-right">Bottom Right</button>
+          <button class="toggle-btn" data-value="bottom-left">Bottom Left</button>
+        </div>
+      </div>
+
+      <h3>Preview</h3>
+      <div class="preview-frame" id="preview">
+        <div class="placeholder">Widget button will appear here</div>
+        <button class="preview-widget-btn dark bottom-right" id="preview-btn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div style="height: 16px;"></div>
+
+      <h3>Embed Code</h3>
+      <div class="code-block" id="code-output">
+        <button class="copy-btn" id="copy-btn" onclick="copyCode()">Copy</button>
+<span class="comment">&lt;!-- Add before &lt;/body&gt; --&gt;</span>
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"https://api.tokamakforest.com/widget.js"</span>
+  <span class="attr">data-api-key</span>=<span class="val">"YOUR_API_KEY"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <!-- Demo pages -->
+    <div class="card">
+      <h2>Demo Pages</h2>
+      <p style="color: var(--text-muted); font-size: 14px; margin-bottom: 16px;">
+        Each demo page has the widget embedded with a different configuration.
+        Set your API key in the URL parameter: <code>?key=tk_xxx</code>
+      </p>
+      <div class="demo-links">
+        <a href="demo-dark.html" class="demo-link">
+          Dark Theme
+          <small>Default — dark background, bottom-right</small>
+        </a>
+        <a href="demo-light.html" class="demo-link">
+          Light Theme
+          <small>White background, bottom-right</small>
+        </a>
+        <a href="demo-left.html" class="demo-link">
+          Bottom Left
+          <small>Dark theme, bottom-left position</small>
+        </a>
+        <a href="demo-project.html" class="demo-link">
+          Project Scoped
+          <small>Answers scoped to a single project</small>
+        </a>
+      </div>
+    </div>
+
+    <hr class="section-divider" />
+
+    <!-- Usage examples -->
+    <div class="card">
+      <h2>Usage Examples</h2>
+
+      <h3 style="margin-top: 0;">Minimal</h3>
+      <div class="code-block">
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"https://api.tokamakforest.com/widget.js"</span>
+  <span class="attr">data-api-key</span>=<span class="val">"tk_your_key"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></div>
+
+      <div style="height: 20px;"></div>
+
+      <h3>All options</h3>
+      <div class="code-block">
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"https://api.tokamakforest.com/widget.js"</span>
+  <span class="attr">data-api-key</span>=<span class="val">"tk_your_key"</span>
+  <span class="attr">data-theme</span>=<span class="val">"light"</span>
+  <span class="attr">data-position</span>=<span class="val">"bottom-left"</span>
+  <span class="attr">data-api-url</span>=<span class="val">"https://api.tokamakforest.com/api/v1/public"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></div>
+
+      <div style="height: 20px;"></div>
+
+      <h3>Project-scoped (only answers about a specific project)</h3>
+      <div class="code-block">
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"https://api.tokamakforest.com/widget.js"</span>
+  <span class="attr">data-api-key</span>=<span class="val">"tk_your_key"</span>
+  <span class="attr">data-api-url</span>=<span class="val">"https://api.tokamakforest.com/api/v1/projects/your-project/public"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></div>
+
+      <div style="height: 20px;"></div>
+
+      <h3>Local development</h3>
+      <div class="code-block">
+<span class="tag">&lt;script</span>
+  <span class="attr">src</span>=<span class="val">"http://localhost:4000/widget.js"</span>
+  <span class="attr">data-api-key</span>=<span class="val">"tk_your_key"</span>
+  <span class="attr">data-api-url</span>=<span class="val">"http://localhost:4000/api/v1/public"</span>
+<span class="tag">&gt;&lt;/script&gt;</span></div>
+    </div>
+  </div>
+
+  <footer>
+    <p>
+      <a href="https://github.com/tokamak-network/tokamak-network-pilot">Tokamak Pilot</a> &mdash;
+      RAG-powered knowledge hub for the Tokamak Network ecosystem
+    </p>
+  </footer>
+
+  <script>
+    var selectedTheme = 'dark';
+    var selectedPosition = 'bottom-right';
+
+    function setupToggle(groupId, onChange) {
+      var group = document.getElementById(groupId);
+      var buttons = group.querySelectorAll('.toggle-btn');
+      buttons.forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          buttons.forEach(function(b) { b.classList.remove('active'); });
+          btn.classList.add('active');
+          onChange(btn.getAttribute('data-value'));
+        });
+      });
+    }
+
+    setupToggle('theme-toggle', function(val) {
+      selectedTheme = val;
+      updatePreview();
+      updateCode();
+    });
+
+    setupToggle('position-toggle', function(val) {
+      selectedPosition = val;
+      updatePreview();
+      updateCode();
+    });
+
+    document.getElementById('api-key-input').addEventListener('input', updateCode);
+    document.getElementById('api-url-input').addEventListener('input', updateCode);
+
+    function updatePreview() {
+      var btn = document.getElementById('preview-btn');
+      btn.className = 'preview-widget-btn ' + selectedTheme + ' ' + selectedPosition;
+    }
+
+    function updateCode() {
+      var apiKey = document.getElementById('api-key-input').value || 'YOUR_API_KEY';
+      var apiUrl = document.getElementById('api-url-input').value;
+
+      var lines = [];
+      lines.push('<span class="comment">&lt;!-- Add before &lt;/body&gt; --&gt;</span>');
+      lines.push('<span class="tag">&lt;script</span>');
+      lines.push('  <span class="attr">src</span>=<span class="val">"https://api.tokamakforest.com/widget.js"</span>');
+      lines.push('  <span class="attr">data-api-key</span>=<span class="val">"' + escapeHtml(apiKey) + '"</span>');
+
+      if (selectedTheme !== 'dark') {
+        lines.push('  <span class="attr">data-theme</span>=<span class="val">"' + selectedTheme + '"</span>');
+      }
+      if (selectedPosition !== 'bottom-right') {
+        lines.push('  <span class="attr">data-position</span>=<span class="val">"' + selectedPosition + '"</span>');
+      }
+      if (apiUrl) {
+        lines.push('  <span class="attr">data-api-url</span>=<span class="val">"' + escapeHtml(apiUrl) + '"</span>');
+      }
+
+      lines.push('<span class="tag">&gt;&lt;/script&gt;</span>');
+
+      var codeEl = document.getElementById('code-output');
+      codeEl.innerHTML = '<button class="copy-btn" id="copy-btn" onclick="copyCode()">Copy</button>\n' + lines.join('\n');
+    }
+
+    function getPlainCode() {
+      var apiKey = document.getElementById('api-key-input').value || 'YOUR_API_KEY';
+      var apiUrl = document.getElementById('api-url-input').value;
+
+      var lines = [];
+      lines.push('<!-- Add before </body> -->');
+      lines.push('<script');
+      lines.push('  src="https://api.tokamakforest.com/widget.js"');
+      lines.push('  data-api-key="' + apiKey + '"');
+
+      if (selectedTheme !== 'dark') {
+        lines.push('  data-theme="' + selectedTheme + '"');
+      }
+      if (selectedPosition !== 'bottom-right') {
+        lines.push('  data-position="' + selectedPosition + '"');
+      }
+      if (apiUrl) {
+        lines.push('  data-api-url="' + apiUrl + '"');
+      }
+
+      lines.push('><\/script>');
+      return lines.join('\n');
+    }
+
+    function copyCode() {
+      navigator.clipboard.writeText(getPlainCode()).then(function() {
+        var btn = document.getElementById('copy-btn');
+        btn.textContent = 'Copied!';
+        btn.classList.add('copied');
+        setTimeout(function() {
+          btn.textContent = 'Copy';
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    }
+
+    function escapeHtml(str) {
+      return str.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+  </script>
+</body>
+</html>

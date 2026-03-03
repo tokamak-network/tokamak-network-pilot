@@ -46,6 +46,18 @@ export class Project {
   @Column({ type: 'boolean', default: false })
   isRoadmapPublic!: boolean;
 
+  @Column({ type: 'varchar', length: 32, default: 'forest' })
+  publicTheme!: string;
+
+  @Column({ type: 'varchar', length: 16, default: 'rounded' })
+  publicBorderRadius!: string;
+
+  @Column({ type: 'boolean', default: false })
+  isNewsEnabled!: boolean;
+
+  @Column({ type: 'jsonb', default: [] })
+  newsKeywords!: string[];
+
   @CreateDateColumn()
   createdAt!: Date;
 

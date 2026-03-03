@@ -35,6 +35,9 @@ function useActiveSection(sectionIds: string[]) {
   const [activeId, setActiveId] = useState(sectionIds[0] || '');
 
   useEffect(() => {
+    // Only run on client side
+    if (typeof window === 'undefined') return;
+
     const observer = new IntersectionObserver(
       (entries) => {
         const visible = entries
@@ -62,9 +65,9 @@ export default function DocsGettingStartedPage() {
   const activeSection = useActiveSection(PAGE_SECTIONS.map((s) => s.id));
 
   return (
-    <div className="flex gap-10">
+    <div className="flex gap-6 lg:gap-10">
       {/* Main Content */}
-      <div className="flex-1 min-w-0 space-y-12">
+      <div className="flex-1 min-w-0 space-y-8 lg:space-y-12">
         {/* Hero */}
         <section id="overview">
           <div className="flex items-start justify-between gap-4">
@@ -468,7 +471,7 @@ console.log(result.sources);`}
       </div>
 
       {/* Right-side Table of Contents */}
-      <aside className="hidden 2xl:flex w-44 shrink-0 flex-col sticky top-10 h-fit max-h-[calc(100vh-5rem)] overflow-y-auto">
+      <aside className="hidden xl:flex w-40 shrink-0 flex-col sticky top-10 h-fit max-h-[calc(100vh-5rem)] overflow-y-auto">
         <p className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider mb-3">
           On this page
         </p>

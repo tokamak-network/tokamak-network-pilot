@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Demo — Project Scoped</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0f0;
+      line-height: 1.6;
+      padding: 48px 24px 120px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: #8888aa; margin-bottom: 32px; }
+    .content-block {
+      background: #12122a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .content-block h2 { font-size: 18px; margin-bottom: 12px; }
+    .content-block p { color: #aaa; font-size: 14px; margin-bottom: 12px; }
+    .content-block p:last-child { margin-bottom: 0; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #6366f1;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    a { color: #818cf8; }
+    .back { display: inline-block; margin-bottom: 24px; color: #8888aa; text-decoration: none; font-size: 13px; }
+    .back:hover { color: #e0e0f0; }
+    .code {
+      background: #0d0d20;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      color: #a78bfa;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+    .highlight {
+      background: rgba(99, 102, 241, 0.1);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      border-radius: 8px;
+      padding: 14px 18px;
+      margin-top: 12px;
+      font-size: 13px;
+      color: #c4b5fd;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to configurator</a>
+    <h1>Project-Scoped Demo</h1>
+    <p class="subtitle">Widget that only answers questions about a specific project</p>
+
+    <div class="content-block">
+      <span class="badge">Widget Config</span>
+      <h2>Embed Code</h2>
+      <p>By pointing <code>data-api-url</code> to a project-specific public endpoint, the widget only returns answers from that project's knowledge sources.</p>
+      <div class="code">&lt;script
+  src="https://api.tokamakforest.com/widget.js"
+  data-api-key="YOUR_KEY"
+  data-api-url="https://api.tokamakforest.com/api/v1/projects/YOUR_PROJECT_SLUG/public"
+&gt;&lt;/script&gt;</div>
+    </div>
+
+    <div class="content-block">
+      <h2>How Project Scoping Works</h2>
+      <p>In Tokamak Pilot, each project has its own set of knowledge sources (GitHub repos, docs, uploads). When you scope the widget to a project, the RAG pipeline only searches that project's sources.</p>
+      <div class="highlight">
+        Replace <code>YOUR_PROJECT_SLUG</code> with your actual project slug. You can find it in the Tokamak Pilot dashboard or via the API: <code>GET /api/v1/projects</code>
+      </div>
+    </div>
+
+    <div class="content-block">
+      <h2>Use Cases</h2>
+      <p>&bull; <strong>Project documentation sites</strong> — Add a widget to your project's docs page that only answers questions about that project</p>
+      <p>&bull; <strong>Product support pages</strong> — Scope to a product's knowledge base for focused support</p>
+      <p>&bull; <strong>Team dashboards</strong> — Give each team a widget scoped to their project's sources</p>
+    </div>
+  </div>
+
+  <!--
+    Tokamak Pilot Widget — Project scoped
+    Replace YOUR_PROJECT_SLUG with your project slug
+  -->
+  <script
+    src="https://api.tokamakforest.com/widget.js"
+    data-api-key="YOUR_API_KEY"
+    data-api-url="https://api.tokamakforest.com/api/v1/projects/YOUR_PROJECT_SLUG/public"
+  ></script>
+</body>
+</html>

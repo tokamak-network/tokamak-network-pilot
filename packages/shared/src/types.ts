@@ -268,6 +268,16 @@ export interface AskInConversationResponse {
 
 export type ProjectRole = 'lead' | 'contributor' | 'viewer';
 
+export type PublicTheme =
+  | 'forest'
+  | 'ocean'
+  | 'sunset'
+  | 'midnight'
+  | 'lavender'
+  | 'slate';
+
+export type PublicBorderRadius = 'rounded' | 'pill' | 'square';
+
 export interface ProjectLink {
   label: string;
   url: string;
@@ -283,6 +293,10 @@ export interface ProjectInfo {
   summary?: string;
   summaryUpdatedAt?: string;
   isPublic: boolean;
+  publicTheme: PublicTheme;
+  publicBorderRadius: PublicBorderRadius;
+  isNewsEnabled: boolean;
+  newsKeywords: string[];
   memberCount: number;
   sourceCount: number;
   createdAt: string;
@@ -328,6 +342,10 @@ export interface CreateProjectRequest {
   logoUrl?: string;
   links?: ProjectLink[];
   isPublic?: boolean;
+  publicTheme?: PublicTheme;
+  publicBorderRadius?: PublicBorderRadius;
+  isNewsEnabled?: boolean;
+  newsKeywords?: string[];
 }
 
 export interface UpdateProjectRequest {
@@ -338,6 +356,10 @@ export interface UpdateProjectRequest {
   links?: ProjectLink[];
   summary?: string;
   isPublic?: boolean;
+  publicTheme?: PublicTheme;
+  publicBorderRadius?: PublicBorderRadius;
+  isNewsEnabled?: boolean;
+  newsKeywords?: string[];
 }
 
 export interface AddProjectMemberRequest {
@@ -402,6 +424,8 @@ export interface ProjectPublicInfo {
   logoUrl?: string;
   links: ProjectLink[];
   summary?: string;
+  publicTheme: PublicTheme;
+  publicBorderRadius: PublicBorderRadius;
   members: Array<{
     role: ProjectRole;
     user: { name?: string; email: string };
@@ -411,6 +435,48 @@ export interface ProjectPublicInfo {
     type: string;
     documentCount: number;
   }>;
+}
+
+// ---- Project News Types ----
+
+export interface ProjectNewsInfo {
+  id: string;
+  projectId: string;
+  title: string;
+  description?: string;
+  url: string;
+  source?: string;
+  imageUrl?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+}
+
+export interface ProjectNewsResponse {
+  data: ProjectNewsInfo[];
+  total: number;
+  page: number;
+  limit: number;
+  hasMore: boolean;
+}
+
+export interface NewsSyncResponse {
+  synced: number;
+}
+
+export type SocialPlatform = 'twitter' | 'linkedin' | 'instagram';
+
+export interface GenerateSocialPostRequest {
+  platform: SocialPlatform;
+  customPrompt?: string;
+}
+
+export interface GeneratedSocialPost {
+  content: string;
+  platform: SocialPlatform;
+  articleId: string;
+  articleTitle: string;
+  provider: string;
+  model: string;
 }
 
 // ---- Feedback Types ----

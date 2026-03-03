@@ -44,7 +44,31 @@ tokamak-network-pilot/
   - [Website crawl](docs/WEBSITE_CRAWL.md) — Add website URLs as knowledge sources (crawl + ingest)
   - [MCP Server](docs/MCP.md) — Use from Cursor / Claude Desktop
 - **[packages/sdk/README.md](packages/sdk/README.md)** — TypeScript SDK install, config, and methods
-- **[examples/](examples/)** — Runnable Node scripts (health, ask, stream, search, sources/content). Run with `TOKAMAK_PILOT_API_URL` and `TOKAMAK_PILOT_API_KEY` set.
+- **[examples/](examples/)** — Runnable examples and integration demos:
+
+### Simple Scripts (raw `fetch`, no SDK)
+
+| Script | Description |
+|--------|-------------|
+| [`node-health.mjs`](examples/node-health.mjs) | Health check |
+| [`node-ask.mjs`](examples/node-ask.mjs) | Ask a question (RAG) |
+| [`node-stream.mjs`](examples/node-stream.mjs) | Stream an answer via SSE |
+| [`node-search.mjs`](examples/node-search.mjs) | Semantic search |
+| [`node-sources-content.mjs`](examples/node-sources-content.mjs) | List sources and content |
+| [`node-projects.mjs`](examples/node-projects.mjs) | List and get projects |
+
+### Integration Examples
+
+Full project examples showing real-world integrations. Each is a standalone project inside `examples/`.
+
+| # | Example | Stack | Description | Status |
+|---|---------|-------|-------------|--------|
+| 1 | [`widget-embed/`](examples/widget-embed/) | HTML, CSS | Embed the Tokamak chat widget on any website with a single `<script>` tag. Shows light/dark themes, position options, and project-scoped chat. | Done |
+| 2 | [`nextjs-chat/`](examples/nextjs-chat/) | Next.js 15, React 19, SDK | Full Next.js app with a chat component using SDK streaming, server actions, conversation history, and project-scoped Q&A. | Done |
+| 3 | [`discord-bot/`](examples/discord-bot/) | discord.js, SDK | Discord bot that answers Tokamak questions in channels. Supports `/ask`, `/search`, and threaded follow-ups. | Planned |
+| 4 | [`telegram-bot/`](examples/telegram-bot/) | grammy, SDK | Telegram bot for Q&A. Supports inline queries, streaming replies, and project-scoped answers. | Planned |
+| 5 | [`slack-bot/`](examples/slack-bot/) | Slack Bolt, SDK | Slack app that brings Tokamak knowledge into workspaces. Supports slash commands, app mentions, and threaded conversations. | Planned |
+| 6 | [`cli-tool/`](examples/cli-tool/) | Node.js, SDK | Interactive terminal Q&A tool. Ask questions, search, browse projects — all from the command line. | Planned |
 
 ## Quick Start
 

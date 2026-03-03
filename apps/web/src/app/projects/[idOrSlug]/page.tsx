@@ -34,6 +34,8 @@ import {
   RefreshCw,
   Clock,
   Settings,
+  Palette,
+  Newspaper,
 } from 'lucide-react';
 import {
   fetchProject,
@@ -81,6 +83,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import type { ConversationMessage } from '@/store/ask';
+import { NewsTab } from '@/components/news';
 
 const roleColors: Record<string, string> = {
   lead: 'bg-warning-bg text-warning border-warning-border',
@@ -121,7 +124,7 @@ export default function ProjectDetailPage() {
   const [editingSummary, setEditingSummary] = useState(false);
   const [summaryDraft, setSummaryDraft] = useState('');
   const [savingSummary, setSavingSummary] = useState(false);
-  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'sources' | 'team' | 'chat' | 'news' | 'settings'>('overview');
   const [invitations, setInvitations] = useState<ProjectInvitationResponse[]>([]);
   const [showInviteForm, setShowInviteForm] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -286,6 +289,22 @@ export default function ProjectDetailPage() {
     }
   };
 
+  const handleTogglePublic = async () => {
+    if (!project) return;
+    try {
+      const makingPrivate = project.isPublic;
+      const updates: Record<string, boolean> = { isPublic: !project.isPublic };
+      if (makingPrivate) {
+        updates.showOnLandingPage = false;
+        updates.isRoadmapPublic = false;
+      }
+      await updateProject(project.id, updates);
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
   const handleToggleLandingPage = async () => {
     if (!project) return;
     try {
@@ -300,6 +319,46 @@ export default function ProjectDetailPage() {
     if (!project) return;
     try {
       await updateProject(project.id, { isRoadmapPublic: !project.isRoadmapPublic });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleToggleNews = async () => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { isNewsEnabled: !project.isNewsEnabled });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleUpdateNewsKeywords = async (keywords: string[]) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { newsKeywords: keywords });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleChangeTheme = async (theme: string) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { publicTheme: theme });
+      await loadData();
+    } catch (err: any) {
+      toast(err.message);
+    }
+  };
+
+  const handleChangeBorderRadius = async (radius: string) => {
+    if (!project) return;
+    try {
+      await updateProject(project.id, { publicBorderRadius: radius });
       await loadData();
     } catch (err: any) {
       toast(err.message);
@@ -377,6 +436,7 @@ export default function ProjectDetailPage() {
     { id: 'sources' as const, label: `Sources (${project.sources.length})`, icon: Database },
     { id: 'team' as const, label: `Team (${project.members.length})`, icon: Users },
     { id: 'chat' as const, label: 'Ask', icon: MessageSquare },
+    { id: 'news' as const, label: 'News', icon: Newspaper },
     { id: 'settings' as const, label: 'Settings', icon: Settings },
   ];
 
@@ -582,12 +642,21 @@ export default function ProjectDetailPage() {
         <ChatTab project={project} />
       )}
 
+      {activeTab === 'news' && (
+        <NewsTab project={project} canEdit={canEdit} isLead={isLead} />
+      )}
+
       {activeTab === 'settings' && (
         <SettingsTab
           project={project}
           isLead={isLead}
+          onTogglePublic={handleTogglePublic}
           onToggleLandingPage={handleToggleLandingPage}
           onToggleRoadmapVisibility={handleToggleRoadmapVisibility}
+          onToggleNews={handleToggleNews}
+          onUpdateNewsKeywords={handleUpdateNewsKeywords}
+          onChangeTheme={handleChangeTheme}
+          onChangeBorderRadius={handleChangeBorderRadius}
         />
       )}
     </div>
@@ -656,75 +725,223 @@ function Toggle({
 
 // ─── Settings Tab ────────────────────────────────────────────
 
+const THEME_OPTIONS = [
+  { id: 'forest', label: 'Forest', color: 'oklch(0.3 0.06 150)', description: 'Deep greens & warm cream' },
+  { id: 'ocean', label: 'Ocean', color: 'oklch(0.35 0.1 240)', description: 'Cool blues & soft whites' },
+  { id: 'sunset', label: 'Sunset', color: 'oklch(0.5 0.15 30)', description: 'Warm oranges & soft golds' },
+  { id: 'midnight', label: 'Midnight', color: 'oklch(0.65 0.12 260)', description: 'Dark navy & electric accents' },
+  { id: 'lavender', label: 'Lavender', color: 'oklch(0.45 0.12 290)', description: 'Soft purples & gentle tones' },
+  { id: 'slate', label: 'Slate', color: 'oklch(0.3 0.02 260)', description: 'Neutral grays, clean & minimal' },
+] as const;
+
+const RADIUS_OPTIONS = [
+  { id: 'rounded', label: 'Rounded', description: 'Smooth, friendly corners' },
+  { id: 'pill', label: 'Pill', description: 'Fully rounded, bubbly shapes' },
+  { id: 'square', label: 'Square', description: 'Sharp, modern edges' },
+] as const;
+
 function SettingsTab({
   project,
   isLead,
+  onTogglePublic,
   onToggleLandingPage,
   onToggleRoadmapVisibility,
+  onToggleNews,
+  onUpdateNewsKeywords,
+  onChangeTheme,
+  onChangeBorderRadius,
 }: {
   project: ProjectDetailResponse;
   isLead: boolean;
+  onTogglePublic: () => void;
   onToggleLandingPage: () => void;
   onToggleRoadmapVisibility: () => void;
+  onToggleNews: () => void;
+  onUpdateNewsKeywords: (keywords: string[]) => void;
+  onChangeTheme: (theme: string) => void;
+  onChangeBorderRadius: (radius: string) => void;
 }) {
-  const canEditVisibility = isLead && project.isPublic;
+  if (!isLead) {
+    return (
+      <div className="space-y-6">
+        <Card>
+          <CardContent className="py-8 text-center text-sm text-muted-foreground">
+            Only project leads can change settings.
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  const currentTheme = project.publicTheme || 'forest';
+  const currentRadius = project.publicBorderRadius || 'rounded';
 
   return (
     <div className="space-y-6">
-      {canEditVisibility && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-base flex items-center gap-2">
-              <Globe className="size-4" />
-              Visibility & sharing
-            </CardTitle>
-            <CardDescription>
-              Control how this project appears on the landing page and public project page.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 font-medium">
-                  <Megaphone className="size-4 text-muted-foreground" />
-                  Show on Landing Page
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Feature this project on the Tokamak Forest landing page so it’s discoverable by visitors.
-                </p>
-              </div>
-              <Toggle
-                checked={!!project.showOnLandingPage}
-                onClick={onToggleLandingPage}
-                aria-label="Toggle show on landing page"
-              />
-            </div>
-            <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2 font-medium">
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Globe className="size-4" />
+            Visibility & sharing
+          </CardTitle>
+          <CardDescription>
+            Control who can see this project and how it appears publicly.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                {project.isPublic ? (
                   <Globe className="size-4 text-muted-foreground" />
-                  Show roadmap on public page
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Allow visitors to see the project roadmap (planned and in-progress work) on the public project page.
-                </p>
+                ) : (
+                  <Lock className="size-4 text-muted-foreground" />
+                )}
+                Public project
               </div>
-              <Toggle
-                checked={!!project.isRoadmapPublic}
-                onClick={onToggleRoadmapVisibility}
-                aria-label="Toggle roadmap visible on public page"
-              />
+              <p className="text-sm text-muted-foreground">
+                {project.isPublic
+                  ? 'This project is visible to anyone with the link. Turn off to make it private.'
+                  : 'This project is private. Only team members can access it. Turn on to make it publicly visible.'}
+              </p>
             </div>
-          </CardContent>
-        </Card>
-      )}
-      {!canEditVisibility && (
-        <Card>
-          <CardContent className="py-8 text-center text-sm text-muted-foreground">
-            Only project leads can change visibility settings. This project is {project.isPublic ? 'public' : 'private'}.
-          </CardContent>
-        </Card>
-      )}
+            <Toggle
+              checked={!!project.isPublic}
+              onClick={onTogglePublic}
+              aria-label="Toggle project public visibility"
+            />
+          </div>
+
+          <div className={cn(
+            'flex items-start justify-between gap-4 rounded-lg border p-4 transition-opacity',
+            !project.isPublic && 'opacity-50',
+          )}>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                <Megaphone className="size-4 text-muted-foreground" />
+                Show on Landing Page
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Feature this project on the Tokamak Forest landing page so it&#39;s discoverable by visitors.
+              </p>
+            </div>
+            <Toggle
+              checked={!!project.showOnLandingPage}
+              onClick={onToggleLandingPage}
+              disabled={!project.isPublic}
+              aria-label="Toggle show on landing page"
+            />
+          </div>
+
+          <div className={cn(
+            'flex items-start justify-between gap-4 rounded-lg border p-4 transition-opacity',
+            !project.isPublic && 'opacity-50',
+          )}>
+            <div className="space-y-0.5">
+              <div className="flex items-center gap-2 font-medium">
+                <Globe className="size-4 text-muted-foreground" />
+                Show roadmap on public page
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Allow visitors to see the project roadmap (planned and in-progress work) on the public project page.
+              </p>
+            </div>
+            <Toggle
+              checked={!!project.isRoadmapPublic}
+              onClick={onToggleRoadmapVisibility}
+              disabled={!project.isPublic}
+              aria-label="Toggle roadmap visible on public page"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* News Aggregation */}
+      <NewsSettingsCard
+        project={project}
+        onToggleNews={onToggleNews}
+        onUpdateKeywords={onUpdateNewsKeywords}
+      />
+
+      {/* Public Page Appearance */}
+      <Card className={cn(!project.isPublic && 'opacity-50 pointer-events-none')}>
+        <CardHeader>
+          <CardTitle className="text-base flex items-center gap-2">
+            <Palette className="size-4" />
+            Public page appearance
+          </CardTitle>
+          <CardDescription>
+            Customize the color theme and shape style of your public project page.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Color Theme Picker */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Color theme</p>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {THEME_OPTIONS.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => onChangeTheme(t.id)}
+                  className={cn(
+                    'relative flex items-center gap-3 rounded-lg border p-3 text-left transition-all hover:border-primary/50 hover:shadow-sm',
+                    currentTheme === t.id
+                      ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                      : 'border-border',
+                  )}
+                >
+                  <div
+                    className="size-8 shrink-0 rounded-full border-2 border-white shadow-sm"
+                    style={{ backgroundColor: t.color }}
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium truncate">{t.label}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{t.description}</p>
+                  </div>
+                  {currentTheme === t.id && (
+                    <div className="absolute top-2 right-2">
+                      <div className="size-2 rounded-full bg-primary" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <Separator />
+
+          {/* Border Radius Picker */}
+          <div className="space-y-3">
+            <p className="text-sm font-medium">Corner style</p>
+            <div className="grid grid-cols-3 gap-3">
+              {RADIUS_OPTIONS.map((r) => {
+                const previewRadius = r.id === 'pill' ? '12px' : r.id === 'square' ? '3px' : '8px';
+                return (
+                  <button
+                    key={r.id}
+                    onClick={() => onChangeBorderRadius(r.id)}
+                    className={cn(
+                      'flex flex-col items-center gap-2 rounded-lg border p-4 transition-all hover:border-primary/50 hover:shadow-sm',
+                      currentRadius === r.id
+                        ? 'border-primary bg-primary/5 ring-1 ring-primary/20'
+                        : 'border-border',
+                    )}
+                  >
+                    <div
+                      className="size-12 border-2 border-foreground/20 bg-primary/10"
+                      style={{ borderRadius: previewRadius }}
+                    />
+                    <div className="text-center">
+                      <p className="text-sm font-medium">{r.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{r.description}</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
@@ -802,6 +1019,126 @@ function ProjectExportButtons({ slug }: { slug: string }) {
 }
 
 // ─── Overview Tab ────────────────────────────────────────────
+
+// ─── News Settings Card ──────────────────────────────────────
+
+function NewsSettingsCard({
+  project,
+  onToggleNews,
+  onUpdateKeywords,
+}: {
+  project: ProjectDetailResponse;
+  onToggleNews: () => void;
+  onUpdateKeywords: (keywords: string[]) => void;
+}) {
+  const [keywordInput, setKeywordInput] = useState('');
+  const keywords = project.newsKeywords || [];
+
+  const handleAddKeyword = () => {
+    const trimmed = keywordInput.trim();
+    if (!trimmed || keywords.includes(trimmed)) return;
+    onUpdateKeywords([...keywords, trimmed]);
+    setKeywordInput('');
+  };
+
+  const handleRemoveKeyword = (keyword: string) => {
+    onUpdateKeywords(keywords.filter((k) => k !== keyword));
+  };
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle className="text-base flex items-center gap-2">
+          <Newspaper className="size-4" />
+          News Aggregation
+        </CardTitle>
+        <CardDescription>
+          Automatically collect news articles related to this project from Google News.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-6">
+        <div className="flex items-start justify-between gap-4 rounded-lg border p-4">
+          <div className="space-y-0.5">
+            <div className="flex items-center gap-2 font-medium">
+              <Newspaper className="size-4 text-muted-foreground" />
+              Enable news feed
+            </div>
+            <p className="text-sm text-muted-foreground">
+              {project.isNewsEnabled
+                ? 'News articles are being fetched automatically every hour.'
+                : 'Turn on to start aggregating news articles related to this project.'}
+            </p>
+          </div>
+          <Toggle
+            checked={!!project.isNewsEnabled}
+            onClick={onToggleNews}
+            aria-label="Toggle news aggregation"
+          />
+        </div>
+
+        {project.isNewsEnabled && (
+          <div className="rounded-lg border p-4 space-y-3">
+            <div className="space-y-0.5">
+              <p className="text-sm font-medium">Search keywords</p>
+              <p className="text-xs text-muted-foreground">
+                Customize which keywords are used to search for news. If empty, the project name is used.
+              </p>
+            </div>
+
+            <div className="flex gap-2">
+              <Input
+                value={keywordInput}
+                onChange={(e) => setKeywordInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    handleAddKeyword();
+                  }
+                }}
+                placeholder="Add a keyword..."
+                className="h-8 text-sm"
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleAddKeyword}
+                disabled={!keywordInput.trim()}
+                className="h-8 shrink-0"
+              >
+                <Plus className="size-3.5 mr-1" />
+                Add
+              </Button>
+            </div>
+
+            {keywords.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5">
+                {keywords.map((kw) => (
+                  <Badge
+                    key={kw}
+                    variant="secondary"
+                    className="text-xs gap-1 pr-1"
+                  >
+                    {kw}
+                    <button
+                      onClick={() => handleRemoveKeyword(kw)}
+                      className="p-0.5 rounded hover:bg-muted-foreground/20 transition-colors"
+                    >
+                      <X className="size-2.5" />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground/60 italic">
+                Using project name &quot;{project.name}&quot; as default search keyword
+              </p>
+            )}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 function OverviewTab({
   project,

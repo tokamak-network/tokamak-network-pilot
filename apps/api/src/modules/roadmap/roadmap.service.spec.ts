@@ -6,6 +6,7 @@ type MockRepo = {
   find: jest.Mock;
   create: jest.Mock;
   save: jest.Mock;
+  remove: jest.Mock;
   createQueryBuilder: jest.Mock;
   update: jest.Mock;
   count: jest.Mock;
@@ -17,6 +18,7 @@ function createMockRepo(): MockRepo {
     find: jest.fn(),
     create: jest.fn((input) => input),
     save: jest.fn(),
+    remove: jest.fn(),
     createQueryBuilder: jest.fn(),
     update: jest.fn(),
     count: jest.fn(),
@@ -225,7 +227,7 @@ describe('RoadmapService', () => {
       'draft-roadmap',
       expect.objectContaining({ projectId: project.id, action: 'draft-roadmap' }),
       expect.objectContaining({
-        jobId: `draft-roadmap:${project.id}`,
+        jobId: `draft-roadmap-${project.id}`,
         delay: 5_000,
       }),
     );

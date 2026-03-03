@@ -523,11 +523,18 @@ export default function ProjectPublicPage() {
   useEffect(() => {
     const load = async () => {
       try {
-        const [publicProject, feedbackList] = await Promise.all([
-          fetchProjectPublic(slug),
-          fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 }),
-        ]);
+        const publicProject = await fetchProjectPublic(slug);
         setProject(publicProject);
+      } catch {
+        setError('Project not found or not public');
+        setLoading(false);
+        setPublicFeedbackLoading(false);
+        return;
+      }
+      setLoading(false);
+
+      try {
+        const feedbackList = await fetchProjectPublicFeedback(slug, { sort: 'top', limit: 8 });
         setPublicFeedbackRows(feedbackList.data);
 
         if (typeof window !== 'undefined') {
@@ -538,18 +545,13 @@ export default function ProjectPublicPage() {
           setVotedFeedbackIds(votedMap);
         }
       } catch {
-        setError('Project not found or not public');
+        // Feedback failed to load but project is still visible
       } finally {
-        setLoading(false);
         setPublicFeedbackLoading(false);
       }
     };
 
-    load().catch(() => {
-      setError('Project not found or not public');
-      setLoading(false);
-      setPublicFeedbackLoading(false);
-    });
+    load();
   }, [slug]);
 
   const handleSubmitFeedback = async (e: React.FormEvent) => {
@@ -623,8 +625,13 @@ export default function ProjectPublicPage() {
     );
   }
 
+  const themeClass = project.publicTheme && project.publicTheme !== 'forest'
+    ? `public-theme-${project.publicTheme}`
+    : '';
+  const radiusClass = `public-radius-${project.publicBorderRadius || 'rounded'}`;
+
   return (
-    <>
+    <div className={cn(themeClass, radiusClass, 'min-h-screen bg-background text-foreground')}>
       {/* Navigation Bar */}
       <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/80">
         <div className="max-w-4xl mx-auto flex h-14 items-center justify-between px-6">
@@ -969,6 +976,6 @@ export default function ProjectPublicPage() {
 
       {/* Floating Chat Widget */}
       <PublicChat project={project} />
-    </>
+    </div>
   );
 }

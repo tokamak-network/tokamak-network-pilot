@@ -24,6 +24,7 @@ export type {
   ProjectFeedbackStatus,
   ProjectFeedbackCategory,
 } from './project-feedback.entity';
+export { ProjectNews } from './project-news.entity';
 export { RoadmapItem } from './roadmap-item.entity';
 export type {
   RoadmapStatus,

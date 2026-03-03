@@ -10,6 +10,7 @@ import {
   IsEmail,
   IsUrl,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import type { ProjectFeedbackCategory } from '../../../entities/project-feedback.entity';
 
@@ -117,12 +118,14 @@ export class ListProjectFeedbackDto {
 
   @ApiPropertyOptional({ description: 'Page number', minimum: 1, example: 1 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   page?: number;
 
   @ApiPropertyOptional({ description: 'Page size', minimum: 1, maximum: 100, example: 20 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -146,6 +149,7 @@ export class ListPublicProjectFeedbackDto {
 
   @ApiPropertyOptional({ description: 'Maximum number of rows', minimum: 1, maximum: 50, example: 10 })
   @IsOptional()
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(50)

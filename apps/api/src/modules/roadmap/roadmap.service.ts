@@ -142,7 +142,7 @@ export class RoadmapService {
         maxItems: 5,
       },
       {
-        jobId: `draft-roadmap:${project.id}`,
+        jobId: `draft-roadmap-${project.id}`,
         delay: 5_000,
         removeOnComplete: 100,
         removeOnFail: 200,
@@ -381,9 +381,12 @@ export class RoadmapService {
 
     const existing = await this.roadmapItemRepo.find({
       where: { projectId: project.id },
-      select: ['id', 'title'],
+      select: ['id', 'title', 'sourceFeedbackIds'],
     });
     const existingTitles = new Set(existing.map((item) => this.normalizeTitle(item.title)));
+    const alreadyLinkedFeedbackIds = new Set(
+      existing.flatMap((item) => item.sourceFeedbackIds),
+    );
 
     const createdItems: RoadmapItem[] = [];
     for (const candidate of aiCandidates) {
@@ -392,10 +395,10 @@ export class RoadmapService {
         continue;
       }
 
-      const linkedFeedbackIds = await this.filterFeedbackIdsForProject(
-        project.id,
-        this.sanitizeFeedbackIds(candidate.feedbackIds),
-      );
+      const candidateFbIds = this.sanitizeFeedbackIds(candidate.feedbackIds);
+      const linkedFeedbackIds = (
+        await this.filterFeedbackIdsForProject(project.id, candidateFbIds)
+      ).filter((id) => !alreadyLinkedFeedbackIds.has(id));
 
       const item = this.roadmapItemRepo.create({
         projectId: project.id,
@@ -415,6 +418,7 @@ export class RoadmapService {
       const saved = await this.roadmapItemRepo.save(item);
       createdItems.push(saved);
       existingTitles.add(normalized);
+      for (const fbId of linkedFeedbackIds) alreadyLinkedFeedbackIds.add(fbId);
 
       if (linkedFeedbackIds.length > 0) {
         await this.projectFeedbackRepo.update(
@@ -505,6 +509,7 @@ export class RoadmapService {
     const sourceFeedbackIds = this.sanitizeFeedbackIds(dto.sourceFeedbackIds);
     if (sourceFeedbackIds.length > 0) {
       await this.ensureFeedbackBelongsToProject(project.id, sourceFeedbackIds);
+      await this.ensureFeedbackNotAlreadyLinked(project.id, sourceFeedbackIds);
     }
 
     const item = this.roadmapItemRepo.create({
@@ -580,6 +585,38 @@ export class RoadmapService {
 
     const saved = await this.roadmapItemRepo.save(item);
     return this.serializeRoadmapItem(saved);
+  }
+
+  async deleteRoadmapItem(
+    projectIdOrSlug: string,
+    itemId: string,
+    userId: string,
+  ) {
+    const project = await this.resolveProject(projectIdOrSlug);
+    await this.requireProjectRole(project.id, userId, ['lead', 'contributor']);
+
+    const item = await this.roadmapItemRepo.findOne({
+      where: { id: itemId, projectId: project.id },
+    });
+
+    if (!item) {
+      throw new NotFoundException(`Roadmap item ${itemId} not found in this project`);
+    }
+
+    if (item.sourceFeedbackIds.length > 0) {
+      await this.projectFeedbackRepo.update(
+        {
+          id: In(item.sourceFeedbackIds),
+          projectId: project.id,
+          status: 'planned',
+        },
+        { status: 'reviewed' },
+      );
+    }
+
+    await this.roadmapItemRepo.remove(item);
+
+    return { deleted: true, id: itemId };
   }
 
   async getPipelineSummary(projectIdOrSlug: string, userId: string) {
@@ -1035,6 +1072,34 @@ export class RoadmapService {
     if (count !== ids.length) {
       throw new BadRequestException(
         'One or more sourceFeedbackIds do not belong to this project',
+      );
+    }
+  }
+
+  private async ensureFeedbackNotAlreadyLinked(
+    projectId: string,
+    feedbackIds: string[],
+    excludeItemId?: string,
+  ): Promise<void> {
+    if (feedbackIds.length === 0) return;
+
+    const existingItems = await this.roadmapItemRepo.find({
+      where: { projectId },
+      select: ['id', 'sourceFeedbackIds'],
+    });
+
+    const alreadyLinked = new Set<string>();
+    for (const item of existingItems) {
+      if (excludeItemId && item.id === excludeItemId) continue;
+      for (const fbId of item.sourceFeedbackIds) {
+        alreadyLinked.add(fbId);
+      }
+    }
+
+    const duplicates = feedbackIds.filter((id) => alreadyLinked.has(id));
+    if (duplicates.length > 0) {
+      throw new BadRequestException(
+        `Feedback already linked to an existing roadmap item: ${duplicates.join(', ')}`,
       );
     }
   }

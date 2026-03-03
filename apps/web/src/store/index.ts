@@ -12,4 +12,5 @@ export { sourcesAtom, sourcesLoadingAtom } from './sources';
 export { contentEntriesAtom, contentLoadingAtom } from './content';
 export { sidebarOpenAtom } from './ui';
 export { userAtom, authLoadingAtom, isAuthenticatedAtom } from './auth';
-export { projectsAtom, projectsLoadingAtom } from './projects';
+export { projectsAtom, projectsLoadingAtom, activeProjectAtom } from './projects';
+export type { ActiveProject } from './projects';

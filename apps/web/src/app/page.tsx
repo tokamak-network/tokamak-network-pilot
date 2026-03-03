@@ -2,7 +2,7 @@
 
 import { useAtom } from 'jotai';
 import { useEffect, useRef, useCallback, useState } from 'react';
-import { Search, Send, TreePine, Database, FileText, Loader2, LayoutDashboard, Plus, MessageCircleQuestion } from 'lucide-react';
+import { Search, Send, TreePine, Database, FileText, Loader2, LayoutDashboard, Plus, MessageCircleQuestion, FolderKanban, Newspaper } from 'lucide-react';
 import Link from 'next/link';
 import {
   queryAtom,
@@ -10,6 +10,7 @@ import {
   conversationAtom,
   activeConversationIdAtom,
   conversationsListAtom,
+  activeProjectAtom,
 } from '@/store';
 import { dbMessageToLocal } from '@/store/ask';
 import {
@@ -19,6 +20,7 @@ import {
   fetchSuggestedQuestions,
 } from '@/lib/api';
 import type { StreamMetadata, SuggestedQuestion } from '@/lib/api';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -38,6 +40,7 @@ export default function HomePage() {
   const [conversation, setConversation] = useAtom(conversationAtom);
   const [activeConversationId, setActiveConversationId] = useAtom(activeConversationIdAtom);
   const [, setConversationsList] = useAtom(conversationsListAtom);
+  const [activeProject] = useAtom(activeProjectAtom);
   const [suggestions, setSuggestions] = useState<SuggestedQuestion[]>([]);
   const scrollEndRef = useRef<HTMLDivElement>(null);
 
@@ -161,10 +164,11 @@ export default function HomePage() {
     };
 
     try {
+      const projectId = activeProject?.id;
       if (activeConversationId) {
-        await askInConversationStream(activeConversationId, currentQuery, callbacks);
+        await askInConversationStream(activeConversationId, currentQuery, callbacks, undefined, projectId);
       } else {
-        await quickAskStream(currentQuery, callbacks);
+        await quickAskStream(currentQuery, callbacks, undefined, projectId);
       }
     } catch (error: any) {
       setConversation((prev) => {
@@ -187,17 +191,38 @@ export default function HomePage() {
           <div className="max-w-2xl w-full text-center space-y-8">
             <div className="space-y-4">
               <div className="flex items-center justify-center gap-2 mb-4">
-                <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
-                  <TreePine className="size-6" />
-                </div>
+                {activeProject ? (
+                  activeProject.logoUrl ? (
+                    <img
+                      src={activeProject.logoUrl}
+                      alt=""
+                      className="size-12 rounded-2xl object-cover"
+                    />
+                  ) : (
+                    <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10">
+                      <FolderKanban className="size-6 text-primary" />
+                    </div>
+                  )
+                ) : (
+                  <div className="flex size-12 items-center justify-center rounded-2xl bg-primary text-primary-foreground">
+                    <TreePine className="size-6" />
+                  </div>
+                )}
               </div>
               <h1 className="text-4xl font-serif font-semibold tracking-tight">
-                Tokamak Forest
+                {activeProject ? `Ask about ${activeProject.name}` : 'Tokamak Forest'}
               </h1>
               <p className="text-muted-foreground text-base max-w-md mx-auto leading-relaxed">
-                Your single source of truth for the Tokamak Network ecosystem.
-                Ask anything — powered by RAG + LLM.
+                {activeProject
+                  ? `Questions are answered using ${activeProject.name}'s knowledge sources.`
+                  : 'Your single source of truth for the Tokamak Network ecosystem. Ask anything — powered by RAG + LLM.'}
               </p>
+              {activeProject && (
+                <Badge variant="secondary" className="gap-1.5">
+                  <FolderKanban className="size-3" />
+                  Scoped to {activeProject.name}
+                </Badge>
+              )}
             </div>
 
             {/* Search Input */}
@@ -208,7 +233,11 @@ export default function HomePage() {
                   <Input
                     value={query}
                     onChange={(e) => setQuery(e.target.value)}
-                    placeholder="Ask about Tokamak Network... e.g. 'How does TON staking work?'"
+                    placeholder={
+                      activeProject
+                        ? `Ask about ${activeProject.name}...`
+                        : "Ask about Tokamak Network... e.g. 'How does TON staking work?'"
+                    }
                     className="pl-10 h-12 text-base"
                   />
                 </div>
@@ -243,7 +272,25 @@ export default function HomePage() {
             )}
 
             {/* Quick Link Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 pt-2">
+            <div className={`grid gap-4 pt-2 ${activeProject ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2 sm:grid-cols-4'}`}>
+              {activeProject && (
+                <Link href="/news">
+                  <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm flex items-center gap-2">
+                        <Newspaper className="size-4 text-muted-foreground" />
+                        News
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <CardDescription>
+                        Latest articles
+                      </CardDescription>
+                    </CardContent>
+                  </Card>
+                </Link>
+              )}
+
               <Link href="/dashboard">
                 <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
                   <CardHeader className="pb-2">
@@ -276,41 +323,45 @@ export default function HomePage() {
                 </Card>
               </Link>
 
-              <Link href="/content">
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <FileText className="size-4 text-muted-foreground" />
-                      Content
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>
-                      Curated guides
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </Link>
+              {!activeProject && (
+                <>
+                  <Link href="/content">
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <FileText className="size-4 text-muted-foreground" />
+                          Content
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription>
+                          Curated guides
+                        </CardDescription>
+                      </CardContent>
+                    </Card>
+                  </Link>
 
-              <a
-                href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/docs`}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
-                  <CardHeader className="pb-2">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <TreePine className="size-4 text-muted-foreground" />
-                      API Docs
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <CardDescription>
-                      Swagger / OpenAPI
-                    </CardDescription>
-                  </CardContent>
-                </Card>
-              </a>
+                  <a
+                    href={`${process.env.NEXT_PUBLIC_API_URL?.replace('/api/v1', '') || 'http://localhost:4000'}/docs`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    <Card className="hover:border-primary/50 transition-colors cursor-pointer h-full">
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm flex items-center gap-2">
+                          <TreePine className="size-4 text-muted-foreground" />
+                          API Docs
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <CardDescription>
+                          Swagger / OpenAPI
+                        </CardDescription>
+                      </CardContent>
+                    </Card>
+                  </a>
+                </>
+              )}
             </div>
           </div>
         </div>
@@ -324,6 +375,11 @@ export default function HomePage() {
               <span className="text-sm font-medium truncate text-muted-foreground">
                 {activeConversationId ? 'Conversation' : 'New Conversation'}
               </span>
+              {activeProject && (
+                <Badge variant="outline" className="text-[10px] shrink-0">
+                  {activeProject.name}
+                </Badge>
+              )}
             </div>
             <Button
               variant="ghost"
