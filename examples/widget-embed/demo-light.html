@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Demo — Light Theme</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f8f9fc;
+      color: #1a1a2e;
+      line-height: 1.6;
+      padding: 48px 24px 120px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: #666; margin-bottom: 32px; }
+    .content-block {
+      background: #fff;
+      border: 1px solid #e5e7eb;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .content-block h2 { font-size: 18px; margin-bottom: 12px; }
+    .content-block p { color: #555; font-size: 14px; margin-bottom: 12px; }
+    .content-block p:last-child { margin-bottom: 0; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #4f46e5;
+      color: #fff;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    a { color: #4f46e5; }
+    .back { display: inline-block; margin-bottom: 24px; color: #888; text-decoration: none; font-size: 13px; }
+    .back:hover { color: #1a1a2e; }
+    .code {
+      background: #f3f4f6;
+      border: 1px solid #e5e7eb;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      color: #4f46e5;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to configurator</a>
+    <h1>Light Theme Demo</h1>
+    <p class="subtitle">Widget with light theme — perfect for light-mode websites</p>
+
+    <div class="content-block">
+      <span class="badge">Widget Config</span>
+      <h2>Embed Code</h2>
+      <p>This page uses the light theme variant. The widget button and chat panel use white backgrounds with indigo accents.</p>
+      <div class="code">&lt;script src="..." data-api-key="YOUR_KEY" data-theme="light"&gt;&lt;/script&gt;</div>
+    </div>
+
+    <div class="content-block">
+      <h2>Sample Page Content</h2>
+      <p>This demonstrates how the widget looks on a light-themed website. Documentation sites, blogs, and marketing pages typically use light themes.</p>
+      <p>The light widget blends seamlessly with these designs while still being visible and accessible.</p>
+    </div>
+
+    <div class="content-block">
+      <h2>Use Cases</h2>
+      <p>The light theme is ideal for:</p>
+      <p>&bull; Documentation sites (GitBook, Docusaurus, etc.)<br/>
+         &bull; Marketing and landing pages<br/>
+         &bull; Blog posts and articles<br/>
+         &bull; Help centers and support pages</p>
+    </div>
+  </div>
+
+  <!-- Tokamak Pilot Widget — Light theme -->
+  <script
+    src="https://api.tokamakforest.com/widget.js"
+    data-api-key="YOUR_API_KEY"
+    data-theme="light"
+  ></script>
+</body>
+</html>

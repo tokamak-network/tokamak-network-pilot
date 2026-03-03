@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Widget Demo — Bottom Left</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0a0a1a;
+      color: #e0e0f0;
+      line-height: 1.6;
+      padding: 48px 24px 120px;
+    }
+    .container { max-width: 720px; margin: 0 auto; }
+    h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+    .subtitle { color: #8888aa; margin-bottom: 32px; }
+    .content-block {
+      background: #12122a;
+      border: 1px solid #2a2a4a;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 20px;
+    }
+    .content-block h2 { font-size: 18px; margin-bottom: 12px; }
+    .content-block p { color: #aaa; font-size: 14px; margin-bottom: 12px; }
+    .content-block p:last-child { margin-bottom: 0; }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      background: #6366f1;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      margin-bottom: 16px;
+    }
+    a { color: #818cf8; }
+    .back { display: inline-block; margin-bottom: 24px; color: #8888aa; text-decoration: none; font-size: 13px; }
+    .back:hover { color: #e0e0f0; }
+    .code {
+      background: #0d0d20;
+      border: 1px solid #2a2a4a;
+      border-radius: 8px;
+      padding: 14px 18px;
+      font-family: 'SF Mono', monospace;
+      font-size: 13px;
+      color: #a78bfa;
+      overflow-x: auto;
+      margin-top: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">&larr; Back to configurator</a>
+    <h1>Bottom Left Demo</h1>
+    <p class="subtitle">Widget positioned at the bottom-left corner</p>
+
+    <div class="content-block">
+      <span class="badge">Widget Config</span>
+      <h2>Embed Code</h2>
+      <p>Use <code>data-position="bottom-left"</code> when the bottom-right corner is occupied by other UI elements (Intercom, Crisp, cookie banners, etc.).</p>
+      <div class="code">&lt;script src="..." data-api-key="YOUR_KEY" data-position="bottom-left"&gt;&lt;/script&gt;</div>
+    </div>
+
+    <div class="content-block">
+      <h2>When to Use Bottom Left</h2>
+      <p>Many websites already have a chat widget, support button, or cookie consent banner in the bottom-right corner. Moving the Tokamak widget to the bottom-left avoids overlap and keeps both elements accessible.</p>
+    </div>
+
+    <div class="content-block">
+      <h2>Combining Options</h2>
+      <p>You can combine position with theme:</p>
+      <div class="code">&lt;script src="..." data-api-key="YOUR_KEY" data-position="bottom-left" data-theme="light"&gt;&lt;/script&gt;</div>
+    </div>
+  </div>
+
+  <!-- Tokamak Pilot Widget — Bottom left position -->
+  <script
+    src="https://api.tokamakforest.com/widget.js"
+    data-api-key="YOUR_API_KEY"
+    data-position="bottom-left"
+  ></script>
+</body>
+</html>
