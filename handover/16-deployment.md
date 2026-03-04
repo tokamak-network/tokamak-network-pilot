@@ -4,6 +4,8 @@
 
 ---
 
+> For the full step-by-step deployment walkthrough, see **[Deploy to Railway](./05b-deploy-to-railway.md)**.
+
 ## Platform: Railway
 
 The project is deployed on Railway with three services:

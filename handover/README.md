@@ -21,6 +21,7 @@ This folder contains the full handover documentation for the Tokamak Pilot proje
 | 3 | [Tech Stack](./03-tech-stack.md) | Every technology used, from frontend to deployment |
 | 4 | [Repository Structure](./04-repository-structure.md) | Folder layout, apps, packages, examples |
 | 5 | [How to Run Locally](./05-how-to-run-locally.md) | Step-by-step setup guide for local development |
+| 5b | [Deploy to Railway](./05b-deploy-to-railway.md) | Step-by-step production deployment on Railway |
 | 6 | [Architecture Overview](./06-architecture-overview.md) | System diagram, data flow, how pieces connect |
 | 7 | [Backend (API)](./07-backend-api.md) | NestJS modules, endpoints, database access |
 | 8 | [Frontend (Web App)](./08-frontend-web-app.md) | Pages, components, state management, theming |
